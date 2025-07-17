@@ -467,7 +467,7 @@
             <h2>Compliance Overview</h2>
             <p class="overview-text">
                 This dashboard provides an overview for your Azure template compliance status with the 'Azure Developer CLI Template Framework' <a href="https://github.com/Azure-Samples/azd-template-artifacts/blob/main/docs/development-guidelines/definition-of-done.md" title="Definition of Done">Definition of Done</a>. Browse the list below to
-                fix specific issues or use the AI agent to automatically fix all compliance issues in your template, in VSCode.dev/azure
+                fix specific issues or use the AI agent to automatically fix all compliance issues in your template in VS Code
             </p>
             <p>For more information about compliance and collections, go here <a href="https://github.com/Azure-Samples/azd-template-artifacts">Azure Developer CLI Template Framework Docs</a></p>
             <div class="compliance-gauge">
@@ -788,7 +788,7 @@
                         <strong>How to fix:</strong> ${fixHint}
                     </div>
                     <div class="item-actions">
-                        <a href="https://insiders.vscode.dev/azure?azdTemplateUrl=${encodeURIComponent(window.reportData.repoUrl)}" 
+                        <a href="#" 
                            class="item-link"
                            onclick="return openEditorWithPrompt(event, '${issue.id}')">
                             <i class="fas fa-external-link-alt"></i> Fix in editor
@@ -885,7 +885,7 @@
             
             event.preventDefault();
             const templateUrl = encodeURIComponent(window.reportData.repoUrl);
-            window.open(`https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}`, '_blank');
+            window.open(`https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}&agent=${encodedPrompt}`, '_blank');
             return false;
         }
 
