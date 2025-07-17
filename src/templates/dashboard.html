@@ -366,9 +366,18 @@
         /* Footer Styles */
         .action-footer {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             margin-top: 32px;
             margin-bottom: 64px;
+        }
+        
+        .btn-help {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-align: center;
+            max-width: 400px;
         }
 
         .btn {
@@ -394,6 +403,49 @@
             .overview-tiles {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* Footer Styles */
+        .site-footer {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 16px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .copyright {
+            font-size: 0.9rem;
+        }
+
+        .footer-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+
+        .footer-link:hover {
+            opacity: 0.8;
+        }
+
+        /* Add padding to ensure content isn't hidden behind fixed footer */
+        body {
+            padding-bottom: 60px;
         }
     </style>
 </head>
@@ -486,10 +538,13 @@
         </section>
 
         <div class="action-footer">
-            <a href="#" class="btn" id="fixButton">
+            <a href="#" class="btn" id="fixButton" title="Open in VS Code with an AI agent prompt to fix all issues">
                 <i class="fas fa-code"></i>
-                Fix in vscode.dev/azure
+                Fix with AI Agent
             </a>
+            <div class="btn-help">
+                This will open your Azure template in VS Code with an AI agent prompt to fix all compliance issues.
+            </div>
         </div>
     </main>
 
@@ -508,9 +563,13 @@
                 // Setup the repository URL
                 document.getElementById('repoUrl').textContent = window.reportData.repoUrl;
                 
-                // Update the fix button URL
-                const repoName = window.reportData.repoUrl.split('/').slice(-2).join('/');
-                document.getElementById('fixButton').href = `https://vscode.dev/github/${repoName}`;
+                // Generate a prompt for the agent based on issues
+                const agentPrompt = generateAgentPrompt();
+                
+                // Update the fix button URL with the Azure template URL format
+                const encodedPrompt = encodeURIComponent(agentPrompt);
+                const templateUrl = encodeURIComponent(window.reportData.repoUrl);
+                document.getElementById('fixButton').href = `https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}`;
 
                 // Setup compliance gauge
                 const compliancePercentage = window.reportData.compliance.compliant.find(item => item.category === 'meta')?.details?.percentageCompliant || 0;
@@ -547,6 +606,52 @@
             document.getElementById('passedPanel').classList.add('panel-open');
         }
         
+        // Function to generate an intelligent prompt for the agent
+        function generateAgentPrompt() {
+            const issues = window.reportData.compliance.issues;
+            const compliancePercentage = window.reportData.compliance.compliant.find(item => item.category === 'meta')?.details?.percentageCompliant || 0;
+            
+            // Create a concise bulleted list format for the agent
+            let prompt = `Fix Azure Template Compliance Issues (${compliancePercentage}%)\n\n`;
+            
+            // Keep a flat list of all issues for cleaner bullet points
+            if (issues.length === 0) {
+                prompt += "• No issues found! The template is fully compliant.";
+                return prompt;
+            }
+            
+            // Add header for issues
+            prompt += `Issues that need fixing:\n\n`;
+            
+            // Add all issues as bullet points
+            issues.forEach(issue => {
+                let issueText = issue.message;
+                // Extract file/folder names when available
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || issue.message;
+                    prompt += `• Create file: ${fileName}\n`;
+                } else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || issue.message;
+                    prompt += `• Create folder: ${folderName}\n`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    prompt += `• ${issue.message}\n`;
+                } else if (issue.id.includes('readme')) {
+                    prompt += `• ${issue.message}\n`;
+                } else if (issue.id.includes('bicep')) {
+                    prompt += `• ${issue.message}\n`;
+                } else if (issue.id.includes('azure-yaml')) {
+                    prompt += `• ${issue.message}\n`;
+                } else {
+                    prompt += `• ${issue.message}\n`;
+                }
+            });
+            
+            // Add reference to standards
+            prompt += `\nPlease fix these issues following Azure template best practices.`;
+            
+            return prompt;
+        }
+
         // Function to render the trend chart using D3.js
         function renderTrendChart() {
             const chartContainer = document.getElementById('trendChart');
@@ -682,7 +787,9 @@
                         <strong>How to fix:</strong> ${fixHint}
                     </div>
                     <div class="item-actions">
-                        <a href="https://vscode.dev/github/${window.reportData.repoUrl.split('/').slice(-2).join('/')}" class="item-link">
+                        <a href="https://insiders.vscode.dev/azure?azdTemplateUrl=${encodeURIComponent(window.reportData.repoUrl)}" 
+                           class="item-link"
+                           onclick="return openEditorWithPrompt(event, '${issue.id}')">
                             <i class="fas fa-external-link-alt"></i> Fix in editor
                         </a>
                     </div>
@@ -743,6 +850,44 @@
             });
         }
 
+        // Function to open editor with specific issue prompt
+        function openEditorWithPrompt(event, issueId) {
+            const issue = window.reportData.compliance.issues.find(i => i.id === issueId);
+            if (!issue) return true;
+            
+            let prompt = `Please help me fix this specific issue in my Azure template repository:\n\n`;
+            prompt += `${issue.message}\n\n`;
+            
+            if (issue.error) {
+                prompt += `Error details: ${issue.error}\n\n`;
+            }
+            
+            // Add specific fix instructions based on issue type
+            if (issueId.includes('missing-file')) {
+                const fileName = issueId.replace('missing-', '');
+                prompt += `Create the missing file: ${fileName}\n`;
+            } else if (issueId.includes('missing-folder')) {
+                const folderName = issueId.replace('missing-folder-', '');
+                prompt += `Create the missing folder: ${folderName}/\n`;
+            } else if (issueId.includes('missing-workflow')) {
+                prompt += "Add the required workflow file to the .github/workflows directory.\n";
+            } else if (issueId.includes('readme')) {
+                prompt += "Update the README.md with the required headings and content.\n";
+            } else if (issueId.includes('bicep')) {
+                prompt += "Fix the Bicep template issues as described above.\n";
+            } else if (issueId.includes('azure-yaml')) {
+                prompt += "Update the azure.yaml file with the required sections.\n";
+            }
+            
+            const repoName = window.reportData.repoUrl.split('/').slice(-2).join('/');
+            const encodedPrompt = encodeURIComponent(prompt);
+            
+            event.preventDefault();
+            const templateUrl = encodeURIComponent(window.reportData.repoUrl);
+            window.open(`https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}&agent=${encodedPrompt}`, '_blank');
+            return false;
+        }
+
         // Setup panel toggle functionality
         document.querySelectorAll('.panel-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -751,5 +896,14 @@
             });
         });
     </script>
+    
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <div class="copyright">©2025 - DevDiv Microsoft</div>
+            <a href="https://aka.ms/gallery/submi" class="footer-link" target="_blank">
+                <i class="fas fa-plus-circle"></i> Submit new template to gallery
+            </a>
+        </div>
+    </footer>
 </body>
 </html>
