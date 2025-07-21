@@ -10,7 +10,8 @@
     "scripts": {
         "build": "tsc && npm run copy-assets",
         "start": "node --experimental-json-modules dist/cli.js",
-        "copy-assets": "mkdir -p dist/templates dist/assets && cp -r src/templates/* dist/templates/ && cp -r assets/* dist/assets/"
+        "copy-assets": "mkdir -p dist/templates dist/assets && cp -r src/templates/* dist/templates/ && cp -r assets/* dist/assets/",
+        "test-dashboard": "node --experimental-json-modules dist/testDashboard.js"
     },
     "keywords": [
         "azd",

@@ -77,6 +77,47 @@ export async function generateDashboard(analysisResults: any, outputPath: string
     
     // Create the dashboard HTML file
     await fs.writeFile(dashboardPath, dashboardTemplate);
+    
+    // Check if we need to copy assets folder
+    const sourceAssetsDir = path.resolve(__dirname, 'templates', 'assets');
+    const targetAssetsDir = path.join(path.dirname(outputPath), 'assets');
+    
+    try {
+      // Check if source assets directory exists
+      await fs.access(sourceAssetsDir);
+      
+      // Create target assets directory if it doesn't exist
+      await fs.mkdir(targetAssetsDir, { recursive: true });
+      
+      // Copy all files from source assets to target assets
+      const assetFiles = await fs.readdir(sourceAssetsDir, { withFileTypes: true });
+      for (const file of assetFiles) {
+        if (file.isDirectory()) {
+          // Handle subdirectories
+          const subDir = file.name;
+          const sourceSubDir = path.join(sourceAssetsDir, subDir);
+          const targetSubDir = path.join(targetAssetsDir, subDir);
+          
+          // Create subdirectory
+          await fs.mkdir(targetSubDir, { recursive: true });
+          
+          // Copy files from subdirectory
+          const subFiles = await fs.readdir(sourceSubDir);
+          for (const subFile of subFiles) {
+            const sourceFilePath = path.join(sourceSubDir, subFile);
+            const targetFilePath = path.join(targetSubDir, subFile);
+            await fs.copyFile(sourceFilePath, targetFilePath);
+          }
+        } else {
+          // Copy file
+          const sourceFilePath = path.join(sourceAssetsDir, file.name);
+          const targetFilePath = path.join(targetAssetsDir, file.name);
+          await fs.copyFile(sourceFilePath, targetFilePath);
+        }
+      }
+    } catch (err) {
+      console.warn('Assets directory not found or could not be copied:', err);
+    }
 
     return dashboardPath;
   } catch (err) {

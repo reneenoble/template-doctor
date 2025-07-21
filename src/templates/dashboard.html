@@ -543,8 +543,18 @@
                 <i class="fas fa-code"></i>
                 Fix with AI Agent
             </a>
+            <button id="createIssueButton" class="btn" style="margin-left: 10px; background-color: #2b3137;">
+                <i class="fab fa-github"></i>
+                Create GitHub Issue
+            </button>
+            <button id="testProvisionButton" class="btn" style="margin-left: 10px; background-color: #0078d4;">
+                <i class="fas fa-rocket"></i>
+                Test AZD Provision
+            </button>
             <div class="btn-help">
-                This will open your Azure template in VS Code with an AI agent prompt to fix all compliance issues.
+                Fix with AI Agent: Opens your template in VS Code with an AI agent prompt.<br>
+                Create GitHub Issue: Creates an issue in your repository with compliance details.<br>
+                Test AZD Provision: Tests if your template can be successfully provisioned with AZD.
             </div>
         </div>
     </main>
@@ -568,7 +578,7 @@
                 const agentPrompt = generateAgentPrompt();
                 
                 // Update the fix button URL with the Azure template URL format
-                const encodedPrompt = encodeURIComponent(agentPrompt);
+                // Note: Not adding prompt parameter as it gets blocked
                 const templateUrl = encodeURIComponent(window.reportData.repoUrl);
                 document.getElementById('fixButton').href = `https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}`;
 
@@ -790,8 +800,14 @@
                     <div class="item-actions">
                         <a href="#" 
                            class="item-link"
-                           onclick="return openEditorWithPrompt(event, '${issue.id}')">
+                           onclick="return openEditorWithFile(event, '${issue.id}')">
                             <i class="fas fa-external-link-alt"></i> Fix in editor
+                        </a>
+                        <a href="#"
+                           class="item-link"
+                           style="margin-left: 15px;"
+                           onclick="return createSingleIssue(event, '${issue.id}')">
+                            <i class="fab fa-github"></i> Create issue
                         </a>
                     </div>
                 `;
@@ -849,44 +865,308 @@
                 
                 passedList.appendChild(li);
             });
-        }
-
-        // Function to open editor with specific issue prompt
-        function openEditorWithPrompt(event, issueId) {
+        }            // Function to open editor with specific file path based on issue
+        function openEditorWithFile(event, issueId) {
             const issue = window.reportData.compliance.issues.find(i => i.id === issueId);
             if (!issue) return true;
             
-            let prompt = `Please help me fix this specific issue in my Azure template repository:\n\n`;
-            prompt += `${issue.message}\n\n`;
+            // Determine the file path based on issue type
+            let filePath = '';
             
-            if (issue.error) {
-                prompt += `Error details: ${issue.error}\n\n`;
-            }
-            
-            // Add specific fix instructions based on issue type
             if (issueId.includes('missing-file')) {
-                const fileName = issueId.replace('missing-', '');
-                prompt += `Create the missing file: ${fileName}\n`;
-            } else if (issueId.includes('missing-folder')) {
-                const folderName = issueId.replace('missing-folder-', '');
-                prompt += `Create the missing folder: ${folderName}/\n`;
+                filePath = issueId.replace('missing-file-', '');
             } else if (issueId.includes('missing-workflow')) {
-                prompt += "Add the required workflow file to the .github/workflows directory.\n";
+                const workflowName = issueId.replace('missing-workflow-', '');
+                filePath = `.github/workflows/${workflowName}.yml`;
             } else if (issueId.includes('readme')) {
-                prompt += "Update the README.md with the required headings and content.\n";
-            } else if (issueId.includes('bicep')) {
-                prompt += "Fix the Bicep template issues as described above.\n";
+                filePath = "README.md";
+            } else if (issueId.includes('bicep') && issueId.includes('main')) {
+                filePath = "infra/main.bicep";
             } else if (issueId.includes('azure-yaml')) {
-                prompt += "Update the azure.yaml file with the required sections.\n";
+                filePath = "azure.yaml";
             }
-            
-            const repoName = window.reportData.repoUrl.split('/').slice(-2).join('/');
-            const encodedPrompt = encodeURIComponent(prompt);
             
             event.preventDefault();
             const templateUrl = encodeURIComponent(window.reportData.repoUrl);
-            window.open(`https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}&agent=${encodedPrompt}`, '_blank');
+            let url = `https://insiders.vscode.dev/azure?azdTemplateUrl=${templateUrl}`;
+            
+            // Add file path if available
+            if (filePath) {
+                url += `&path=${encodeURIComponent(filePath)}`;
+            }
+            
+            window.open(url, '_blank');
             return false;
+        }
+        
+        // Function to handle creating a GitHub issue for a single issue
+        function createSingleIssue(event, issueId) {
+            event.preventDefault();
+            
+            const issue = window.reportData.compliance.issues.find(i => i.id === issueId);
+            if (!issue) return false;
+            
+            const mcpUrl = new URL(window.location.href);
+            const baseUrl = mcpUrl.origin;
+            const createIssueUrl = `${baseUrl}/api/github-issue`;
+            
+            // Create a more specific issue body for this single issue
+            let issueBody = "## Template Doctor Compliance Issue\n\n";
+            issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
+            issueBody += `### Issue Details:\n\n`;
+            issueBody += `- **ID**: ${issue.id}\n`;
+            issueBody += `- **Message**: ${issue.message}\n`;
+            
+            if (issue.error) {
+                issueBody += `- **Error**: ${issue.error}\n`;
+            }
+            
+            // Determine fix hint based on issue type
+            let fixHint = "";
+            if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
+                fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
+            } else if (issue.id.includes('missing-workflow')) {
+                fixHint = "Add the required workflow file to your .github/workflows directory.";
+            } else if (issue.id.includes('readme')) {
+                fixHint = "Update your README.md with the required headings and content.";
+            } else if (issue.id.includes('bicep')) {
+                fixHint = "Add the missing resources to your Bicep files.";
+            } else if (issue.id.includes('azure-yaml')) {
+                fixHint = "Update your azure.yaml file to include required sections.";
+            } else {
+                fixHint = "Review the issue details and make appropriate changes.";
+            }
+            
+            issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
+            issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
+            
+            // Determine a good title based on the issue
+            let issueTitle = "";
+            if (issue.id.includes('missing-file')) {
+                const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                issueTitle = `Missing required file: ${fileName}`;
+            } else if (issue.id.includes('missing-folder')) {
+                const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                issueTitle = `Missing required folder: ${folderName}`;
+            } else if (issue.id.includes('missing-workflow')) {
+                const workflowName = issue.id.replace('missing-workflow-', '');
+                issueTitle = `Missing workflow: ${workflowName}`;
+            } else {
+                // Use the message as title, but keep it reasonably short
+                issueTitle = issue.message.length > 60 ? 
+                    `${issue.message.substring(0, 57)}...` : 
+                    issue.message;
+            }
+            
+            const issueData = {
+                repoUrl: window.reportData.repoUrl,
+                title: issueTitle,
+                body: issueBody
+            };
+            
+            // Find the link element that was clicked and change its state
+            const linkElement = event.target.closest('.item-link');
+            const originalText = linkElement.innerHTML;
+            linkElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Issue...';
+            linkElement.style.pointerEvents = 'none';
+            
+            fetch(createIssueUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(issueData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(`GitHub issue created successfully! Issue URL: ${data.html_url}`);
+                // Open the issue in a new tab
+                window.open(data.html_url, '_blank');
+            })
+            .catch(error => {
+                console.error('Error creating GitHub issue:', error);
+                alert(`Failed to create GitHub issue: ${error.message}`);
+            })
+            .finally(() => {
+                // Restore link state
+                linkElement.innerHTML = originalText;
+                linkElement.style.pointerEvents = '';
+            });
+            
+            return false;
+        }
+        
+        // Function to handle creating a GitHub issue for all issues
+        function createGitHubIssue() {
+            const mcpUrl = new URL(window.location.href);
+            const baseUrl = mcpUrl.origin;
+            const createIssueUrl = `${baseUrl}/api/github-issue`;
+            
+            // Create summary of issues for the GitHub issue body
+            let issueBody = "## Template Doctor Compliance Issues\n\n";
+            issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
+            issueBody += `Compliance Score: ${window.reportData.compliance.compliant.find(item => item.category === 'meta')?.details?.percentageCompliant || 0}%\n\n`;
+            issueBody += "### Issues Found:\n\n";
+            
+            window.reportData.compliance.issues.forEach(issue => {
+                issueBody += `- ${issue.message}\n`;
+            });
+            
+            const issueData = {
+                repoUrl: window.reportData.repoUrl,
+                title: `Template Compliance Issues - ${new Date().toLocaleDateString()}`,
+                body: issueBody
+            };
+            
+            // Show loading state
+            const createIssueButton = document.getElementById('createIssueButton');
+            const originalText = createIssueButton.innerHTML;
+            createIssueButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Issue...';
+            createIssueButton.disabled = true;
+            
+            fetch(createIssueUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(issueData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(`GitHub issue created successfully! Issue URL: ${data.html_url}`);
+                // Open the issue in a new tab
+                window.open(data.html_url, '_blank');
+            })
+            .catch(error => {
+                console.error('Error creating GitHub issue:', error);
+                alert(`Failed to create GitHub issue: ${error.message}`);
+            })
+            .finally(() => {
+                // Restore button state
+                createIssueButton.innerHTML = originalText;
+                createIssueButton.disabled = false;
+            });
+        }
+        
+        // Function to test AZD provision
+        function testAzdProvision() {
+            const mcpUrl = new URL(window.location.href);
+            const baseUrl = mcpUrl.origin;
+            const provisionUrl = `${baseUrl}/api/provision`;
+            
+            // Show loading state
+            const testProvisionButton = document.getElementById('testProvisionButton');
+            const originalText = testProvisionButton.innerHTML;
+            testProvisionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting Test...';
+            testProvisionButton.disabled = true;
+            
+            const provisionData = {
+                repoUrl: window.reportData.repoUrl
+            };
+            
+            fetch(provisionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(provisionData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Start polling for status
+                alert(`AZD provision test started! Run ID: ${data.runId}`);
+                pollProvisionStatus(data.runId, baseUrl);
+            })
+            .catch(error => {
+                console.error('Error starting AZD provision test:', error);
+                alert(`Failed to start AZD provision test: ${error.message}`);
+                // Restore button state
+                testProvisionButton.innerHTML = originalText;
+                testProvisionButton.disabled = false;
+            });
+        }
+        
+        // Function to poll provision status
+        function pollProvisionStatus(runId, baseUrl) {
+            const statusUrl = `${baseUrl}/api/provision-status?runId=${runId}`;
+            const testProvisionButton = document.getElementById('testProvisionButton');
+            
+            // Set a timer to check status every 10 seconds
+            const statusCheck = setInterval(() => {
+                fetch(statusUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Network response was not ok: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.status === 'completed') {
+                            clearInterval(statusCheck);
+                            testProvisionButton.innerHTML = '<i class="fas fa-check"></i> Provision Completed';
+                            testProvisionButton.style.backgroundColor = '#107c10'; // Success green
+                            
+                            // Show result in alert
+                            if (data.success) {
+                                alert(`AZD provision test completed successfully! See logs for details.`);
+                            } else {
+                                alert(`AZD provision test failed. See logs for details.`);
+                            }
+                            
+                            // Reset button after 5 seconds
+                            setTimeout(() => {
+                                testProvisionButton.innerHTML = '<i class="fas fa-rocket"></i> Test AZD Provision';
+                                testProvisionButton.style.backgroundColor = '#0078d4'; // Original color
+                                testProvisionButton.disabled = false;
+                            }, 5000);
+                            
+                        } else if (data.status === 'failed') {
+                            clearInterval(statusCheck);
+                            testProvisionButton.innerHTML = '<i class="fas fa-times"></i> Provision Failed';
+                            testProvisionButton.style.backgroundColor = '#d83b01'; // Error color
+                            
+                            alert(`AZD provision test failed: ${data.error || 'Unknown error'}`);
+                            
+                            // Reset button after 5 seconds
+                            setTimeout(() => {
+                                testProvisionButton.innerHTML = '<i class="fas fa-rocket"></i> Test AZD Provision';
+                                testProvisionButton.style.backgroundColor = '#0078d4'; // Original color
+                                testProvisionButton.disabled = false;
+                            }, 5000);
+                            
+                        } else {
+                            // Still running, update button text with progress
+                            testProvisionButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${data.progress || 'Running...'}`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking provision status:', error);
+                        clearInterval(statusCheck);
+                        testProvisionButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Status Check Failed';
+                        
+                        // Reset button after 5 seconds
+                        setTimeout(() => {
+                            testProvisionButton.innerHTML = '<i class="fas fa-rocket"></i> Test AZD Provision';
+                            testProvisionButton.style.backgroundColor = '#0078d4'; // Original color
+                            testProvisionButton.disabled = false;
+                        }, 5000);
+                    });
+            }, 10000); // Check every 10 seconds
         }
 
         // Setup panel toggle functionality
@@ -896,6 +1176,10 @@
                 panel.classList.toggle('panel-open');
             });
         });
+        
+        // Setup MCP integration button event handlers
+        document.getElementById('createIssueButton').addEventListener('click', createGitHubIssue);
+        document.getElementById('testProvisionButton').addEventListener('click', testAzdProvision);
     </script>
     
     <footer class="site-footer">

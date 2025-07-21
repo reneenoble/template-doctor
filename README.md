@@ -34,16 +34,25 @@ npm link
 
 ```bash
 # Analyze a GitHub repository
-template-doctor --repo=https://github.com/username/repo
+template-doctor analyze --repo=https://github.com/username/repo
 
 # Analyze and serve the dashboard on localhost
-template-doctor --repo=https://github.com/username/repo --serve
+template-doctor analyze --repo=https://github.com/username/repo --serve
 
 # Analyze and automatically open the dashboard in a browser
-template-doctor --repo=https://github.com/username/repo --open-dashboard
+template-doctor analyze --repo=https://github.com/username/repo --open-dashboard
 
 # Specify a custom port for the dashboard server
-template-doctor --repo=https://github.com/username/repo --serve --port=8080
+template-doctor analyze --repo=https://github.com/username/repo --serve --port=8080
+
+# Create a GitHub issue with analysis results
+template-doctor create-issue --repo=https://github.com/username/repo
+
+# Start an AZD provision test
+template-doctor provision --repo=https://github.com/username/repo --env=dev
+
+# Check the status of an AZD provision job
+template-doctor status --job-id=12345
 ```
 
 ## Output
@@ -71,6 +80,50 @@ npm run build && npm start -- --repo=https://github.com/username/repo
 # Adding new compliance rules
 # Modify src/config/dod-rules.ts to add new rules
 ```
+
+## MCP Server Integration
+
+Template Doctor can integrate with the awesome-azd-template-testing MCP server to:
+
+1. Create GitHub issues with template analysis results
+2. Run AZD provisioning tests on templates
+3. Get status and logs from provisioning jobs
+
+### Configuration
+
+Set the following environment variables in your `.env` file:
+
+```bash
+MCP_SERVER_URL=https://awesome-azd-template-testing.azurewebsites.net
+MCP_API_KEY=your_api_key_here
+```
+
+### Usage Examples
+
+```bash
+# Create a GitHub issue with analysis results
+template-doctor create-issue --repo=https://github.com/username/repo
+
+# Start an AZD provision test
+template-doctor provision --repo=https://github.com/username/repo --env=dev
+
+# Check the status of an AZD provision job
+template-doctor status --job-id=12345
+
+# Test the dashboard with MCP integration
+npm run test-dashboard
+```
+
+### Testing the Dashboard
+
+To test the dashboard with MCP integration buttons:
+
+1. Make sure your `.env` file contains the `MCP_API_KEY` value
+2. Run `npm run build` to build the project
+3. Run `npm run test-dashboard` to open a test dashboard with sample data
+4. Test the "Create GitHub Issue" and "Test AZD Provision" buttons
+
+The test dashboard uses sample data to show how the MCP integration works.
 
 ## License
 
