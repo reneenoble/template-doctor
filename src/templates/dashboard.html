@@ -75,6 +75,35 @@
             font-size: 1.5rem;
             font-weight: 600;
         }
+        
+        .repo-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        #repoUrl {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .back-to-index {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        .back-to-index:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
 
         /* Main Content Styles */
         main {
@@ -366,18 +395,53 @@
         /* Footer Styles */
         .action-footer {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            justify-content: center;
             align-items: center;
+            gap: 16px;
             margin-top: 32px;
             margin-bottom: 64px;
         }
         
-        .btn-help {
-            margin-top: 12px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 240px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
             text-align: center;
-            max-width: 400px;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
 
         .btn {
@@ -389,19 +453,33 @@
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            min-width: 180px;
+            justify-content: center;
+            text-decoration: none;
         }
 
         .btn:hover {
             background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         @media (max-width: 768px) {
             .overview-tiles {
                 grid-template-columns: 1fr;
+            }
+            
+            .action-footer {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .btn {
+                min-width: 240px;
             }
         }
 
@@ -453,11 +531,14 @@
     <header>
         <div class="container header-content">
             <div class="logo">
-                <img src="assets/images/template-doctor-logo.svg" alt="Template Doctor Logo">
+                <img src="../assets/images/logo.svg" alt="Template Doctor Logo">
                 <h1>Template Doctor</h1>
             </div>
             <div class="repo-info">
                 <span id="repoUrl"></span>
+                <a href="../template-index.html" class="back-to-index">
+                    <i class="fas fa-arrow-left"></i> Back to Templates
+                </a>
             </div>
         </div>
     </header>
@@ -539,22 +620,28 @@
         </section>
 
         <div class="action-footer">
-            <a href="#" class="btn" id="fixButton" title="Open in VS Code with an AI agent prompt to fix all issues">
-                <i class="fas fa-code"></i>
-                Fix with AI Agent
-            </a>
-            <button id="createIssueButton" class="btn" style="margin-left: 10px; background-color: #2b3137;">
-                <i class="fab fa-github"></i>
-                Create GitHub Issue
-            </button>
-            <button id="testProvisionButton" class="btn" style="margin-left: 10px; background-color: #0078d4;">
-                <i class="fas fa-rocket"></i>
-                Test AZD Provision
-            </button>
-            <div class="btn-help">
-                Fix with AI Agent: Opens your template in VS Code with an AI agent prompt.<br>
-                Create GitHub Issue: Creates an issue in your repository with compliance details.<br>
-                Test AZD Provision: Tests if your template can be successfully provisioned with AZD.
+            <div class="tooltip">
+                <a href="#" class="btn" id="fixButton">
+                    <i class="fas fa-code"></i>
+                    Fix with AI Agent
+                </a>
+                <span class="tooltiptext">Opens your template in VS Code with an AI agent prompt.</span>
+            </div>
+            
+            <div class="tooltip">
+                <button id="createIssueButton" class="btn" style="background-color: #2b3137;">
+                    <i class="fab fa-github"></i>
+                    Create GitHub Issue
+                </button>
+                <span class="tooltiptext">Creates an issue in your repository with compliance details.</span>
+            </div>
+            
+            <div class="tooltip">
+                <button id="testProvisionButton" class="btn" style="background-color: #0078d4;">
+                    <i class="fas fa-rocket"></i>
+                    Test AZD Provision
+                </button>
+                <span class="tooltiptext">Tests if your template can be successfully provisioned with AZD.</span>
             </div>
         </div>
     </main>

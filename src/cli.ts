@@ -20,6 +20,7 @@ const serveFlag = args.includes("--serve");
 const portArg = args.find(a => a.startsWith("--port="));
 const port = portArg ? parseInt(portArg.split("=")[1], 10) : 3000;
 const createIssueFlag = args.includes("--create-issue");
+const listFlag = args.includes("--list") || args.includes("--index");
 
 // Handle different commands
 async function run() {
@@ -39,6 +40,14 @@ async function run() {
     case "status":
       await statusCommand();
       break;
+    case "list":
+    case "templates":
+      await listCommand();
+      break;
+    case "rebuild":
+    case "update-index":
+      await rebuildCommand();
+      break;
     case "help":
     default:
       showHelp();
@@ -56,6 +65,8 @@ function showHelp() {
   console.log("  create-issue       Create a GitHub issue with analysis results");
   console.log("  provision          Start an AZD provision test");
   console.log("  status             Check the status of an AZD provision job");
+  console.log("  list, templates    List all analyzed templates and open dashboard");
+  console.log("  rebuild            Regenerate the template index dashboard");
   console.log("  help               Show this help message\n");
   console.log("Options:");
   console.log("  --repo=<url>       URL of the GitHub repository to analyze");
@@ -74,6 +85,9 @@ async function analyzeCommand() {
     showHelp();
     return;
   }
+  
+  // If openDashboardFlag is set, always open the index page rather than the specific report
+  const preferIndex = openDashboardFlag;
 
   try {
     const result = await analyzeTemplate(repoUrl);
@@ -94,15 +108,27 @@ async function analyzeCommand() {
     if (createIssueFlag) {
       await createIssueFromResults(result);
     }
+
+    // Always make sure the index file is updated with the new template
+    console.log("🔄 Updating template index...");
+    
+    // Import the updateIndexFile function from dashboardGenerator
+    const { updateIndexFile } = await import("./dashboardGenerator.js");
+    
+    // Regenerate the index file
+    await updateIndexFile(resultsDir);
+    console.log("✅ Template index updated successfully");
     
     // If serve flag is set or open dashboard flag is set, start the server
     if (serveFlag || openDashboardFlag) {
       try {
         // Handle serving the dashboard
-        if (openDashboardFlag) {
-          // Start server and open the dashboard in the browser
-          const serverInfo = await openDashboard(dashboardPath, port);
-          console.log(`🚀 Dashboard opened at: ${serverInfo.url}`);
+    if (openDashboardFlag) {
+      // Start server and open the dashboard in the browser
+      // Always open the specific dashboard path for the analysis
+      const serverInfo = await openDashboard(dashboardPath, port);
+      console.log(`🚀 Dashboard opened at: ${serverInfo.url}`);
+      console.log(`� Analyzing template: ${repoUrl}`);
           
           // Keep the server running until the user presses Ctrl+C
           console.log("\n👀 Press Ctrl+C to stop the server and exit");
@@ -249,6 +275,102 @@ function extractRepoFullName(url: string): string {
   const match = url.match(/github\.com\/([^/]+\/[^/]+)(\.git)?/);
   if (!match) throw new Error("Invalid GitHub URL");
   return match[1];
+}
+
+/**
+ * Command to list all templates and open the template index dashboard
+ */
+async function listCommand() {
+  try {
+    const resultsDir = path.resolve("results");
+    if (!existsSync(resultsDir)) {
+      console.error("❌ No results directory found. Run an analysis first with 'template-doctor analyze --repo=<url>')");
+      return;
+    }
+
+    console.log("📊 Opening template dashboard...");
+    
+    const indexPath = path.join(resultsDir, "template-index.html");
+    
+    if (!existsSync(indexPath)) {
+      console.error("❌ No template index found. Run an analysis first with 'template-doctor analyze --repo=<url>'");
+      return;
+    }
+    
+    // Serve or open the template index
+    try {
+      if (openDashboardFlag) {
+        const serverInfo = await openDashboard(indexPath, port);
+        console.log(`🚀 Template index opened at: ${serverInfo.url}`);
+        console.log("\n👀 Press Ctrl+C to stop the server and exit");
+      } else if (serveFlag) {
+        const serverInfo = await serveDashboard(indexPath, port);
+        console.log(`🚀 Template index available at: ${serverInfo.url}`);
+        console.log("\n👀 Press Ctrl+C to stop the server and exit");
+      } else {
+        console.log(`📄 Template index available at: file://${indexPath}`);
+      }
+    } catch (err) {
+      console.error("❌ Failed to start dashboard server:", err instanceof Error ? err.message : err);
+      // Still show file path as fallback
+      console.log(`📄 You can open the template index file directly: file://${indexPath}`);
+    }
+  } catch (err) {
+    console.error("❌ Failed to list templates:", err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
+}
+
+/**
+ * Command to rebuild the template index dashboard
+ */
+async function rebuildCommand() {
+  try {
+    const resultsDir = path.resolve("results");
+    if (!existsSync(resultsDir)) {
+      console.error("❌ No results directory found. Run an analysis first with 'template-doctor analyze --repo=<url>')");
+      return;
+    }
+
+    console.log("🔄 Rebuilding template index dashboard...");
+    
+    // Import the updateIndexFile function from dashboardGenerator
+    const { updateIndexFile } = await import("./dashboardGenerator.js");
+    
+    // Regenerate the index file
+    await updateIndexFile(resultsDir);
+    
+    console.log("✅ Template index dashboard rebuilt successfully.");
+
+    const indexPath = path.join(resultsDir, "template-index.html");
+    
+    if (!existsSync(indexPath)) {
+      console.error("❌ Failed to create template index.");
+      return;
+    }
+
+    // Serve or open the template index
+    try {
+      if (openDashboardFlag) {
+        const serverInfo = await openDashboard(indexPath, port);
+        console.log(`🚀 Template index opened at: ${serverInfo.url}`);
+        console.log("\n👀 Press Ctrl+C to stop the server and exit");
+      } else if (serveFlag) {
+        const serverInfo = await serveDashboard(indexPath, port);
+        console.log(`🚀 Template index available at: ${serverInfo.url}`);
+        console.log("\n👀 Press Ctrl+C to stop the server and exit");
+      } else {
+        console.log(`📄 Template index available at: file://${indexPath}`);
+      }
+    } catch (err) {
+      console.error("❌ Failed to start dashboard server:", err instanceof Error ? err.message : err);
+      // Still show file path as fallback
+      console.log(`📄 You can open the template index file directly: file://${indexPath}`);
+    }
+  } catch (err) {
+    console.error("❌ Failed to rebuild template index:", err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
 }
 
 // Run the CLI

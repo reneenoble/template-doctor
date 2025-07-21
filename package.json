@@ -11,7 +11,13 @@
         "build": "tsc && npm run copy-assets",
         "start": "node --experimental-json-modules dist/cli.js",
         "copy-assets": "mkdir -p dist/templates dist/assets && cp -r src/templates/* dist/templates/ && cp -r assets/* dist/assets/",
-        "test-dashboard": "node --experimental-json-modules dist/testDashboard.js"
+        "test-dashboard": "node --experimental-json-modules dist/testDashboard.js",
+        "test-index": "node --experimental-json-modules dist/testDashboard.js --index",
+        "demo-analyze": "node dist/cli.js analyze --repo=https://github.com/Azure-Samples/azd-templates",
+        "demo-list": "node dist/cli.js list --serve",
+        "demo-full": "node dist/demoTemplateList.js",
+        "analyze-todo": "node dist/cli.js analyze --repo=https://github.com/anfibiacreativa/todo-nodejs-mongo-coreconf --open-dashboard",
+        "link-global": "npm link"
     },
     "keywords": [
         "azd",
