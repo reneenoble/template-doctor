@@ -48,7 +48,7 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
       app.use('/assets', serveStatic(assetsDir));
       
       // Serve the index at root or redirect to index if we're opening a specific report
-      app.get('/', (req, res) => {
+      app.get('/', (_req, res) => {
         // Check if we have a template-index.html file in the results directory
         const indexPath = path.join(resultsDir, 'template-index.html');
         if (existsSync(indexPath)) {
@@ -132,10 +132,6 @@ export async function openDashboard(dashboardPath: string, port = 3000): Promise
   
   // Calculate the relative URL path from the absolute file path
   // This ensures we navigate to the correct dashboard file and not just the root
-  const dashboardDir = path.dirname(dashboardPath);
-  const resultsBaseDir = path.resolve(dashboardDir, '..');
-  const isRepoSubdir = path.basename(resultsBaseDir) === 'results';
-  const resultsDir = isRepoSubdir ? resultsBaseDir : dashboardDir;
   
   // Get the relative path for URL construction
   // We need to ensure this generates a proper URL that the browser can access

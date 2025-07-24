@@ -8,8 +8,9 @@
         "template-doctor": "dist/cli.js"
     },
     "scripts": {
+        "dev": "tsx watch src/cli.ts",
         "build": "tsc && npm run copy-assets",
-        "start": "node --experimental-json-modules dist/cli.js",
+        "start": "node --experimental-json-modules -r tsconfig-paths/register dist/cli.js",
         "copy-assets": "mkdir -p dist/templates dist/assets && cp -r src/templates/* dist/templates/ && cp -r assets/* dist/assets/",
         "test-dashboard": "node --experimental-json-modules dist/testDashboard.js",
         "test-index": "node --experimental-json-modules dist/testDashboard.js --index",
@@ -30,9 +31,12 @@
         "@types/express": "^5.0.3",
         "@types/node": "^24.0.14",
         "@types/serve-static": "^1.15.8",
+        "tsconfig-paths": "^4.2.0",
+        "tsx": "^4.20.3",
         "typescript": "^5.8.3"
     },
     "dependencies": {
+        "@octokit/rest": "^22.0.0",
         "dotenv": "^17.2.0",
         "express": "^5.1.0",
         "open": "^10.2.0",

@@ -20,7 +20,6 @@ const serveFlag = args.includes("--serve");
 const portArg = args.find(a => a.startsWith("--port="));
 const port = portArg ? parseInt(portArg.split("=")[1], 10) : 3000;
 const createIssueFlag = args.includes("--create-issue");
-const listFlag = args.includes("--list") || args.includes("--index");
 
 // Handle different commands
 async function run() {
@@ -86,8 +85,7 @@ async function analyzeCommand() {
     return;
   }
   
-  // If openDashboardFlag is set, always open the index page rather than the specific report
-  const preferIndex = openDashboardFlag;
+  // If openDashboardFlag is set, open the dashboard in the browser
 
   try {
     const result = await analyzeTemplate(repoUrl);
@@ -271,11 +269,15 @@ async function statusCommand() {
   }
 }
 
+// This function is used in the CLI to extract repository information
+// It's kept for reference and potential future use
+/*
 function extractRepoFullName(url: string): string {
   const match = url.match(/github\.com\/([^/]+\/[^/]+)(\.git)?/);
   if (!match) throw new Error("Invalid GitHub URL");
   return match[1];
 }
+*/
 
 /**
  * Command to list all templates and open the template index dashboard

@@ -1,4 +1,4 @@
-import { TemplateConfig } from './config-types';
+import { TemplateConfig } from './config-types.js';
 
 const config: TemplateConfig = {
   requiredFiles: [

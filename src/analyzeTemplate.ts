@@ -1,7 +1,5 @@
 import { listRepoFiles, fetchFileContent, getDefaultBranch } from "./githubClient.js";
 import config from "./config/dod-rules.js";
-import { TemplateConfig } from "./config/config-types.js";
-import path from "path";
 
 type Issue = { id: string; severity: "error" | "warning"; message: string, error?: string };
 type ReadmeHeading = { level: number; text: string; hasImage?: boolean };
@@ -79,7 +77,7 @@ export async function analyzeTemplate(repoUrl: string): Promise<{
   if (config.requiredDocFiles) {
     for (const docFile of config.requiredDocFiles) {
       const matchingFiles = normalized.filter(file => 
-        docFile.patterns.some(pattern => pattern.test(file))
+        docFile.patterns.some((pattern: RegExp) => pattern.test(file))
       );
       
       if (matchingFiles.length === 0) {

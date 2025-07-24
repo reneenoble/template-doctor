@@ -156,7 +156,7 @@ export async function generateDashboard(analysisResults: any, outputPath: string
     }
     
     // Update or create the index file with all templates
-    await updateIndexFile(resultsBaseDir, repoName, latestData);
+    await updateIndexFile(resultsBaseDir);
 
     return dashboardPath;
   } catch (err) {
@@ -171,7 +171,7 @@ export async function generateDashboard(analysisResults: any, outputPath: string
  * @param currentRepoName - The name of the current repository (optional)
  * @param latestData - The latest analysis data (optional)
  */
-export async function updateIndexFile(resultsBaseDir: string, currentRepoName?: string, latestData?: any): Promise<void> {
+export async function updateIndexFile(resultsBaseDir: string): Promise<void> {
   try {
     // Create template-index.html if it doesn't exist
     const indexPath = path.join(resultsBaseDir, 'template-index.html');
