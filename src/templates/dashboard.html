@@ -1135,36 +1135,108 @@
                 const today = new Date();
                 const formattedDate = `[${today.toISOString().split('T')[0]}]`;
                 
-                // Create a more specific issue body for this single issue
-                let issueBody = "## Template Doctor Compliance Issue\n\n";
-                issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
-                issueBody += `### Issue Details:\n\n`;
-                issueBody += `- **ID**: ${issue.id}\n`;
+                // Create a comprehensive issue body with detailed guidance
+                let issueBody = "# Template Doctor Compliance Issue\n\n";
+                issueBody += `Repository: [${window.reportData.repoUrl}](${window.reportData.repoUrl})\n\n`;
+                
+                // Add clear issue details
+                issueBody += `## Issue Details\n\n`;
+                issueBody += `- **Issue ID**: \`${issue.id}\`\n`;
+                issueBody += `- **Category**: ${issue.id.split('-')[0] || 'Compliance'}\n`;
+                issueBody += `- **Severity**: ${issue.id.includes('critical') ? 'Critical' : 'Standard'}\n`;
                 issueBody += `- **Message**: ${issue.message}\n`;
-                issueBody += `- **Created**: ${today.toLocaleString()}\n`;
+                issueBody += `- **Created**: ${today.toLocaleString()}\n\n`;
                 
+                // Add error details in a code block for better readability
                 if (issue.error) {
-                    issueBody += `- **Error**: ${issue.error}\n`;
+                    issueBody += `## Error Details\n\n\`\`\`\n${issue.error}\n\`\`\`\n\n`;
                 }
                 
-                // Determine fix hint based on issue type
-                let fixHint = "";
-                if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
-                    fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
-                } else if (issue.id.includes('missing-workflow')) {
-                    fixHint = "Add the required workflow file to your .github/workflows directory.";
-                } else if (issue.id.includes('readme')) {
-                    fixHint = "Update your README.md with the required headings and content.";
-                } else if (issue.id.includes('bicep')) {
-                    fixHint = "Add the missing resources to your Bicep files.";
-                } else if (issue.id.includes('azure-yaml')) {
-                    fixHint = "Update your azure.yaml file to include required sections.";
-                } else {
-                    fixHint = "Review the issue details and make appropriate changes.";
+                // Create detailed step-by-step instructions based on issue type
+                issueBody += `## How to Fix\n\n`;
+                
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                    issueBody += `### Steps to Create \`${fileName}\`\n\n`;
+                    issueBody += `1. Create a new file named \`${fileName}\` in your repository\n`;
+                    issueBody += `2. Add the following content structure based on requirements:\n\n`;
+                    
+                    // Add template content based on file type
+                    if (fileName.includes('.md')) {
+                        issueBody += "```markdown\n# Title\n\n## Description\n\nAdd the required content here.\n```\n\n";
+                    } else if (fileName.includes('.yaml') || fileName.includes('.yml')) {
+                        issueBody += "```yaml\n# Required structure\nname: example\nversion: 1.0.0\n\n# Add additional required fields\n```\n\n";
+                    } else if (fileName.includes('.json')) {
+                        issueBody += "```json\n{\n  \"name\": \"example\",\n  \"version\": \"1.0.0\"\n  // Add required fields\n}\n```\n\n";
+                    } else if (fileName.includes('.bicep')) {
+                        issueBody += "```bicep\n// Add your Bicep resources here\nparam location string = resourceGroup().location\n\n// Define resources\n```\n\n";
+                    }
+                    
+                    issueBody += `3. Commit the file to your repository\n`;
+                    issueBody += `4. Run Template Doctor again to verify the issue is resolved\n\n`;
+                } 
+                else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                    issueBody += `### Steps to Create \`${folderName}\` Directory\n\n`;
+                    issueBody += `1. Create the directory structure for \`${folderName}\` in your repository\n`;
+                    issueBody += `2. Add appropriate files within this directory (such as README.md or required configuration files)\n`;
+                    issueBody += `3. Commit the changes to your repository\n`;
+                    issueBody += `4. Run Template Doctor again to verify the issue is resolved\n\n`;
+                }
+                else if (issue.id.includes('missing-workflow')) {
+                    const workflowName = issue.id.replace('missing-workflow-', '');
+                    issueBody += `### Steps to Add GitHub Workflow \`${workflowName}\`\n\n`;
+                    issueBody += `1. Create the directory structure \`.github/workflows/\` if it doesn't exist\n`;
+                    issueBody += `2. Add a new workflow file named \`${workflowName}.yml\` with appropriate triggers and actions\n`;
+                    issueBody += `3. Example workflow structure:\n\n`;
+                    issueBody += "```yaml\nname: " + workflowName + "\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      # Add required steps here\n```\n\n";
+                    issueBody += `4. Commit the file to your repository\n`;
+                    issueBody += `5. Run Template Doctor again to verify the issue is resolved\n\n`;
+                }
+                else if (issue.id.includes('readme')) {
+                    issueBody += `### Steps to Fix README Issues\n\n`;
+                    issueBody += `1. Open the README.md file in your repository\n`;
+                    issueBody += `2. Ensure it includes the following required sections:\n`;
+                    issueBody += `   - Project title and description\n`;
+                    issueBody += `   - Prerequisites and dependencies\n`;
+                    issueBody += `   - Setup and installation instructions\n`;
+                    issueBody += `   - Usage examples\n`;
+                    issueBody += `   - Deployment information\n`;
+                    issueBody += `3. Add any missing sections or information\n`;
+                    issueBody += `4. Commit the changes to your repository\n\n`;
+                }
+                else if (issue.id.includes('bicep')) {
+                    issueBody += `### Steps to Fix Bicep File Issues\n\n`;
+                    issueBody += `1. Review your Bicep files for missing required resources or parameters\n`;
+                    issueBody += `2. Add any missing resources according to the Azure Architecture requirements\n`;
+                    issueBody += `3. Ensure parameter naming follows the recommended patterns\n`;
+                    issueBody += `4. Validate the Bicep files using the Azure CLI: \`az bicep build --file main.bicep\`\n`;
+                    issueBody += `5. Commit the changes to your repository\n\n`;
+                }
+                else if (issue.id.includes('azure-yaml')) {
+                    issueBody += `### Steps to Fix azure.yaml Issues\n\n`;
+                    issueBody += `1. Open or create the \`azure.yaml\` file in the root of your repository\n`;
+                    issueBody += `2. Ensure it includes the following required sections:\n`;
+                    issueBody += "```yaml\n# Required azure.yaml structure\nname: YourProjectName\nversion: 1.0.0\n\ninfra:\n  provider: bicep\n  path: infra\n\npipelines:\n  - source: azd-pipelines\n    triggers:\n      - main\n```\n\n";
+                    issueBody += `3. Add any missing sections or fields\n`;
+                    issueBody += `4. Commit the changes to your repository\n\n`;
+                }
+                else {
+                    issueBody += `### General Steps to Fix This Issue\n\n`;
+                    issueBody += `1. Review the issue details carefully\n`;
+                    issueBody += `2. Make the necessary changes to address the compliance issue\n`;
+                    issueBody += `3. Test your changes locally to ensure they resolve the issue\n`;
+                    issueBody += `4. Commit the changes to your repository\n`;
+                    issueBody += `5. Run Template Doctor again to verify the issue is resolved\n\n`;
                 }
                 
-                issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
-                issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
+                // Add additional resources
+                issueBody += `## Additional Resources\n\n`;
+                issueBody += `- [Azure Developer CLI Documentation](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)\n`;
+                issueBody += `- [GitHub Actions Workflows](https://docs.github.com/en/actions/using-workflows)\n`;
+                issueBody += `- [Bicep Documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/)\n\n`;
+                
+                issueBody += `---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
                 
                 // Determine a good title based on the issue
                 let issueTitle = "";
@@ -1426,33 +1498,104 @@
                         `TD-${i+1}: ${issue.message}`;
                 }
                 
-                // Create the body for the sub-issue
-                let issueBody = "## Template Doctor Compliance Issue\n\n";
-                issueBody += `### Issue Details:\n\n`;
-                issueBody += `- **ID**: ${issue.id}\n`;
-                issueBody += `- **Message**: ${issue.message}\n`;
+                // Create a more comprehensive body for the sub-issue
+                let issueBody = "# Template Doctor Compliance Issue\n\n";
                 
+                // Add clear issue header and details
+                issueBody += `## Issue Details\n\n`;
+                issueBody += `- **Issue ID**: \`${issue.id}\`\n`;
+                issueBody += `- **Category**: ${issue.id.split('-')[0] || 'Compliance'}\n`;
+                issueBody += `- **Severity**: ${issue.id.includes('critical') ? 'Critical' : 'Standard'}\n`;
+                issueBody += `- **Message**: ${issue.message}\n\n`;
+                
+                // Add error details in a code block for better readability
                 if (issue.error) {
-                    issueBody += `- **Error**: ${issue.error}\n`;
+                    issueBody += `## Error Details\n\n\`\`\`\n${issue.error}\n\`\`\`\n\n`;
                 }
                 
-                // Determine fix hint based on issue type
-                let fixHint = "";
-                if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
-                    fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
-                } else if (issue.id.includes('missing-workflow')) {
-                    fixHint = "Add the required workflow file to your .github/workflows directory.";
-                } else if (issue.id.includes('readme')) {
-                    fixHint = "Update your README.md with the required headings and content.";
-                } else if (issue.id.includes('bicep')) {
-                    fixHint = "Add the missing resources to your Bicep files.";
-                } else if (issue.id.includes('azure-yaml')) {
-                    fixHint = "Update your azure.yaml file to include required sections.";
-                } else {
-                    fixHint = "Review the issue details and make appropriate changes.";
+                // Create detailed step-by-step instructions based on issue type
+                issueBody += `## How to Fix\n\n`;
+                
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                    issueBody += `### Steps to Create \`${fileName}\`\n\n`;
+                    issueBody += `1. Create a new file named \`${fileName}\` in your repository\n`;
+                    issueBody += `2. Add the following content structure based on requirements:\n\n`;
+                    
+                    // Add template content based on file type
+                    if (fileName.includes('.md')) {
+                        issueBody += "```markdown\n# Title\n\n## Description\n\nAdd the required content here.\n```\n\n";
+                    } else if (fileName.includes('.yaml') || fileName.includes('.yml')) {
+                        issueBody += "```yaml\n# Required structure\nname: example\nversion: 1.0.0\n\n# Add additional required fields\n```\n\n";
+                    } else if (fileName.includes('.json')) {
+                        issueBody += "```json\n{\n  \"name\": \"example\",\n  \"version\": \"1.0.0\"\n  // Add required fields\n}\n```\n\n";
+                    } else if (fileName.includes('.bicep')) {
+                        issueBody += "```bicep\n// Add your Bicep resources here\nparam location string = resourceGroup().location\n\n// Define resources\n```\n\n";
+                    }
+                    
+                    issueBody += `3. Commit the file to your repository\n`;
+                    issueBody += `4. Run Template Doctor again to verify the issue is resolved\n\n`;
+                } 
+                else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                    issueBody += `### Steps to Create \`${folderName}\` Directory\n\n`;
+                    issueBody += `1. Create the directory structure for \`${folderName}\` in your repository\n`;
+                    issueBody += `2. Add appropriate files within this directory (such as README.md or required configuration files)\n`;
+                    issueBody += `3. Commit the changes to your repository\n`;
+                    issueBody += `4. Run Template Doctor again to verify the issue is resolved\n\n`;
+                }
+                else if (issue.id.includes('missing-workflow')) {
+                    const workflowName = issue.id.replace('missing-workflow-', '');
+                    issueBody += `### Steps to Add GitHub Workflow \`${workflowName}\`\n\n`;
+                    issueBody += `1. Create the directory structure \`.github/workflows/\` if it doesn't exist\n`;
+                    issueBody += `2. Add a new workflow file named \`${workflowName}.yml\` with appropriate triggers and actions\n`;
+                    issueBody += `3. Example workflow structure:\n\n`;
+                    issueBody += "```yaml\nname: " + workflowName + "\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      # Add required steps here\n```\n\n";
+                    issueBody += `4. Commit the file to your repository\n`;
+                    issueBody += `5. Run Template Doctor again to verify the issue is resolved\n\n`;
+                }
+                else if (issue.id.includes('readme')) {
+                    issueBody += `### Steps to Fix README Issues\n\n`;
+                    issueBody += `1. Open the README.md file in your repository\n`;
+                    issueBody += `2. Ensure it includes the following required sections:\n`;
+                    issueBody += `   - Project title and description\n`;
+                    issueBody += `   - Prerequisites and dependencies\n`;
+                    issueBody += `   - Setup and installation instructions\n`;
+                    issueBody += `   - Usage examples\n`;
+                    issueBody += `   - Deployment information\n`;
+                    issueBody += `3. Add any missing sections or information\n`;
+                    issueBody += `4. Commit the changes to your repository\n\n`;
+                }
+                else if (issue.id.includes('bicep')) {
+                    issueBody += `### Steps to Fix Bicep File Issues\n\n`;
+                    issueBody += `1. Review your Bicep files for missing required resources or parameters\n`;
+                    issueBody += `2. Add any missing resources according to the Azure Architecture requirements\n`;
+                    issueBody += `3. Ensure parameter naming follows the recommended patterns\n`;
+                    issueBody += `4. Validate the Bicep files using the Azure CLI: \`az bicep build --file main.bicep\`\n`;
+                    issueBody += `5. Commit the changes to your repository\n\n`;
+                }
+                else if (issue.id.includes('azure-yaml')) {
+                    issueBody += `### Steps to Fix azure.yaml Issues\n\n`;
+                    issueBody += `1. Open or create the \`azure.yaml\` file in the root of your repository\n`;
+                    issueBody += `2. Ensure it includes the following required sections:\n`;
+                    issueBody += "```yaml\n# Required azure.yaml structure\nname: YourProjectName\nversion: 1.0.0\n\ninfra:\n  provider: bicep\n  path: infra\n\npipelines:\n  - source: azd-pipelines\n    triggers:\n      - main\n```\n\n";
+                    issueBody += `3. Add any missing sections or fields\n`;
+                    issueBody += `4. Commit the changes to your repository\n\n`;
+                }
+                else {
+                    issueBody += `### General Steps to Fix This Issue\n\n`;
+                    issueBody += `1. Review the issue details carefully\n`;
+                    issueBody += `2. Make the necessary changes to address the compliance issue\n`;
+                    issueBody += `3. Test your changes locally to ensure they resolve the issue\n`;
+                    issueBody += `4. Commit the changes to your repository\n`;
+                    issueBody += `5. Run Template Doctor again to verify the issue is resolved\n\n`;
                 }
                 
-                issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
+                // Add additional resources
+                issueBody += `## Additional Resources\n\n`;
+                issueBody += `- [Azure Developer CLI Documentation](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/)\n`;
+                issueBody += `- [GitHub Actions Workflows](https://docs.github.com/en/actions/using-workflows)\n`;
+                issueBody += `- [Bicep Documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/)\n\n`;
                 
                 try {
                     const response = await fetch(createSubIssueUrl, {

@@ -178,23 +178,97 @@ async function createIssueFromResults(result: any) {
     const formattedDate = `[${today.toISOString().split('T')[0]}]`;
     const issueTitle = `Template Doctor Analysis: ${result.compliance.summary} ${formattedDate}`;
     
-    // Format the issue body with the compliance results
+    // Format the issue body with the compliance results and detailed information
     let issueBody = `# Template Doctor Analysis\n\n`;
     issueBody += `Analyzed on: ${new Date(result.timestamp).toLocaleString()}\n\n`;
     issueBody += `## Summary\n\n`;
+    issueBody += `- Repository: [${result.repoUrl}](${result.repoUrl})\n`;
     issueBody += `- Compliance: ${result.compliance.compliant.find((item: any) => item.category === 'meta')?.details?.percentageCompliant || 0}%\n`;
     issueBody += `- Issues Found: ${result.compliance.issues.length}\n`;
     issueBody += `- Passed Checks: ${result.compliance.compliant.filter((item: any) => item.category !== 'meta').length}\n\n`;
     
+    // Add repository information if available
+    if (result.repoInfo) {
+      issueBody += `## Repository Information\n\n`;
+      issueBody += `- Name: ${result.repoInfo.name || 'Unknown'}\n`;
+      if (result.repoInfo.description) {
+        issueBody += `- Description: ${result.repoInfo.description}\n`;
+      }
+      if (result.repoInfo.defaultBranch) {
+        issueBody += `- Default Branch: ${result.repoInfo.defaultBranch}\n`;
+      }
+      issueBody += `\n`;
+    }
+    
     if (result.compliance.issues.length > 0) {
       issueBody += `## Issues to Fix\n\n`;
       result.compliance.issues.forEach((issue: any, index: number) => {
-        issueBody += `${index + 1}. **${issue.message}**\n`;
+        issueBody += `### ${index + 1}. ${issue.message}\n\n`;
+        
+        // Add error details if available
         if (issue.error) {
-          issueBody += `   - ${issue.error}\n`;
+          issueBody += `**Error Details:**\n\`\`\`\n${issue.error}\n\`\`\`\n\n`;
         }
-        issueBody += `\n`;
+        
+        // Add more context based on issue type
+        if (issue.id) {
+          issueBody += `**Issue ID:** \`${issue.id}\`\n\n`;
+        }
+        
+        if (issue.category) {
+          issueBody += `**Category:** ${issue.category}\n\n`;
+        }
+        
+        // Add remediation steps based on issue type
+        issueBody += `**How to Fix:**\n`;
+        
+        if (issue.id.includes('missing-file')) {
+          const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+          issueBody += `1. Create the missing file \`${fileName}\`\n`;
+          issueBody += `2. Ensure it contains the required content/structure\n`;
+          issueBody += `3. Commit the file to the repository\n\n`;
+        } 
+        else if (issue.id.includes('missing-folder')) {
+          const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+          issueBody += `1. Create the directory structure for \`${folderName}\`\n`;
+          issueBody += `2. Add appropriate files within this directory\n`;
+          issueBody += `3. Commit the changes to the repository\n\n`;
+        }
+        else if (issue.id.includes('missing-workflow')) {
+          const workflowName = issue.id.replace('missing-workflow-', '');
+          issueBody += `1. Create a GitHub Actions workflow file for \`${workflowName}\`\n`;
+          issueBody += `2. Ensure it follows the required structure and triggers\n`;
+          issueBody += `3. Save it in the \`.github/workflows/\` directory\n`;
+          issueBody += `4. Commit the file to the repository\n\n`;
+        }
+        else if (issue.id.includes('invalid-') || issue.id.includes('malformed-')) {
+          issueBody += `1. Review the file content and fix any syntax or formatting errors\n`;
+          issueBody += `2. Ensure it follows the required structure and schema\n`;
+          issueBody += `3. Validate the file before committing\n`;
+          issueBody += `4. Commit the changes to the repository\n\n`;
+        }
+        else {
+          issueBody += `1. Review the issue details carefully\n`;
+          issueBody += `2. Make the necessary changes to address the specific compliance issue\n`;
+          issueBody += `3. Verify that the changes resolve the issue\n`;
+          issueBody += `4. Commit the changes to the repository\n\n`;
+        }
       });
+      
+      // Add general guidance for fixing issues
+      issueBody += `## Next Steps\n\n`;
+      issueBody += `1. Address each issue individually, starting with the highest priority items\n`;
+      issueBody += `2. Run Template Doctor again after making changes to verify improvements\n`;
+      issueBody += `3. Aim for 100% compliance to ensure your template follows all best practices\n\n`;
+    }
+    
+    // Add passed checks for context
+    if (result.compliance.compliant.length > 0) {
+      issueBody += `## Passed Checks\n\n`;
+      result.compliance.compliant.filter((item: any) => item.category !== 'meta').forEach((item: any) => {
+        issueBody += `- ✅ ${item.message || item.id}\n`;
+      });
+      issueBody += `\n`;
     }
     
     // Add unique ID to help identify this issue for updates
