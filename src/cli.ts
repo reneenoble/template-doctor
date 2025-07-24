@@ -6,7 +6,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { generateDashboard } from "./dashboardGenerator.js";
 import { openDashboard, serveDashboard } from "./dashboardServer.js";
-import { createGitHubIssue, testAzdProvision, getAzdProvisionStatus } from "./mcpClient.js";
+import { createGitHubIssue, testAzdProvision, getAzdProvisionStatus, getGitHubIssues, updateGitHubIssue } from "./mcpClient.js";
 
 dotenv.config();
 
@@ -173,7 +173,10 @@ async function createIssueFromResults(result: any) {
   try {
     console.log("📝 Creating GitHub issue...");
     
-    const issueTitle = `Template Doctor Analysis: ${result.compliance.summary}`;
+    // Add date in square brackets to title
+    const today = new Date();
+    const formattedDate = `[${today.toISOString().split('T')[0]}]`;
+    const issueTitle = `Template Doctor Analysis: ${result.compliance.summary} ${formattedDate}`;
     
     // Format the issue body with the compliance results
     let issueBody = `# Template Doctor Analysis\n\n`;
@@ -194,6 +197,41 @@ async function createIssueFromResults(result: any) {
       });
     }
     
+    // Add unique ID to help identify this issue for updates
+    const uniqueId = `template-doctor-${Date.now()}`;
+    issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
+    
+    // First check for existing issues to update
+    try {
+      // Get existing issues for this repository
+      const { issues } = await getGitHubIssues(result.repoUrl, 'open');
+      
+      // Look for Template Doctor Analysis issues
+      const existingIssue = issues.find(issue => 
+        issue.title.startsWith('Template Doctor Analysis:')
+      );
+      
+      if (existingIssue) {
+        console.log(`📎 Found existing Template Doctor issue #${existingIssue.number}, updating...`);
+        
+        // Update the existing issue instead of creating a new one
+        const response = await updateGitHubIssue(
+          result.repoUrl, 
+          existingIssue.number, 
+          issueTitle, 
+          issueBody
+        );
+        
+        console.log(`✅ GitHub issue updated: ${response.html_url}`);
+        console.log(`   Issue number: #${response.number}`);
+        return response;
+      }
+    } catch (error) {
+      // If we fail to check for existing issues, proceed with creating a new one
+      console.warn("⚠️ Failed to check for existing issues, creating new issue instead");
+    }
+    
+    // Create a new issue if no existing issue was found or update failed
     const response = await createGitHubIssue(result.repoUrl, issueTitle, issueBody);
     console.log(`✅ GitHub issue created: ${response.html_url}`);
     console.log(`   Issue number: #${response.number}`);
@@ -374,6 +412,8 @@ async function rebuildCommand() {
     process.exit(1);
   }
 }
+
+
 
 // Run the CLI
 run().catch(err => {

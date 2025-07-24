@@ -59,94 +59,61 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
         }
       });
       
-      // API endpoints - Defined below
-      
-      // Add middleware to inject a back button into HTML files
-      app.use((req, res, next) => {
-        // Store the original send method
-        const originalSend = res.send;
-        
-        // Override send method
-        res.send = function(body) {
-          // Only process HTML files
-          if (typeof body === 'string' && req.path.endsWith('.html') && !req.path.includes('template-index.html')) {
-            // Add a back button to the HTML content
-            const backButton = `
-              <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
-                <a href="/template-index.html" style="display: inline-block; padding: 8px 16px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500;">
-                  <span style="margin-right: 5px;">&#8592;</span> Back to Index
-                </a>
-              </div>
-            `;
-            
-            // Insert the back button after the opening body tag
-            body = body.replace('<body>', '<body>' + backButton);
-          }
-          
-          // Call the original send method
-          return originalSend.call(this, body);
-        };
-        
-        next();
-      });
-      
       // API endpoints
       
       // GitHub Issue Creation Endpoint
       app.post('/api/github-issue', express.json(), async (req, res) => {
         try {
-          const { repoUrl, title, body, labels, checkForDuplicates = false } = req.body;
+          const { repoUrl, title, body, labels, checkForDuplicates = true } = req.body;
           
           if (!repoUrl || !title || !body) {
             res.status(400).json({ error: "Missing required parameters: repoUrl, title, body" });
             return;
           }
           
-          // Extract date from the title if it exists in the format [YYYY-MM-DD]
-          const dateMatch = title.match(/\[(\d{4}-\d{2}-\d{2})\]/);
-          const dateStr = dateMatch ? dateMatch[1] : null;
+          console.log(`Creating GitHub issue: ${title} for ${repoUrl}`);
           
-          let updated = false;
-          let response;
+          // Add date in square brackets to title if it's not there yet
+          const today = new Date();
+          const formattedDate = `[${today.toISOString().split('T')[0]}]`;
+          const finalTitle = title.includes('[20') ? title : `${title} ${formattedDate}`;
           
-          // Check for duplicate issues if requested
           if (checkForDuplicates) {
             try {
-              const existingIssues = await getGitHubIssues(repoUrl, 'open');
-              
-              // Look for similar issues with the same date or title pattern
-              const similarIssues = existingIssues.issues.filter(issue => {
-                if (dateStr) {
-                  // If we have a date in the new title, look for matching date in existing titles
-                  return issue.title.includes(dateStr);
+              // Check for existing issues with similar titles
+              const issueKeywords = title.split(' ').filter((word: string) => word.length > 4);
+              const { issues } = await getGitHubIssues(repoUrl, 'open');                // Check if there's a similar issue based on title
+              const similarIssue = issues.find(issue => {
+                if (title === issue.title) return true;
+                
+                // Check if the issue is about the same topic
+                if (issue.title.includes('Template Doctor') && 
+                    issueKeywords.some((keyword: string) => issue.title.includes(keyword))) {
+                  return true;
                 }
                 
-                // Otherwise look for similar title (without the date part)
-                const baseTitle = title.replace(/\[\d{4}-\d{2}-\d{2}\]/, '').trim();
-                const issueBaseTitle = issue.title.replace(/\[\d{4}-\d{2}-\d{2}\]/, '').trim();
-                
-                return issueBaseTitle.includes(baseTitle) || baseTitle.includes(issueBaseTitle);
+                return false;
               });
               
-              if (similarIssues.length > 0) {
-                // Update the first similar issue instead of creating a new one
-                console.log(`Found similar issue #${similarIssues[0].number}. Updating instead of creating.`);
-                response = await updateGitHubIssue(repoUrl, similarIssues[0].number, title, body);
-                updated = true;
+              if (similarIssue) {
+                // Instead of creating a duplicate, update the existing issue
+                console.log(`Found similar issue #${similarIssue.number}, updating instead of creating new`);
+                const response = await updateGitHubIssue(repoUrl, similarIssue.number, finalTitle, body);
+                const enhancedResponse = { 
+                  ...response, 
+                  updated: true  // Add flag to indicate this was an update
+                };
+                res.json(enhancedResponse);
+                return;
               }
             } catch (error) {
-              // If we can't check for duplicates, just proceed with creation
-              console.warn("Could not check for duplicate issues:", error);
+              console.warn("Error checking for duplicate issues, proceeding with creation:", error);
+              // Continue with creating a new issue if checking fails
             }
           }
           
-          // Create a new issue if no duplicate was found or update failed
-          if (!response) {
-            console.log(`Creating GitHub issue: ${title} for ${repoUrl}`);
-            response = await createGitHubIssue(repoUrl, title, body, labels, checkForDuplicates);
-          }
-          
-          res.json({ ...response, updated });
+          const response = await createGitHubIssue(repoUrl, finalTitle, body, labels);
+          res.json(response);
         } catch (error) {
           console.error("Error creating GitHub issue:", error);
           res.status(500).json({ error: (error as Error).message });
@@ -213,36 +180,34 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
           res.status(500).json({ error: (error as Error).message });
         }
       });
-      
-      // API endpoint for creating sub-issues
-      app.post('/api/github-sub-issue', express.json(), async (req, res) => {
-        try {
-          const { repoUrl, title, body, parentIssueNumber, issueId, labels = ["Template Doctor Issue"] } = req.body;
-          
-          if (!repoUrl || !title || !body || !parentIssueNumber) {
-            res.status(400).json({ error: "Missing required parameters: repoUrl, title, body, parentIssueNumber" });
-            return;
+
+      // Add middleware to inject a back button into HTML files
+      app.use((req, res, next) => {
+        // Store the original send method
+        const originalSend = res.send;
+        
+        // Override send method
+        res.send = function(body) {
+          // Only process HTML files
+          if (typeof body === 'string' && req.path.endsWith('.html') && !req.path.includes('template-index.html')) {
+            // Add a back button to the HTML content
+            const backButton = `
+              <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+                <a href="/template-index.html" style="display: inline-block; padding: 8px 16px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500;">
+                  <span style="margin-right: 5px;">&#8592;</span> Back to Index
+                </a>
+              </div>
+            `;
+            
+            // Insert the back button after the opening body tag
+            body = body.replace('<body>', '<body>' + backButton);
           }
           
-          console.log(`Creating GitHub sub-issue: ${title} for parent #${parentIssueNumber}`);
-          
-          // Import the createSubIssue function
-          const { createSubIssue } = await import('./mcpClient.js');
-          
-          const response = await createSubIssue(
-            repoUrl, 
-            title, 
-            body, 
-            parentIssueNumber, 
-            issueId, 
-            labels
-          );
-          
-          res.json(response);
-        } catch (error) {
-          console.error("Error creating GitHub sub-issue:", error);
-          res.status(500).json({ error: (error as Error).message });
-        }
+          // Call the original send method
+          return originalSend.call(this, body);
+        };
+        
+        next();
       });
       
       // Start the server

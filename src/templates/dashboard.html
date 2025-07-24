@@ -629,7 +629,7 @@
             </div>
             
             <div class="tooltip">
-                <button id="createIssueButton" class="btn" style="background-color: #2b3137;">
+                <button id="create-github-issue-btn" class="btn" style="background-color: #2b3137;">
                     <i class="fab fa-github"></i>
                     Create GitHub Issue
                 </button>
@@ -995,74 +995,27 @@
             
             const mcpUrl = new URL(window.location.href);
             const baseUrl = mcpUrl.origin;
-            const createIssueUrl = `${baseUrl}/api/github-issue`;
-            
-            // Create a more specific issue body for this single issue
-            let issueBody = "## Template Doctor Compliance Issue\n\n";
-            issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
-            issueBody += `### Issue Details:\n\n`;
-            issueBody += `- **ID**: ${issue.id}\n`;
-            issueBody += `- **Message**: ${issue.message}\n`;
-            
-            if (issue.error) {
-                issueBody += `- **Error**: ${issue.error}\n`;
-            }
-            
-            // Determine fix hint based on issue type
-            let fixHint = "";
-            if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
-                fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
-            } else if (issue.id.includes('missing-workflow')) {
-                fixHint = "Add the required workflow file to your .github/workflows directory.";
-            } else if (issue.id.includes('readme')) {
-                fixHint = "Update your README.md with the required headings and content.";
-            } else if (issue.id.includes('bicep')) {
-                fixHint = "Add the missing resources to your Bicep files.";
-            } else if (issue.id.includes('azure-yaml')) {
-                fixHint = "Update your azure.yaml file to include required sections.";
-            } else {
-                fixHint = "Review the issue details and make appropriate changes.";
-            }
-            
-            issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
-            issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
-            
-            // Determine a good title based on the issue
-            let issueTitle = "";
-            if (issue.id.includes('missing-file')) {
-                const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
-                issueTitle = `Missing required file: ${fileName}`;
-            } else if (issue.id.includes('missing-folder')) {
-                const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
-                issueTitle = `Missing required folder: ${folderName}`;
-            } else if (issue.id.includes('missing-workflow')) {
-                const workflowName = issue.id.replace('missing-workflow-', '');
-                issueTitle = `Missing workflow: ${workflowName}`;
-            } else {
-                // Use the message as title, but keep it reasonably short
-                issueTitle = issue.message.length > 60 ? 
-                    `${issue.message.substring(0, 57)}...` : 
-                    issue.message;
-            }
-            
-            const issueData = {
-                repoUrl: window.reportData.repoUrl,
-                title: issueTitle,
-                body: issueBody
-            };
             
             // Find the link element that was clicked and change its state
             const linkElement = event.target.closest('.item-link');
             const originalText = linkElement.innerHTML;
             linkElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Issue...';
-            linkElement.style.pointerEvents = 'none';
             
-            fetch(createIssueUrl, {
-                method: 'POST',
+            // Disable all issue creation links to prevent duplicate clicking
+            const allIssueLinks = document.querySelectorAll('.item-link');
+            allIssueLinks.forEach(link => {
+                link.style.pointerEvents = 'none';
+                link.style.opacity = '0.5';
+            });
+            
+            // First check if there's already a main issue to link this to
+            const checkIssuesUrl = `${baseUrl}/api/github-issues?repoUrl=${encodeURIComponent(window.reportData.repoUrl)}&state=open`;
+            
+            fetch(checkIssuesUrl, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(issueData)
+                }
             })
             .then(response => {
                 if (!response.ok) {
@@ -1071,19 +1024,208 @@
                 return response.json();
             })
             .then(data => {
-                alert(`GitHub issue created successfully! Issue URL: ${data.html_url}`);
-                // Open the issue in a new tab
-                window.open(data.html_url, '_blank');
+                // Look for Template Doctor Analysis issues with the "Template Doctor Full Scan" label
+                const mainIssue = data.issues.find(issue => 
+                    issue.title.startsWith('Template Doctor Analysis:') && 
+                    (issue.labels && issue.labels.includes('Template Doctor Full Scan'))
+                );
+                
+                if (mainIssue) {
+                    // Create a sub-issue linked to the main issue
+                    return createLinkedSubIssue(issue, mainIssue.number);
+                } else {
+                    // No main issue found, create a standalone issue
+                    return createStandaloneIssue(issue);
+                }
+            })
+            .then(data => {
+                const actionText = data.updated ? "updated" : "created";
+                
+                // Show success message using the helper function
+                showStatusMessage(
+                    linkElement.parentNode,
+                    'success',
+                    `Issue ${actionText}! <a href="${data.html_url}" target="_blank">View Issue #${data.number}</a>`
+                );
             })
             .catch(error => {
                 console.error('Error creating GitHub issue:', error);
-                alert(`Failed to create GitHub issue: ${error.message}`);
+                
+                // Show error message using the helper function
+                showStatusMessage(
+                    linkElement.parentNode,
+                    'error',
+                    `Error: ${error.message}`
+                );
             })
             .finally(() => {
                 // Restore link state
                 linkElement.innerHTML = originalText;
-                linkElement.style.pointerEvents = '';
+                
+                // Re-enable all issue creation links
+                const allIssueLinks = document.querySelectorAll('.item-link');
+                allIssueLinks.forEach(link => {
+                    link.style.pointerEvents = '';
+                    link.style.opacity = '1';
+                });
             });
+            
+            // Helper function to create a standalone issue
+            function createStandaloneIssue(issue) {
+                const createIssueUrl = `${baseUrl}/api/github-issue`;
+                const today = new Date();
+                const formattedDate = `[${today.toISOString().split('T')[0]}]`;
+                
+                // Create a more specific issue body for this single issue
+                let issueBody = "## Template Doctor Compliance Issue\n\n";
+                issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
+                issueBody += `### Issue Details:\n\n`;
+                issueBody += `- **ID**: ${issue.id}\n`;
+                issueBody += `- **Message**: ${issue.message}\n`;
+                issueBody += `- **Created**: ${today.toLocaleString()}\n`;
+                
+                if (issue.error) {
+                    issueBody += `- **Error**: ${issue.error}\n`;
+                }
+                
+                // Determine fix hint based on issue type
+                let fixHint = "";
+                if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
+                    fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    fixHint = "Add the required workflow file to your .github/workflows directory.";
+                } else if (issue.id.includes('readme')) {
+                    fixHint = "Update your README.md with the required headings and content.";
+                } else if (issue.id.includes('bicep')) {
+                    fixHint = "Add the missing resources to your Bicep files.";
+                } else if (issue.id.includes('azure-yaml')) {
+                    fixHint = "Update your azure.yaml file to include required sections.";
+                } else {
+                    fixHint = "Review the issue details and make appropriate changes.";
+                }
+                
+                issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
+                issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
+                
+                // Determine a good title based on the issue
+                let issueTitle = "";
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                    issueTitle = `Missing required file: ${fileName} ${formattedDate}`;
+                } else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                    issueTitle = `Missing required folder: ${folderName} ${formattedDate}`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    const workflowName = issue.id.replace('missing-workflow-', '');
+                    issueTitle = `Missing workflow: ${workflowName} ${formattedDate}`;
+                } else {
+                    // Use the message as title, but keep it reasonably short
+                    issueTitle = issue.message.length > 60 ? 
+                        `${issue.message.substring(0, 57)}... ${formattedDate}` : 
+                        `${issue.message} ${formattedDate}`;
+                }
+                
+                // Add unique identifier to help prevent duplicates
+                const uniqueId = `${issue.id}-${Date.now()}`;
+                issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
+                
+                // Create the issue
+                return fetch(createIssueUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        repoUrl: window.reportData.repoUrl,
+                        title: issueTitle,
+                        body: issueBody,
+                        labels: ["Template Doctor Issue"],
+                        checkForDuplicates: true
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok: ${response.status}`);
+                    }
+                    return response.json();
+                });
+            }
+            
+            // Helper function to create a sub-issue linked to the main issue
+            function createLinkedSubIssue(issue, parentIssueNumber) {
+                const createSubIssueUrl = `${baseUrl}/api/github-sub-issue`;
+                
+                // Create an ID for this issue that includes the issue type and a timestamp
+                const issueId = `TD-${issue.id}-${Date.now()}`;
+                
+                // Create a title with a prefix to identify it
+                const issueIndex = window.reportData.compliance.issues.findIndex(i => i.id === issue.id) + 1;
+                let issueTitle = "";
+                
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                    issueTitle = `TD-${issueIndex}: Missing required file: ${fileName}`;
+                } else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                    issueTitle = `TD-${issueIndex}: Missing required folder: ${folderName}`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    const workflowName = issue.id.replace('missing-workflow-', '');
+                    issueTitle = `TD-${issueIndex}: Missing workflow: ${workflowName}`;
+                } else {
+                    // Use the message as title, but keep it reasonably short
+                    issueTitle = issue.message.length > 60 ? 
+                        `TD-${issueIndex}: ${issue.message.substring(0, 57)}...` : 
+                        `TD-${issueIndex}: ${issue.message}`;
+                }
+                
+                // Create the issue body
+                let issueBody = "## Template Doctor Compliance Issue\n\n";
+                issueBody += `### Issue Details:\n\n`;
+                issueBody += `- **ID**: ${issue.id}\n`;
+                issueBody += `- **Message**: ${issue.message}\n`;
+                
+                if (issue.error) {
+                    issueBody += `- **Error**: ${issue.error}\n`;
+                }
+                
+                // Determine fix hint based on issue type
+                let fixHint = "";
+                if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
+                    fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    fixHint = "Add the required workflow file to your .github/workflows directory.";
+                } else if (issue.id.includes('readme')) {
+                    fixHint = "Update your README.md with the required headings and content.";
+                } else if (issue.id.includes('bicep')) {
+                    fixHint = "Add the missing resources to your Bicep files.";
+                } else if (issue.id.includes('azure-yaml')) {
+                    fixHint = "Update your azure.yaml file to include required sections.";
+                } else {
+                    fixHint = "Review the issue details and make appropriate changes.";
+                }
+                
+                issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
+                
+                // Create the sub-issue
+                return fetch(createSubIssueUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        repoUrl: window.reportData.repoUrl,
+                        title: issueTitle,
+                        body: issueBody,
+                        parentIssueNumber: parentIssueNumber,
+                        issueId: issueId,
+                        labels: ["Template Doctor Issue"]
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok: ${response.status}`);
+                    }
+                    return response.json();
+                });
+            }
             
             return false;
         }
@@ -1094,28 +1236,66 @@
             const baseUrl = mcpUrl.origin;
             const createIssueUrl = `${baseUrl}/api/github-issue`;
             
-            // Create summary of issues for the GitHub issue body
-            let issueBody = "## Template Doctor Compliance Issues\n\n";
-            issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
-            issueBody += `Compliance Score: ${window.reportData.compliance.compliant.find(item => item.category === 'meta')?.details?.percentageCompliant || 0}%\n\n`;
-            issueBody += "### Issues Found:\n\n";
+            // Add today's date in square brackets for the issue title
+            const today = new Date();
+            const formattedDate = `[${today.toISOString().split('T')[0]}]`;
             
-            window.reportData.compliance.issues.forEach(issue => {
-                issueBody += `- ${issue.message}\n`;
-            });
+            // Create summary of issues for the GitHub issue body
+            let issueBody = "# Template Doctor Analysis\n\n";
+            issueBody += `Template: ${window.reportData.repoUrl}\n\n`;
+            issueBody += `Analyzed on: ${new Date().toLocaleString()}\n\n`;
+            issueBody += `## Summary\n\n`;
+            issueBody += `- Compliance: ${window.reportData.compliance.compliant.find(item => item.category === 'meta')?.details?.percentageCompliant || 0}%\n`;
+            issueBody += `- Issues Found: ${window.reportData.compliance.issues.length}\n`;
+            issueBody += `- Passed Checks: ${window.reportData.compliance.compliant.filter(item => item.category !== 'meta').length}\n\n`;
+            
+            if (window.reportData.compliance.issues.length > 0) {
+                issueBody += `## Issues to Fix\n\n`;
+                window.reportData.compliance.issues.forEach((issue, index) => {
+                    issueBody += `${index + 1}. **${issue.message}**\n`;
+                    if (issue.error) {
+                        issueBody += `   - ${issue.error}\n`;
+                    }
+                    issueBody += `\n`;
+                });
+            }
+            
+            // Add unique ID to help identify this issue for updates
+            const uniqueId = `template-doctor-${Date.now()}`;
+            issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
+            issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
             
             const issueData = {
                 repoUrl: window.reportData.repoUrl,
-                title: `Template Compliance Issues - ${new Date().toLocaleDateString()}`,
-                body: issueBody
+                title: `Template Doctor Analysis: ${window.reportData.compliance.summary} ${formattedDate}`,
+                body: issueBody,
+                labels: ["Template Doctor Full Scan"],
+                checkForDuplicates: true
             };
             
             // Show loading state
-            const createIssueButton = document.getElementById('createIssueButton');
+            const createIssueButton = document.getElementById('create-github-issue-btn');
             const originalText = createIssueButton.innerHTML;
-            createIssueButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Issue...';
+            createIssueButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Issues...';
             createIssueButton.disabled = true;
             
+            // Add a status message element below the button
+            let statusElement = document.getElementById('issueStatusMessage');
+            if (!statusElement) {
+                statusElement = document.createElement('div');
+                statusElement.id = 'issueStatusMessage';
+                statusElement.style.marginTop = '10px';
+                statusElement.style.padding = '10px';
+                statusElement.style.backgroundColor = '#f0f0f0';
+                statusElement.style.borderRadius = '4px';
+                statusElement.style.fontSize = '14px';
+                createIssueButton.parentNode.appendChild(statusElement);
+            }
+            
+            statusElement.innerHTML = 'Creating main issue...';
+            statusElement.style.display = 'block';
+            
+            // Proceed with creating/updating the main issue
             fetch(createIssueUrl, {
                 method: 'POST',
                 headers: {
@@ -1130,19 +1310,120 @@
                 return response.json();
             })
             .then(data => {
-                alert(`GitHub issue created successfully! Issue URL: ${data.html_url}`);
-                // Open the issue in a new tab
-                window.open(data.html_url, '_blank');
+                const actionText = data.updated ? "updated" : "created";
+                const mainIssueNumber = data.number;
+                
+                statusElement.innerHTML = `Main issue ${actionText}. <a href="${data.html_url}" target="_blank">View Issue #${mainIssueNumber}</a><br>Creating individual issues...`;
+                
+                // Create sub-issues for each individual issue
+                return createSubIssues(window.reportData.compliance.issues, window.reportData.repoUrl, mainIssueNumber, baseUrl, statusElement);
             })
             .catch(error => {
                 console.error('Error creating GitHub issue:', error);
-                alert(`Failed to create GitHub issue: ${error.message}`);
+                statusElement.innerHTML = `<span style="color: red;">Error: ${error.message}</span>`;
             })
             .finally(() => {
                 // Restore button state
                 createIssueButton.innerHTML = originalText;
                 createIssueButton.disabled = false;
             });
+        }
+        
+        // Helper function to create sub-issues for each individual issue
+        async function createSubIssues(issues, repoUrl, parentIssueNumber, baseUrl, statusElement) {
+            const createSubIssueUrl = `${baseUrl}/api/github-sub-issue`;
+            const today = new Date();
+            const formattedDate = `[${today.toISOString().split('T')[0]}]`;
+            
+            let successCount = 0;
+            let failureCount = 0;
+            
+            for (let i = 0; i < issues.length; i++) {
+                const issue = issues[i];
+                statusElement.innerHTML = `Creating individual issues: ${i+1}/${issues.length}...`;
+                
+                // Generate a unique ID for this issue based on its content
+                const issueId = `TD-${issue.id}-${Date.now()}`;
+                
+                // Create the title for the sub-issue
+                let issueTitle = "";
+                if (issue.id.includes('missing-file')) {
+                    const fileName = issue.message.match(/Missing required file: (.+)/)?.[1] || "file";
+                    issueTitle = `TD-${i+1}: Missing required file: ${fileName}`;
+                } else if (issue.id.includes('missing-folder')) {
+                    const folderName = issue.message.match(/Missing required folder: (.+)/)?.[1] || "folder";
+                    issueTitle = `TD-${i+1}: Missing required folder: ${folderName}`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    const workflowName = issue.id.replace('missing-workflow-', '');
+                    issueTitle = `TD-${i+1}: Missing workflow: ${workflowName}`;
+                } else {
+                    // Use the message as title, but keep it reasonably short
+                    issueTitle = issue.message.length > 60 ? 
+                        `TD-${i+1}: ${issue.message.substring(0, 57)}...` : 
+                        `TD-${i+1}: ${issue.message}`;
+                }
+                
+                // Create the body for the sub-issue
+                let issueBody = "## Template Doctor Compliance Issue\n\n";
+                issueBody += `### Issue Details:\n\n`;
+                issueBody += `- **ID**: ${issue.id}\n`;
+                issueBody += `- **Message**: ${issue.message}\n`;
+                
+                if (issue.error) {
+                    issueBody += `- **Error**: ${issue.error}\n`;
+                }
+                
+                // Determine fix hint based on issue type
+                let fixHint = "";
+                if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
+                    fixHint = `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.`;
+                } else if (issue.id.includes('missing-workflow')) {
+                    fixHint = "Add the required workflow file to your .github/workflows directory.";
+                } else if (issue.id.includes('readme')) {
+                    fixHint = "Update your README.md with the required headings and content.";
+                } else if (issue.id.includes('bicep')) {
+                    fixHint = "Add the missing resources to your Bicep files.";
+                } else if (issue.id.includes('azure-yaml')) {
+                    fixHint = "Update your azure.yaml file to include required sections.";
+                } else {
+                    fixHint = "Review the issue details and make appropriate changes.";
+                }
+                
+                issueBody += `\n### How to Fix:\n\n${fixHint}\n`;
+                
+                try {
+                    const response = await fetch(createSubIssueUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            repoUrl: repoUrl,
+                            title: issueTitle,
+                            body: issueBody,
+                            parentIssueNumber: parentIssueNumber,
+                            issueId: issueId,
+                            labels: ["Template Doctor Issue"]
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok: ${response.status}`);
+                    }
+                    
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error creating sub-issue for ${issue.id}:`, error);
+                    failureCount++;
+                }
+            }
+            
+            // Update the status element with the final results
+            if (failureCount === 0) {
+                statusElement.innerHTML = `<span style="color: green;">✅ Created main issue and ${successCount} individual issues successfully!</span>`;
+            } else {
+                statusElement.innerHTML = `<span style="color: orange;">⚠️ Created main issue and ${successCount} individual issues. Failed to create ${failureCount} issues.</span>`;
+            }
         }
         
         // Function to test AZD provision
@@ -1265,8 +1546,40 @@
         });
         
         // Setup MCP integration button event handlers
-        document.getElementById('createIssueButton').addEventListener('click', createGitHubIssue);
+        document.getElementById('create-github-issue-btn').addEventListener('click', createGitHubIssue);
         document.getElementById('testProvisionButton').addEventListener('click', testAzdProvision);
+        
+        // Helper function to show status messages
+        function showStatusMessage(parentElement, type, message, duration = 10000) {
+            const messageElement = document.createElement('div');
+            messageElement.style.fontSize = '12px';
+            messageElement.style.marginTop = '5px';
+            messageElement.style.padding = '5px';
+            messageElement.style.borderRadius = '3px';
+            
+            if (type === 'success') {
+                messageElement.style.color = 'white';
+                messageElement.style.backgroundColor = '#107c10';
+            } else if (type === 'error') {
+                messageElement.style.color = 'white';
+                messageElement.style.backgroundColor = '#d83b01';
+            } else if (type === 'info') {
+                messageElement.style.color = 'white';
+                messageElement.style.backgroundColor = '#0078d4';
+            }
+            
+            messageElement.innerHTML = message;
+            
+            // Insert the message into the parent element
+            parentElement.appendChild(messageElement);
+            
+            // Auto-remove the message after the specified duration
+            setTimeout(() => {
+                messageElement.remove();
+            }, duration);
+            
+            return messageElement;
+        }
     </script>
     
     <footer class="site-footer">
