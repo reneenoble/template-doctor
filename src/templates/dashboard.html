@@ -406,7 +406,8 @@
         /* Tooltip styles */
         .tooltip {
             position: relative;
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
         }
         
         .tooltip .tooltiptext {
@@ -1008,31 +1009,89 @@
                 link.style.opacity = '0.5';
             });
             
-            // First check if there's already a main issue to link this to
-            const checkIssuesUrl = `${baseUrl}/api/github-issues?repoUrl=${encodeURIComponent(window.reportData.repoUrl)}&state=open`;
+            // First check if there's already a main issue to link this to (both open and closed)
+            const checkOpenIssuesUrl = `${baseUrl}/api/github-issues?repoUrl=${encodeURIComponent(window.reportData.repoUrl)}&state=open`;
             
-            fetch(checkIssuesUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
+            // Function to check for a main issue
+            const checkForMainIssue = async () => {
+                // First check open issues
+                const openResponse = await fetch(checkOpenIssuesUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!openResponse.ok) {
+                    throw new Error(`Network response was not ok: ${openResponse.status}`);
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Look for Template Doctor Analysis issues with the "Template Doctor Full Scan" label
-                const mainIssue = data.issues.find(issue => 
+                
+                const openData = await openResponse.json();
+                
+                // Look for Template Doctor Analysis issues with the "template-doctor-full-scan" label
+                const mainIssue = openData.issues.find(issue => 
                     issue.title.startsWith('Template Doctor Analysis:') && 
-                    (issue.labels && issue.labels.includes('Template Doctor Full Scan'))
+                    (issue.labels && issue.labels.includes('template-doctor-full-scan'))
                 );
                 
                 if (mainIssue) {
-                    // Create a sub-issue linked to the main issue
-                    return createLinkedSubIssue(issue, mainIssue.number);
+                    return mainIssue;
+                }
+                
+                // If no open main issue, check closed issues
+                const checkClosedIssuesUrl = `${baseUrl}/api/github-issues?repoUrl=${encodeURIComponent(window.reportData.repoUrl)}&state=closed`;
+                
+                const closedResponse = await fetch(checkClosedIssuesUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!closedResponse.ok) {
+                    throw new Error(`Network response was not ok: ${closedResponse.status}`);
+                }
+                
+                const closedData = await closedResponse.json();
+                
+                // Look for Template Doctor Analysis issues with the "template-doctor-full-scan" label
+                const closedMainIssue = closedData.issues.find(issue => 
+                    issue.title.startsWith('Template Doctor Analysis:') && 
+                    (issue.labels && issue.labels.includes('template-doctor-full-scan'))
+                );
+                
+                return closedMainIssue;
+            };
+            
+            // Use the function to check for main issues
+            checkForMainIssue()
+            .then(mainIssue => {
+                if (mainIssue) {
+                    // Check if the issue is closed (might need to reopen it)
+                    if (mainIssue.state === 'closed') {
+                        // We found a closed main issue - reopen it first
+                        return fetch(`${baseUrl}/api/reopen-issue`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                repoUrl: window.reportData.repoUrl,
+                                issueNumber: mainIssue.number
+                            })
+                        }).then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Failed to reopen issue: ${response.status}`);
+                            }
+                            return response.json();
+                        }).then(() => {
+                            // Now create a sub-issue linked to the reopened issue
+                            return createLinkedSubIssue(issue, mainIssue.number);
+                        });
+                    } else {
+                        // Main issue is already open, just link to it
+                        return createLinkedSubIssue(issue, mainIssue.number);
+                    }
                 } else {
                     // No main issue found, create a standalone issue
                     return createStandaloneIssue(issue);
@@ -1127,21 +1186,20 @@
                 
                 // Add unique identifier to help prevent duplicates
                 const uniqueId = `${issue.id}-${Date.now()}`;
-                issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
-                
-                // Create the issue
-                return fetch(createIssueUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        repoUrl: window.reportData.repoUrl,
-                        title: issueTitle,
-                        body: issueBody,
-                        labels: ["Template Doctor Issue"],
-                        checkForDuplicates: true
-                    })
+                issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;                    // Create the issue
+                    return fetch(createIssueUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            repoUrl: window.reportData.repoUrl,
+                            title: issueTitle,
+                            body: issueBody,
+                            labels: ["template-doctor-issue"],
+                            checkForDuplicates: true,
+                            assignee: "copilot-swe-agent" // Use correct Copilot assignee name
+                        })
                 }).then(response => {
                     if (!response.ok) {
                         throw new Error(`Network response was not ok: ${response.status}`);
@@ -1217,7 +1275,7 @@
                         body: issueBody,
                         parentIssueNumber: parentIssueNumber,
                         issueId: issueId,
-                        labels: ["Template Doctor Issue"]
+                        labels: ["template-doctor-issue"]
                     })
                 }).then(response => {
                     if (!response.ok) {
@@ -1235,6 +1293,9 @@
             const mcpUrl = new URL(window.location.href);
             const baseUrl = mcpUrl.origin;
             const createIssueUrl = `${baseUrl}/api/github-issue`;
+            
+            // Check for both open and closed issues before creating a new one
+            const checkOpenIssuesUrl = `${baseUrl}/api/github-issues?repoUrl=${encodeURIComponent(window.reportData.repoUrl)}&state=all`;
             
             // Add today's date in square brackets for the issue title
             const today = new Date();
@@ -1265,12 +1326,14 @@
             issueBody += `\n---\n*This issue was created by Template Doctor, an automated compliance checking tool.*`;
             issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
             
+            // Make sure the labels are passed exactly as GitHub expects them
             const issueData = {
                 repoUrl: window.reportData.repoUrl,
                 title: `Template Doctor Analysis: ${window.reportData.compliance.summary} ${formattedDate}`,
                 body: issueBody,
-                labels: ["Template Doctor Full Scan"],
-                checkForDuplicates: true
+                labels: ["template-doctor-full-scan"],
+                checkForDuplicates: true,
+                assignee: "copilot-swe-agent" // Use correct Copilot assignee name
             };
             
             // Show loading state
@@ -1403,7 +1466,8 @@
                             body: issueBody,
                             parentIssueNumber: parentIssueNumber,
                             issueId: issueId,
-                            labels: ["Template Doctor Issue"]
+                            labels: ["template-doctor-issue"],
+                            assignee: "copilot-swe-agent" // Use correct Copilot assignee name
                         })
                     });
                     

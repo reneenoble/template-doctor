@@ -95,7 +95,7 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
       // GitHub Issue Creation Endpoint
       app.post('/api/github-issue', express.json(), async (req, res) => {
         try {
-          const { repoUrl, title, body, labels, checkForDuplicates = false } = req.body;
+          const { repoUrl, title, body, labels, checkForDuplicates = false, assignee } = req.body;
           
           if (!repoUrl || !title || !body) {
             res.status(400).json({ error: "Missing required parameters: repoUrl, title, body" });
@@ -112,13 +112,19 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
           // Check for duplicate issues if requested
           if (checkForDuplicates) {
             try {
-              const existingIssues = await getGitHubIssues(repoUrl, 'open');
+              // First check open issues
+              const openIssues = await getGitHubIssues(repoUrl, 'open');
               
-              // Look for similar issues with the same date or title pattern
-              const similarIssues = existingIssues.issues.filter(issue => {
-                if (dateStr) {
-                  // If we have a date in the new title, look for matching date in existing titles
-                  return issue.title.includes(dateStr);
+              // Look for similar open issues with the same date or title pattern
+              const openSimilarIssues = openIssues.issues.filter(issue => {
+                // Check if it's a Template Doctor issue first
+                if (!issue.title.startsWith('Template Doctor')) {
+                  return false;
+                }
+                
+                if (dateStr && issue.title.includes(dateStr)) {
+                  // If we have a date in the new title, look for matching date
+                  return true;
                 }
                 
                 // Otherwise look for similar title (without the date part)
@@ -128,11 +134,38 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
                 return issueBaseTitle.includes(baseTitle) || baseTitle.includes(issueBaseTitle);
               });
               
-              if (similarIssues.length > 0) {
+              if (openSimilarIssues.length > 0) {
                 // Update the first similar issue instead of creating a new one
-                console.log(`Found similar issue #${similarIssues[0].number}. Updating instead of creating.`);
-                response = await updateGitHubIssue(repoUrl, similarIssues[0].number, title, body);
+                console.log(`Found similar open issue #${openSimilarIssues[0].number}. Updating instead of creating.`);
+                response = await updateGitHubIssue(repoUrl, openSimilarIssues[0].number, title, body, false, assignee);
                 updated = true;
+              } else {
+                // Check closed issues
+                const closedIssues = await getGitHubIssues(repoUrl, 'closed');
+                
+                // Look for similar closed issues
+                const closedSimilarIssues = closedIssues.issues.filter(issue => {
+                  // Check if it's a Template Doctor issue first
+                  if (!issue.title.startsWith('Template Doctor')) {
+                    return false;
+                  }
+                  
+                  if (dateStr && issue.title.includes(dateStr)) {
+                    return true;
+                  }
+                  
+                  const baseTitle = title.replace(/\[\d{4}-\d{2}-\d{2}\]/, '').trim();
+                  const issueBaseTitle = issue.title.replace(/\[\d{4}-\d{2}-\d{2}\]/, '').trim();
+                  
+                  return issueBaseTitle.includes(baseTitle) || baseTitle.includes(issueBaseTitle);
+                });
+                
+                if (closedSimilarIssues.length > 0) {
+                  // Reopen and update the first closed issue
+                  console.log(`Found similar closed issue #${closedSimilarIssues[0].number}. Reopening and updating.`);
+                  response = await updateGitHubIssue(repoUrl, closedSimilarIssues[0].number, title, body, true, assignee);
+                  updated = true;
+                }
               }
             } catch (error) {
               // If we can't check for duplicates, just proceed with creation
@@ -143,7 +176,7 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
           // Create a new issue if no duplicate was found or update failed
           if (!response) {
             console.log(`Creating GitHub issue: ${title} for ${repoUrl}`);
-            response = await createGitHubIssue(repoUrl, title, body, labels, checkForDuplicates);
+            response = await createGitHubIssue(repoUrl, title, body, labels, checkForDuplicates, assignee);
           }
           
           res.json({ ...response, updated });
@@ -217,7 +250,15 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
       // API endpoint for creating sub-issues
       app.post('/api/github-sub-issue', express.json(), async (req, res) => {
         try {
-          const { repoUrl, title, body, parentIssueNumber, issueId, labels = ["Template Doctor Issue"] } = req.body;
+          const { 
+            repoUrl, 
+            title, 
+            body, 
+            parentIssueNumber, 
+            issueId, 
+            labels = ["template-doctor-issue"],
+            assignee 
+          } = req.body;
           
           if (!repoUrl || !title || !body || !parentIssueNumber) {
             res.status(400).json({ error: "Missing required parameters: repoUrl, title, body, parentIssueNumber" });
@@ -235,12 +276,47 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
             body, 
             parentIssueNumber, 
             issueId, 
-            labels
+            labels,
+            assignee
           );
           
           res.json(response);
         } catch (error) {
           console.error("Error creating GitHub sub-issue:", error);
+          res.status(500).json({ error: (error as Error).message });
+        }
+      });
+      
+      // API endpoint for reopening a closed issue
+      app.post('/api/reopen-issue', express.json(), async (req, res) => {
+        try {
+          const { repoUrl, issueNumber, assignee } = req.body;
+          
+          if (!repoUrl || !issueNumber) {
+            res.status(400).json({ error: "Missing required parameters: repoUrl, issueNumber" });
+            return;
+          }
+          
+          console.log(`Reopening GitHub issue #${issueNumber}`);
+          
+          // Use updateGitHubIssue function with a dummy title/body
+          // We'll set these to their original values when we fetch them
+          const response = await updateGitHubIssue(
+            repoUrl,
+            issueNumber,
+            "Reopening issue",
+            "Reopening closed issue...",
+            true, // Flag to reopen the issue
+            assignee
+          );
+          
+          res.json({
+            html_url: response.html_url,
+            number: response.number,
+            reopened: true
+          });
+        } catch (error) {
+          console.error("Error reopening GitHub issue:", error);
           res.status(500).json({ error: (error as Error).message });
         }
       });

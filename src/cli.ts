@@ -171,7 +171,7 @@ async function createIssueCommand() {
 
 async function createIssueFromResults(result: any) {
   try {
-    console.log("📝 Creating GitHub issue...");
+    console.log("📝 Preparing GitHub issue...");
     
     // Add date in square brackets to title
     const today = new Date();
@@ -201,40 +201,82 @@ async function createIssueFromResults(result: any) {
     const uniqueId = `template-doctor-${Date.now()}`;
     issueBody += `\n\n<!-- Issue Tracker ID: ${uniqueId} -->`;
     
-    // First check for existing issues to update
+    // First check for open issues
+    let existingMainIssue = null;
+    let isReopenedIssue = false;
+    
     try {
-      // Get existing issues for this repository
-      const { issues } = await getGitHubIssues(result.repoUrl, 'open');
+      // First check open issues with the specific label
+      console.log("🔍 Checking for existing open issues...");
+      const { issues: openIssues } = await getGitHubIssues(
+        result.repoUrl, 
+        'open',
+        ['template-doctor-full-scan'] // Filter by this label to improve efficiency
+      );
       
       // Look for Template Doctor Analysis issues
-      const existingIssue = issues.find(issue => 
+      existingMainIssue = openIssues.find(issue => 
         issue.title.startsWith('Template Doctor Analysis:')
       );
       
-      if (existingIssue) {
-        console.log(`📎 Found existing Template Doctor issue #${existingIssue.number}, updating...`);
-        
-        // Update the existing issue instead of creating a new one
-        const response = await updateGitHubIssue(
+      // If no open issue found, check closed issues
+      if (!existingMainIssue) {
+        console.log("🔍 Checking for existing closed issues...");
+        const { issues: closedIssues } = await getGitHubIssues(
           result.repoUrl, 
-          existingIssue.number, 
-          issueTitle, 
-          issueBody
+          'closed',
+          ['template-doctor-full-scan'] // Filter by this label to improve efficiency
         );
         
-        console.log(`✅ GitHub issue updated: ${response.html_url}`);
-        console.log(`   Issue number: #${response.number}`);
-        return response;
+        existingMainIssue = closedIssues.find(issue => 
+          issue.title.startsWith('Template Doctor Analysis:')
+        );
+        
+        if (existingMainIssue) {
+          console.log(`📎 Found existing closed Template Doctor issue #${existingMainIssue.number}, reopening...`);
+          isReopenedIssue = true;
+        }
+      } else {
+        console.log(`📎 Found existing open Template Doctor issue #${existingMainIssue.number}, updating...`);
       }
+      
     } catch (error) {
       // If we fail to check for existing issues, proceed with creating a new one
       console.warn("⚠️ Failed to check for existing issues, creating new issue instead");
     }
     
-    // Create a new issue if no existing issue was found or update failed
-    const response = await createGitHubIssue(result.repoUrl, issueTitle, issueBody);
-    console.log(`✅ GitHub issue created: ${response.html_url}`);
-    console.log(`   Issue number: #${response.number}`);
+    // Handle existing issue or create a new one
+    let response;
+    
+    if (existingMainIssue) {
+      // Update the existing issue
+      response = await updateGitHubIssue(
+        result.repoUrl, 
+        existingMainIssue.number, 
+        issueTitle, 
+        issueBody,
+        isReopenedIssue, // reopen if it was closed
+        "copilot-swe-agent" // assign to Copilot using the correct login name
+      );
+      
+      const actionText = isReopenedIssue ? "reopened and updated" : "updated";
+      console.log(`✅ GitHub issue ${actionText}: ${response.html_url}`);
+      console.log(`   Issue number: #${response.number}`);
+    } else {
+      console.log("✨ Creating new GitHub issue...");
+      // Create a new issue with the template-doctor-full-scan label
+      response = await createGitHubIssue(
+        result.repoUrl, 
+        issueTitle, 
+        issueBody,
+        ["template-doctor-full-scan"], // Use the correct label for the main issue
+        false, // Don't need to check for duplicates again
+        "copilot-swe-agent" // assign to Copilot using the correct login name
+      );
+      
+      console.log(`✅ GitHub issue created: ${response.html_url}`);
+      console.log(`   Issue number: #${response.number}`);
+    }
     
     return response;
   } catch (err) {
