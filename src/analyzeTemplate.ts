@@ -1,5 +1,11 @@
 import { listRepoFiles, fetchFileContent, getDefaultBranch } from "./githubClient.js";
-import config from "./config/dod-rules.js";
+import dodRulesConfig from "./config/dod-rules.js";
+import partnerRulesConfig from "./config/partner-rules.js";
+import customRulesConfig from "./config/custom-rules.js";
+import { TemplateConfig } from "./config/config-types.js";
+
+// Define valid rule sets
+export type RuleSet = "dod" | "partner" | "custom";
 
 type Issue = { id: string; severity: "error" | "warning"; message: string, error?: string };
 type ReadmeHeading = { level: number; text: string; hasImage?: boolean };
@@ -11,8 +17,26 @@ type ComplianceItem = {
   details?: any;
 };
 
-export async function analyzeTemplate(repoUrl: string): Promise<{
+/**
+ * Get the appropriate configuration based on the selected rule set
+ * @param ruleSet The rule set to use: "dod", "partner", or "custom"
+ * @returns The configuration for the selected rule set
+ */
+function getConfig(ruleSet: RuleSet = "dod"): TemplateConfig {
+  switch (ruleSet) {
+    case "partner":
+      return partnerRulesConfig;
+    case "custom":
+      return customRulesConfig;
+    case "dod":
+    default:
+      return dodRulesConfig;
+  }
+}
+
+export async function analyzeTemplate(repoUrl: string, ruleSet: RuleSet = "dod"): Promise<{
   repoUrl: string;
+  ruleSet: RuleSet;
   timestamp: string;
   compliance: {
     issues: Issue[];
@@ -20,6 +44,8 @@ export async function analyzeTemplate(repoUrl: string): Promise<{
     summary: string;
   };
 }> {
+  // Get the appropriate configuration based on the rule set
+  const config = getConfig(ruleSet);
   const repoFullName = extractRepoFullName(repoUrl);
   const defaultBranch = await getDefaultBranch(repoFullName);
   const files = await listRepoFiles(repoFullName, defaultBranch);
@@ -127,7 +153,7 @@ export async function analyzeTemplate(repoUrl: string): Promise<{
   if (config.readmeRequirements && normalized.some(f => f === "readme.md")) {
     try {
       const readmeContent = await fetchFileContent(repoFullName, "README.md", defaultBranch);
-      await checkReadmeRequirements(readmeContent, issues, compliant);
+      await checkReadmeRequirements(readmeContent, issues, compliant, config);
     } catch (err) {
       issues.push({
         id: "readme-read-error",
@@ -299,6 +325,7 @@ export async function analyzeTemplate(repoUrl: string): Promise<{
 
   const result = {
     repoUrl,
+    ruleSet,
     timestamp: new Date().toISOString(),
     compliance: {
       issues,
@@ -349,8 +376,9 @@ function parseMarkdownHeadings(markdown: string): ReadmeHeading[] {
  * @param readmeContent README.md content
  * @param issues Array to add issues to
  * @param compliant Array to add compliant items to
+ * @param config The configuration to use for the analysis
  */
-async function checkReadmeRequirements(readmeContent: string, issues: Issue[], compliant: ComplianceItem[]): Promise<void> {
+async function checkReadmeRequirements(readmeContent: string, issues: Issue[], compliant: ComplianceItem[], config: TemplateConfig): Promise<void> {
   const headings = parseMarkdownHeadings(readmeContent);
   
   // Check for required headings (h2)

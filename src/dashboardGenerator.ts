@@ -56,6 +56,7 @@ export async function generateDashboard(analysisResults: any, outputPath: string
       dashboardPath: dashboardFilename,
       dataPath: dataJsFilename,
       repoUrl: analysisResults.repoUrl,
+      ruleSet: analysisResults.ruleSet || 'dod', // Include the rule set used
       compliance: {
         percentage: analysisResults.compliance.compliant.find((item: any) => item.category === 'meta')?.details?.percentageCompliant || 0,
         issues: analysisResults.compliance.issues.length,
@@ -81,6 +82,7 @@ export async function generateDashboard(analysisResults: any, outputPath: string
     // Add current analysis to history
     const historyEntry = {
       timestamp: analysisResults.timestamp,
+      ruleSet: analysisResults.ruleSet || 'dod', // Include the rule set used
       percentage: analysisResults.compliance.compliant.find((item: any) => item.category === 'meta')?.details?.percentageCompliant || 0,
       issues: analysisResults.compliance.issues.length,
       passed: analysisResults.compliance.compliant.filter((item: any) => item.category !== 'meta').length,
@@ -108,8 +110,21 @@ export async function generateDashboard(analysisResults: any, outputPath: string
     // Use a simpler approach to avoid parsing errors
     await fs.writeFile(dataJsPath, `window.reportData = ${JSON.stringify(reportDataWithHistory, null, 2)};`);
     
-    // Add a script tag to load the data file before the closing body tag
-    dashboardTemplate = dashboardTemplate.replace('</body>', `<script src="${dataJsFilename}"></script></body>`);
+    // Copy the GitHub issue handler script to the repo directory
+    const issueHandlerSrc = path.resolve(__dirname, 'templates', 'github-issue-handler.js');
+    const issueHandlerDest = path.join(repoDir, 'github-issue-handler.js');
+    
+    try {
+      await fs.copyFile(issueHandlerSrc, issueHandlerDest);
+    } catch (err) {
+      console.warn('Could not copy GitHub issue handler script:', err);
+    }
+    
+    // Add script tags to load the data file and GitHub issue handler before the closing body tag
+    dashboardTemplate = dashboardTemplate.replace('</body>', 
+      `<script src="${dataJsFilename}"></script>
+       <script src="github-issue-handler.js"></script>
+       </body>`);
     
     // Create the dashboard HTML file
     await fs.writeFile(dashboardPath, dashboardTemplate);

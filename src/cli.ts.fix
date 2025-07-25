@@ -365,36 +365,6 @@ async function createIssueFromResults(result: any) {
     return response;
   } catch (err) {
     console.error("❌ Failed to create GitHub issue:", err instanceof Error ? err.message : err);
-    
-    // Check for specific errors about disabled issues
-    const errorObj = err as any;
-    
-    if (errorObj.code === 'ISSUES_DISABLED' || 
-        (errorObj.message && errorObj.message.includes('Issues are disabled for this repo')) ||
-        (errorObj.data && errorObj.data.message === 'Issues are disabled for this repo')) {
-      
-      // Get the exact GitHub error message if available
-      const githubMessage = errorObj.data?.message || 
-                            (errorObj.originalError?.data?.message || 
-                            (errorObj.message?.includes('Issues are disabled') ? errorObj.message : 
-                            'Issues are disabled for this repository'));
-      
-      // Get the status code if available                      
-      const statusCode = errorObj.data?.status || 
-                         (errorObj.originalError?.status || 
-                         (errorObj.response?.status || 410));
-      
-      console.error(`❗ GitHub API Error (${statusCode}): ${githubMessage}`);
-      console.error(`📄 Documentation: ${errorObj.data?.documentation_url || 'https://docs.github.com/v3/issues/'}`);
-      console.error("🔧 To enable issues, go to the repository settings on GitHub:");
-      console.error(`   ${result.repoUrl}/settings`);
-      console.error("   Then check the 'Issues' option under Features section.");
-      
-    } else {
-      // For other errors, show a generic message
-      console.error("❌ Unable to create or update GitHub issue. Check permissions and try again.");
-    }
-    
     throw err;
   }
 }

@@ -284,6 +284,31 @@
             background-color: var(--primary-dark);
             transform: translateY(-2px);
         }
+        
+        .rule-set-badge {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 5px;
+        }
+        
+        .rule-dod {
+            background-color: #005a9e;
+            color: white;
+        }
+        
+        .rule-partner {
+            background-color: #6b2eb3;
+            color: white;
+        }
+        
+        .rule-custom {
+            background-color: #c19c00;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -373,6 +398,12 @@
                 const date = new Date(template.timestamp);
                 const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
                 
+                // Format rule set for display - capitalize first letter
+                const ruleSet = template.ruleSet ? 
+                    template.ruleSet.charAt(0).toUpperCase() + template.ruleSet.slice(1) : 
+                    'DoD';
+                const ruleClass = `rule-${template.ruleSet || 'dod'}`;
+                
                 div.innerHTML = `
                     <div class="template-header">
                         <div class="template-name">${repoName}</div>
@@ -381,7 +412,7 @@
                     
                     <div>
                         <div style="display: flex; justify-content: space-between;">
-                            <div>Compliance:</div>
+                            <div>Compliance <span class="rule-set-badge ${ruleClass}">${ruleSet}</span>:</div>
                             <div><strong>${template.compliance.percentage}%</strong></div>
                         </div>
                         <div class="gauge">

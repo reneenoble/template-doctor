@@ -145,14 +145,12 @@ async function analyzeCommand() {
         }
       } catch (err) {
         console.error("❌ Failed to start dashboard server:", err instanceof Error ? err.message : err);
-        // Still show file path as fallback but suggest using server
-        console.log(`📄 Dashboard file located at: ${dashboardPath}`);
-        console.log(`💡 Try again with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+        // Still show file path as fallback
+        console.log(`📄 You can open the dashboard file directly: file://${dashboardPath}`);
       }
     } else {
-      // Suggest using the server options instead of the file path
-      console.log(`📄 Dashboard generated at: ${dashboardPath}`);
-      console.log(`💡 Run with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+      // Just show the file path if not serving
+      console.log(`📄 Open dashboard: file://${dashboardPath}`);
     }
   } catch (err) {
     console.error("❌ Analysis failed:", err instanceof Error ? err.message : err);
@@ -365,36 +363,6 @@ async function createIssueFromResults(result: any) {
     return response;
   } catch (err) {
     console.error("❌ Failed to create GitHub issue:", err instanceof Error ? err.message : err);
-    
-    // Check for specific errors about disabled issues
-    const errorObj = err as any;
-    
-    if (errorObj.code === 'ISSUES_DISABLED' || 
-        (errorObj.message && errorObj.message.includes('Issues are disabled for this repo')) ||
-        (errorObj.data && errorObj.data.message === 'Issues are disabled for this repo')) {
-      
-      // Get the exact GitHub error message if available
-      const githubMessage = errorObj.data?.message || 
-                            (errorObj.originalError?.data?.message || 
-                            (errorObj.message?.includes('Issues are disabled') ? errorObj.message : 
-                            'Issues are disabled for this repository'));
-      
-      // Get the status code if available                      
-      const statusCode = errorObj.data?.status || 
-                         (errorObj.originalError?.status || 
-                         (errorObj.response?.status || 410));
-      
-      console.error(`❗ GitHub API Error (${statusCode}): ${githubMessage}`);
-      console.error(`📄 Documentation: ${errorObj.data?.documentation_url || 'https://docs.github.com/v3/issues/'}`);
-      console.error("🔧 To enable issues, go to the repository settings on GitHub:");
-      console.error(`   ${result.repoUrl}/settings`);
-      console.error("   Then check the 'Issues' option under Features section.");
-      
-    } else {
-      // For other errors, show a generic message
-      console.error("❌ Unable to create or update GitHub issue. Check permissions and try again.");
-    }
-    
     throw err;
   }
 }
@@ -494,15 +462,12 @@ async function listCommand() {
         console.log(`🚀 Template index available at: ${serverInfo.url}`);
         console.log("\n👀 Press Ctrl+C to stop the server and exit");
       } else {
-        // Suggest using the server options instead of the file path
-        console.log(`📄 Template index generated at: ${indexPath}`);
-        console.log(`💡 Run with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+        console.log(`📄 Template index available at: file://${indexPath}`);
       }
     } catch (err) {
       console.error("❌ Failed to start dashboard server:", err instanceof Error ? err.message : err);
-      // Still show file path as fallback but suggest using server
-      console.log(`📄 Template index file located at: ${indexPath}`);
-      console.log(`💡 Try again with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+      // Still show file path as fallback
+      console.log(`📄 You can open the template index file directly: file://${indexPath}`);
     }
   } catch (err) {
     console.error("❌ Failed to list templates:", err instanceof Error ? err.message : err);
@@ -549,15 +514,12 @@ async function rebuildCommand() {
         console.log(`🚀 Template index available at: ${serverInfo.url}`);
         console.log("\n👀 Press Ctrl+C to stop the server and exit");
       } else {
-        // Suggest using the server options instead of the file path
-        console.log(`📄 Template index generated at: ${indexPath}`);
-        console.log(`💡 Run with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+        console.log(`📄 Template index available at: file://${indexPath}`);
       }
     } catch (err) {
       console.error("❌ Failed to start dashboard server:", err instanceof Error ? err.message : err);
-      // Still show file path as fallback but suggest using server
-      console.log(`📄 Template index file located at: ${indexPath}`);
-      console.log(`💡 Try again with --serve or --open-dashboard to view in a browser at http://localhost:${port}`);
+      // Still show file path as fallback
+      console.log(`📄 You can open the template index file directly: file://${indexPath}`);
     }
   } catch (err) {
     console.error("❌ Failed to rebuild template index:", err instanceof Error ? err.message : err);

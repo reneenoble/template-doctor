@@ -182,7 +182,40 @@ export async function serveDashboard(dashboardPath: string, port = 3000): Promis
           res.json({ ...response, updated });
         } catch (error) {
           console.error("Error creating GitHub issue:", error);
-          res.status(500).json({ error: (error as Error).message });
+               // Check for specific GitHub API errors about disabled issues
+      const errorMsg = (error as Error).message;
+      const errorObj: any = error;
+      
+      // Check for our enhanced error with ISSUES_DISABLED code
+      if (errorObj.code === 'ISSUES_DISABLED' || errorMsg.includes('Issues are disabled for this repo')) {
+        const originalErrorData = errorObj.data || {};
+        
+        // Make sure we use an integer for the status code
+        // Parse the status to an integer or use a default value (410 for disabled issues)
+        const statusCode = parseInt(originalErrorData.status) || 410;
+        
+        // Return error response with all GitHub error details preserved
+        res.status(statusCode).json({ 
+          error: originalErrorData.message || "Issues are disabled for this repository. Please enable issues in the repository settings to use this feature.",
+          message: originalErrorData.message || errorMsg, // Include the exact message from GitHub
+          documentation_url: originalErrorData.documentation_url || "https://docs.github.com/v3/issues/",
+          status: statusCode,
+          code: originalErrorData.code || "ISSUES_DISABLED"
+        });
+      } else {
+        // For other errors, forward the exact error message to make debugging easier
+        // Make sure status is an integer
+        const status = parseInt(errorObj.response?.status) || 500;
+        const errorData = errorObj.response?.data || {};
+        
+        res.status(status).json({ 
+          error: errorMsg,
+          message: errorData.message || errorMsg,
+          documentation_url: errorData.documentation_url,
+          status: status,
+          code: errorData.code
+        });
+      }
         }
       });
       

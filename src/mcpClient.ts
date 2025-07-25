@@ -249,8 +249,43 @@ export async function createGitHubIssue(
       number: response.data.number,
       updated: false
     };
-  } catch (error) {
+  }  catch (error) {
     console.error("Failed to create GitHub issue:", error);
+    
+    // Check if this is an error about issues being disabled
+    if (error instanceof Error) {
+      const errorObj: any = error;
+      
+      // Extract the original error data if available (might be in different places depending on the error source)
+      const originalErrorData = errorObj.response?.data || errorObj.data || {};
+      
+      // Check for GitHub API error response about disabled issues (status 410 Gone or 403 Forbidden)
+      if (errorObj.message?.includes('Issues are disabled for this repo') || 
+          (originalErrorData?.message === 'Issues are disabled for this repo')) {
+        
+        // Create enhanced error that preserves the original error data
+        const enhancedError = new Error(originalErrorData?.message || 'Issues are disabled for this repository. Please enable issues in the repository settings to use this feature.');
+        (enhancedError as any).code = originalErrorData?.code || 'ISSUES_DISABLED';
+        (enhancedError as any).originalError = error;
+        (enhancedError as any).data = originalErrorData;
+        (enhancedError as any).documentation_url = originalErrorData?.documentation_url;
+        // Make sure status is always an integer (410 is Gone, which is appropriate for disabled resources)
+        (enhancedError as any).status = parseInt(originalErrorData?.status as string) || 
+                                        parseInt(errorObj.response?.status as string) || 
+                                        410;
+        throw enhancedError;
+      }
+      
+      // For other errors, preserve as much information as possible
+      if (originalErrorData && Object.keys(originalErrorData).length > 0) {
+        // Enhance the error with additional properties from the GitHub API response
+        errorObj.data = originalErrorData;
+        errorObj.documentation_url = originalErrorData?.documentation_url;
+        errorObj.status = originalErrorData?.status || errorObj.response?.status;
+        errorObj.code = originalErrorData?.code;
+      }
+    }
+    
     throw error;
   }
 }
