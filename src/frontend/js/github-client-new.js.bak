@@ -300,39 +300,6 @@ class GitHubClient {
     async searchRepositories(query, page = 1, perPage = 10) {
         if (!query) return { items: [] };
         
-        // Check if query looks like a full GitHub URL or owner/repo reference
-        if (query.includes('github.com/') || query.includes('/')) {
-            // Extract owner and repo from the query
-            let owner, repo;
-            
-            if (query.includes('github.com/')) {
-                const parts = query.split('github.com/')[1].split('/');
-                owner = parts[0];
-                repo = parts[1]?.split('#')[0]?.split('?')[0]; // Remove any hash or query parameters
-            } else if (query.includes('/')) {
-                const parts = query.split('/');
-                owner = parts[0];
-                repo = parts[1]?.split('#')[0]?.split('?')[0]; // Remove any hash or query parameters
-            }
-            
-            // If we have both owner and repo, try to fetch the specific repository first
-            if (owner && repo) {
-                try {
-                    console.log(`[GitHubClient] Trying to fetch specific repository: ${owner}/${repo}`);
-                    const repoData = await this.getRepository(owner, repo);
-                    
-                    // Return it as a single-item search result
-                    return {
-                        total_count: 1,
-                        items: [repoData]
-                    };
-                } catch (error) {
-                    console.log(`[GitHubClient] Specific repository not found, falling back to search: ${error.message}`);
-                    // Fall back to regular search if the specific repo isn't found
-                }
-            }
-        }
-        
         const searchQuery = encodeURIComponent(`${query} in:name,description,readme`);
         return this.request(`/search/repositories?q=${searchQuery}&page=${page}&per_page=${perPage}`);
     }
@@ -956,29 +923,9 @@ class GitHubClient {
      * @returns {Promise<Object>} - Forked repository info
      */
     async forkRepository(owner, repo) {
-        console.log(`Creating fork of ${owner}/${repo}`);
-        
-        if (window.NotificationSystem) {
-            window.NotificationSystem.showInfo(
-                'Creating Fork',
-                `Creating a fork of ${owner}/${repo}...`,
-                3000
-            );
-        }
-        
-        const result = await this.request(`/repos/${owner}/${repo}/forks`, {
+        return this.request(`/repos/${owner}/${repo}/forks`, {
             method: 'POST'
         });
-        
-        if (window.NotificationSystem) {
-            window.NotificationSystem.showSuccess(
-                'Fork Created',
-                `Successfully forked ${owner}/${repo} to your account`,
-                3000
-            );
-        }
-        
-        return result;
     }
 }
 

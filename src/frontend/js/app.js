@@ -98,8 +98,29 @@ async function checkAndUpdateRepoUrl(repoUrl) {
         
         // Show confirmation dialog if configured
         if (ORGANIZATIONS_CONFIG.requireConfirmationForFork) {
-            if (!confirm(`This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`)) {
-                return repoUrl; // User declined, use original URL
+            // Use notification system if available
+            if (window.Notifications) {
+                const result = await new Promise((resolve) => {
+                    window.Notifications.confirm(
+                        'Repository Fork',
+                        `This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`,
+                        {
+                            confirmLabel: 'Check For Fork',
+                            cancelLabel: 'Use Original',
+                            onConfirm: () => resolve(true),
+                            onCancel: () => resolve(false)
+                        }
+                    );
+                });
+                
+                if (!result) {
+                    return repoUrl; // User declined, use original URL
+                }
+            } else {
+                // Fallback to native confirm
+                if (!confirm(`This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`)) {
+                    return repoUrl; // User declined, use original URL
+                }
             }
         }
         
@@ -125,7 +146,26 @@ async function checkAndUpdateRepoUrl(repoUrl) {
                 return potentialForkUrl;
             } else if (response.status === 404) {
                 // User doesn't have a fork, ask if they want to create one
-                if (confirm(`You don't have a fork of ${owner}/${repo}. Would you like to create one now?`)) {
+                let shouldCreateFork = false;
+                
+                if (window.Notifications) {
+                    shouldCreateFork = await new Promise((resolve) => {
+                        window.Notifications.confirm(
+                            'Create Fork',
+                            `You don't have a fork of ${owner}/${repo}. Would you like to create one now?`,
+                            {
+                                confirmLabel: 'Create Fork',
+                                cancelLabel: 'Use Original',
+                                onConfirm: () => resolve(true),
+                                onCancel: () => resolve(false)
+                            }
+                        );
+                    });
+                } else {
+                    shouldCreateFork = confirm(`You don't have a fork of ${owner}/${repo}. Would you like to create one now?`);
+                }
+                
+                if (shouldCreateFork) {
                     try {
                         debug('app', `Creating fork of ${owner}/${repo}`);
                         if (window.NotificationSystem) {
@@ -1189,8 +1229,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch (error) {
                             debug('app', `Error checking fork status: ${error.message}`, error);
                             // Use the original approach as fallback
-                            if (confirm(`This will fork ${repo.full_name} to your account before scanning. Continue?`)) {
-                                internalAnalyzeRepo(repo.html_url, 'show-modal');
+                            if (window.Notifications) {
+                                window.Notifications.confirm(
+                                    'Fork Repository',
+                                    `This will fork ${repo.full_name} to your account before scanning. Continue?`,
+                                    {
+                                        confirmLabel: 'Fork and Scan',
+                                        cancelLabel: 'Cancel',
+                                        onConfirm: () => {
+                                            internalAnalyzeRepo(repo.html_url, 'show-modal');
+                                        }
+                                    }
+                                );
+                            } else {
+                                if (confirm(`This will fork ${repo.full_name} to your account before scanning. Continue?`)) {
+                                    internalAnalyzeRepo(repo.html_url, 'show-modal');
+                                }
                             }
                         }
                     }
