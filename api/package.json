@@ -7,8 +7,9 @@
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
-    "node-fetch": "^2.6.7",
-    "@azure/functions": "^3.5.0"
+    "@azure/functions": "^3.5.0",
+    "@octokit/rest": "^22.0.0",
+    "node-fetch": "^2.6.7"
   },
   "engines": {
     "node": ">=16"
