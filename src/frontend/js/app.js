@@ -1,6 +1,13 @@
 // Main Application Logic for Template Doctor Frontend
 // Wires up authentication, search, analysis, and dashboard rendering
 
+// Configuration for organizations that might require forking
+const ORGANIZATIONS_CONFIG = {
+    requireConfirmationForFork: true,
+    organizationsToFork: ['Azure', 'Azure-Samples', 'Microsoft'],
+    // Add more configurations here as needed
+};
+
 // Debug logging utility - consistent with auth.js
 function debug(module, message, data) {
     const timestamp = new Date().toISOString();
@@ -38,6 +45,144 @@ function debugReportData(label, data) {
         }
     }
     console.groupEnd();
+}
+
+/**
+ * Checks if a repository belongs to any of the specified organizations 
+ * and offers to replace with the current user's fork
+ * @param {string} repoUrl - Original repository URL
+ * @returns {Promise<string>} - New repository URL (might be the same or a user fork)
+ */
+async function checkAndUpdateRepoUrl(repoUrl) {
+    // If no URL or not a GitHub URL, return as is
+    if (!repoUrl || !repoUrl.includes('github.com/')) {
+        return repoUrl;
+    }
+    
+    // Check if user is logged in
+    if (!window.GitHubClient || !window.GitHubClient.auth.isAuthenticated()) {
+        debug('app', 'User not logged in, cannot fork repositories');
+        return repoUrl;
+    }
+    
+    // Get current username
+    const currentUsername = window.GitHubClient.auth.getUsername();
+    if (!currentUsername) {
+        debug('app', 'Cannot get current username');
+        return repoUrl;
+    }
+    
+    // Extract owner and repo from URL
+    try {
+        const urlParts = repoUrl.split('github.com/')[1].split('/');
+        const owner = urlParts[0];
+        const repo = urlParts[1];
+        
+        if (!owner || !repo) {
+            throw new Error('Invalid repository URL format');
+        }
+        
+        // Check if the owner is one of the organizations that might need forking
+        const needsFork = ORGANIZATIONS_CONFIG.organizationsToFork.some(
+            org => owner.toLowerCase() === org.toLowerCase()
+        );
+        
+        if (!needsFork) {
+            debug('app', `Repository ${owner}/${repo} does not need forking`);
+            return repoUrl;
+        }
+        
+        // Construct potential fork URL
+        const potentialForkUrl = `https://github.com/${currentUsername}/${repo}`;
+        debug('app', `Original repo: ${repoUrl}, potential fork: ${potentialForkUrl}`);
+        
+        // Show confirmation dialog if configured
+        if (ORGANIZATIONS_CONFIG.requireConfirmationForFork) {
+            if (!confirm(`This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`)) {
+                return repoUrl; // User declined, use original URL
+            }
+        }
+        
+        // Check if the user already has a fork
+        try {
+            debug('app', `Checking if user ${currentUsername} has a fork of ${owner}/${repo}`);
+            const response = await fetch(`https://api.github.com/repos/${currentUsername}/${repo}`, {
+                headers: {
+                    'Authorization': `token ${window.GitHubClient.auth.getToken()}`
+                }
+            });
+            
+            if (response.ok) {
+                // User has a fork, use it
+                debug('app', `User has a fork of ${owner}/${repo}`);
+                if (window.NotificationSystem) {
+                    window.NotificationSystem.showInfo(
+                        'Using Your Fork',
+                        `Using your fork of ${owner}/${repo} for analysis`,
+                        3000
+                    );
+                }
+                return potentialForkUrl;
+            } else if (response.status === 404) {
+                // User doesn't have a fork, ask if they want to create one
+                if (confirm(`You don't have a fork of ${owner}/${repo}. Would you like to create one now?`)) {
+                    try {
+                        debug('app', `Creating fork of ${owner}/${repo}`);
+                        if (window.NotificationSystem) {
+                            window.NotificationSystem.showInfo(
+                                'Creating Fork',
+                                `Creating a fork of ${owner}/${repo}...`,
+                                3000
+                            );
+                        }
+                        
+                        const forkResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/forks`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `token ${window.GitHubClient.auth.getToken()}`
+                            }
+                        });
+                        
+                        if (forkResponse.ok) {
+                            const forkData = await forkResponse.json();
+                            debug('app', `Fork created: ${forkData.html_url}`);
+                            if (window.NotificationSystem) {
+                                window.NotificationSystem.showSuccess(
+                                    'Fork Created',
+                                    `Successfully forked ${owner}/${repo}`,
+                                    3000
+                                );
+                            }
+                            return forkData.html_url;
+                        } else {
+                            throw new Error(`Failed to create fork: ${forkResponse.status} ${forkResponse.statusText}`);
+                        }
+                    } catch (forkError) {
+                        debug('app', `Error creating fork: ${forkError.message}`, forkError);
+                        if (window.NotificationSystem) {
+                            window.NotificationSystem.showError(
+                                'Fork Error',
+                                `Failed to create fork: ${forkError.message}`,
+                                5000
+                            );
+                        }
+                        return repoUrl; // Use original URL as fallback
+                    }
+                } else {
+                    return repoUrl; // User declined to fork, use original URL
+                }
+            } else {
+                // Other error occurred
+                throw new Error(`Error checking fork: ${response.status} ${response.statusText}`);
+            }
+        } catch (error) {
+            debug('app', `Error checking/creating fork: ${error.message}`, error);
+            return repoUrl; // Use original URL as fallback
+        }
+    } catch (parseError) {
+        debug('app', `Error parsing repository URL: ${parseError.message}`, parseError);
+        return repoUrl; // Use original URL as fallback
+    }
 }
 
 // Direct data loading function - uses direct loading with a script tag
@@ -623,9 +768,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             });
             
-            card.querySelector('.rescan-btn').addEventListener('click', () => {
-                // Show ruleset selection modal
-                internalAnalyzeRepo(template.repoUrl, 'show-modal');
+            card.querySelector('.rescan-btn').addEventListener('click', async () => {
+                // Check if the repository needs to be forked before scanning
+                try {
+                    const updatedRepoUrl = await checkAndUpdateRepoUrl(template.repoUrl);
+                    internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
+                } catch (error) {
+                    debug('app', `Error checking fork status: ${error.message}`, error);
+                    // Continue with original URL on error
+                    internalAnalyzeRepo(template.repoUrl, 'show-modal');
+                }
             });
             
             templateGrid.appendChild(card);
@@ -917,8 +1069,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 scrollAndHighlightTemplate(templateId);
             });
             
-            div.querySelector('.rescan-btn').addEventListener('click', () => {
-                internalAnalyzeRepo(matchedTemplate.repoUrl);
+            div.querySelector('.rescan-btn').addEventListener('click', async () => {
+                // Check if the repository needs to be forked before scanning
+                try {
+                    const updatedRepoUrl = await checkAndUpdateRepoUrl(matchedTemplate.repoUrl);
+                    internalAnalyzeRepo(updatedRepoUrl);
+                } catch (error) {
+                    debug('app', `Error checking fork status: ${error.message}`, error);
+                    // Continue with original URL on error
+                    internalAnalyzeRepo(matchedTemplate.repoUrl);
+                }
             });
             
             searchResults.appendChild(div);
@@ -958,8 +1118,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                     
-                    searchResults.querySelector('.analyze-btn').addEventListener('click', () => {
-                        internalAnalyzeRepo(repoUrl, 'show-modal');
+                    searchResults.querySelector('.analyze-btn').addEventListener('click', async () => {
+                        // Check if the repository needs to be forked before scanning
+                        try {
+                            const updatedRepoUrl = await checkAndUpdateRepoUrl(repoUrl);
+                            internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
+                        } catch (error) {
+                            debug('app', `Error checking fork status: ${error.message}`, error);
+                            // Continue with original URL on error
+                            internalAnalyzeRepo(repoUrl, 'show-modal');
+                        }
                     });
                 } else {
                     searchResults.innerHTML = '<div>No repositories found.</div>';
@@ -1002,14 +1170,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 
-                div.querySelector('.analyze-btn').addEventListener('click', () => {
+                div.querySelector('.analyze-btn').addEventListener('click', async () => {
                     if (isUserRepo || isPreviouslyScanned) {
-                        internalAnalyzeRepo(repo.html_url, 'show-modal');
+                        // Even for previously scanned repos, check if it needs to be forked
+                        try {
+                            const updatedRepoUrl = await checkAndUpdateRepoUrl(repo.html_url);
+                            internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
+                        } catch (error) {
+                            debug('app', `Error checking fork status: ${error.message}`, error);
+                            // Continue with original URL on error
+                            internalAnalyzeRepo(repo.html_url, 'show-modal');
+                        }
                     } else {
                         // Would need to implement fork functionality
-                        if (confirm(`This will fork ${repo.full_name} to your account before scanning. Continue?`)) {
-                            // For now, just analyze without forking
-                            internalAnalyzeRepo(repo.html_url, 'show-modal');
+                        try {
+                            const updatedRepoUrl = await checkAndUpdateRepoUrl(repo.html_url);
+                            internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
+                        } catch (error) {
+                            debug('app', `Error checking fork status: ${error.message}`, error);
+                            // Use the original approach as fallback
+                            if (confirm(`This will fork ${repo.full_name} to your account before scanning. Continue?`)) {
+                                internalAnalyzeRepo(repo.html_url, 'show-modal');
+                            }
                         }
                     }
                 });
@@ -1178,6 +1360,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 debug('app', 'Required services still unavailable after reinitialization attempt');
                 return;
             }
+        }
+        
+        // Check if the repository belongs to one of the configured organizations
+        // and offer to use the user's fork instead
+        try {
+            debug('app', `Checking if repository ${repoUrl} needs forking`);
+            const updatedRepoUrl = await checkAndUpdateRepoUrl(repoUrl);
+            
+            if (updatedRepoUrl !== repoUrl) {
+                debug('app', `Repository URL updated from ${repoUrl} to ${updatedRepoUrl}`);
+                repoUrl = updatedRepoUrl;
+            }
+        } catch (forkCheckError) {
+            debug('app', `Error checking fork status: ${forkCheckError.message}`, forkCheckError);
+            // Continue with original URL on error
         }
         
         // Double-check analyzer
@@ -1359,7 +1556,104 @@ document.addEventListener('DOMContentLoaded', () => {
             debug('app', `Error analyzing repo: ${err.message}`, err);
             loadingContainer.style.display = 'none';
             errorSection.style.display = 'block';
-            errorMessage.textContent = err.message || 'An unknown error occurred during analysis';
+            
+            // Check if this is a SAML error (detected by the GitHub client)
+            if (err.isSamlError || (err.status === 403 && err.data?.documentation_url?.includes('/saml-single-sign-on/'))) {
+                console.log('[App] SAML protected repository detected, attempting to fork');
+                
+                // Update error message
+                errorMessage.textContent = "This repository is protected by SAML SSO. Attempting to fork it...";
+                
+                // Extract owner and repo from URL to attempt forking
+                try {
+                    const urlParts = repoUrl.split('github.com/')[1].split('/');
+                    const owner = urlParts[0];
+                    const repo = urlParts[1];
+                    
+                    if (!owner || !repo || !window.GitHubClient) {
+                        throw new Error('Invalid repository URL or GitHub client not available');
+                    }
+                    
+                    // Check if user is authenticated
+                    if (!window.GitHubClient.auth.isAuthenticated()) {
+                        errorMessage.textContent = "Please login with GitHub to fork this SAML-protected repository.";
+                        return;
+                    }
+                    
+                    // Create and add a loading indicator
+                    const loadingIndicator = document.createElement('div');
+                    loadingIndicator.className = 'fork-loading';
+                    loadingIndicator.innerHTML = '<div class="loading-spinner"></div><p>Attempting to fork repository...</p>';
+                    document.querySelector('.error-container').appendChild(loadingIndicator);
+                    
+                    // Try to fork the repository
+                    (async function() {
+                        try {
+                            // Check if user already has a fork
+                            const currentUsername = window.GitHubClient.auth.getUsername();
+                            const hasFork = await window.GitHubClient.checkUserHasFork(owner, repo);
+                            
+                            let forkUrl;
+                            if (hasFork) {
+                                // User already has a fork
+                                console.log(`[App] User already has a fork of ${owner}/${repo}`);
+                                forkUrl = `https://github.com/${currentUsername}/${repo}`;
+                            } else {
+                                // Create a new fork
+                                console.log(`[App] Attempting to create a new fork of ${owner}/${repo}`);
+                                const forkResult = await window.GitHubClient.forkRepository(owner, repo);
+                                
+                                if (!forkResult || !forkResult.html_url) {
+                                    throw new Error('Failed to create fork - no URL returned');
+                                }
+                                
+                                forkUrl = forkResult.html_url;
+                            }
+                            
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+                            
+                            // Update error message with success
+                            errorMessage.textContent = `Successfully forked repository. Analyzing the fork...`;
+                            
+                            // Hide error section and show loading again
+                            errorSection.style.display = 'none';
+                            loadingContainer.style.display = 'flex';
+                            
+                            // Use the internal analyze function to analyze the forked repo
+                            internalAnalyzeRepo(forkUrl, ruleSet);
+                            
+                        } catch (forkError) {
+                            // Remove loading indicator
+                            loadingIndicator.remove();
+                            
+                            // Update error message
+                            errorMessage.textContent = `Failed to fork repository: ${forkError.message}`;
+                            
+                            // If this is also a SAML error, show the auth link
+                            if (forkError.isSamlError && forkError.data?.documentation_url) {
+                                const authLink = document.createElement('div');
+                                authLink.innerHTML = `
+                                    <p style="margin-top: 15px;">Authorization required for this organization.</p>
+                                    <a href="${forkError.data.documentation_url}" target="_blank" 
+                                       style="display: inline-block; margin-top: 10px; padding: 8px 16px; 
+                                              background-color: #28a745; color: white; text-decoration: none; 
+                                              border-radius: 4px; font-weight: bold;">
+                                        Authorize SAML Access
+                                    </a>
+                                `;
+                                document.querySelector('.error-container').appendChild(authLink);
+                            }
+                        }
+                    })();
+                    
+                } catch (parseError) {
+                    errorMessage.textContent = `Could not parse repository URL: ${parseError.message}`;
+                }
+            } else {
+                // Regular error (not SAML-related)
+                errorMessage.textContent = err.message || 'An unknown error occurred during analysis';
+            }
         }
     }
 

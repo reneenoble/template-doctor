@@ -140,12 +140,24 @@ class GitHubClient {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 console.error(`[GitHubClient] Error response:`, errorData);
+                
+                // Check if this is a SAML protected repository error (403 + documentation URL pattern)
+                const isSamlError = (response.status === 403 && 
+                                  errorData.documentation_url && 
+                                  errorData.documentation_url.includes('/saml-single-sign-on/'));
+                
+                if (isSamlError) {
+                    console.error(`[GitHubClient] SAML protection detected: ${errorData.documentation_url}`);
+                }
+                
                 const error = new Error(
                     errorData.message || `GitHub API error: ${response.status} ${response.statusText}`
                 );
                 error.status = response.status;
                 error.response = response;
                 error.data = errorData;
+                error.isSamlError = isSamlError;
+                
                 throw error;
             }
 
@@ -311,7 +323,71 @@ class GitHubClient {
      * @returns {Promise} - Repository details
      */
     async getRepository(owner, repo) {
-        return this.request(`/repos/${owner}/${repo}`);
+        try {
+            return await this.request(`/repos/${owner}/${repo}`);
+        } catch (error) {
+            // Check if this is a SAML error
+            if (error.isSamlError) {
+                console.log(`SAML protection detected for ${owner}/${repo}`);
+                
+                // If the user is authenticated, try to use their fork
+                if (this.auth && this.auth.isAuthenticated()) {
+                    const userInfo = this.auth.getUserInfo();
+                    const currentUsername = userInfo ? userInfo.login : null;
+                    if (currentUsername) {
+                        // Check if the user already has a fork
+                        try {
+                            console.log(`Trying to use fork ${currentUsername}/${repo} instead`);
+                            return await this.request(`/repos/${currentUsername}/${repo}`);
+                        } catch (forkError) {
+                            // User doesn't have a fork yet
+                            if (confirm(`This repository (${owner}/${repo}) requires SAML authentication. Would you like to create a fork in your account?`)) {
+                                try {
+                                    console.log(`Creating fork of ${owner}/${repo}`);
+                                    
+                                    if (window.NotificationSystem) {
+                                        window.NotificationSystem.showInfo(
+                                            'Creating Fork',
+                                            `Creating a fork of ${owner}/${repo}...`,
+                                            3000
+                                        );
+                                    }
+                                    
+                                    // Create fork
+                                    const forkResponse = await fetch(`${this.baseUrl}/repos/${owner}/${repo}/forks`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Authorization': `token ${this.auth.getAccessToken()}`,
+                                            'Accept': 'application/vnd.github.v3+json'
+                                        }
+                                    });
+                                    
+                                    if (forkResponse.ok) {
+                                        const forkData = await forkResponse.json();
+                                        console.log(`Fork created: ${forkData.html_url}`);
+                                        
+                                        if (window.NotificationSystem) {
+                                            window.NotificationSystem.showSuccess(
+                                                'Fork Created',
+                                                `Successfully forked ${owner}/${repo}`,
+                                                3000
+                                            );
+                                        }
+                                        
+                                        return forkData;
+                                    }
+                                } catch (createForkError) {
+                                    console.error(`Error creating fork: ${createForkError.message}`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Re-throw the original error if we couldn't handle it
+            throw error;
+        }
     }
 
     /**
@@ -322,6 +398,29 @@ class GitHubClient {
      * @returns {Promise} - List of files
      */
     async listRepoFiles(owner, repo, path = '') {
+        // Check if owner is one of the organizations that might need forking
+        const organizationsToFork = ['Azure', 'Azure-Samples', 'Microsoft'];
+        const needsFork = organizationsToFork.some(
+            org => owner.toLowerCase() === org.toLowerCase()
+        );
+        
+        if (needsFork && this.auth && this.auth.isAuthenticated()) {
+            // Try to use the authenticated user's fork instead
+            const userInfo = this.auth.getUserInfo();
+            const currentUsername = userInfo ? userInfo.login : null;
+            if (currentUsername) {
+                try {
+                    // Check if the user has a fork of this repository by trying to list files
+                    console.log(`Trying to list files from fork ${currentUsername}/${repo}/${path}`);
+                    return await this.request(`/repos/${currentUsername}/${repo}/contents/${path}`);
+                } catch (error) {
+                    console.log(`Error listing files from fork: ${error.message}`);
+                    // Continue with original repository if fork doesn't exist or other error
+                }
+            }
+        }
+        
+        // If we get here, use the original repository
         return this.request(`/repos/${owner}/${repo}/contents/${path}`);
     }
 
@@ -333,11 +432,92 @@ class GitHubClient {
      * @returns {Promise} - File content
      */
     async getFileContent(owner, repo, path) {
-        const response = await this.request(`/repos/${owner}/${repo}/contents/${path}`);
-        if (response.encoding === 'base64') {
-            return atob(response.content); // Decode base64
+        // Check if owner is one of the organizations that might need forking
+        const organizationsToFork = ['Azure', 'Azure-Samples', 'Microsoft'];
+        const needsFork = organizationsToFork.some(
+            org => owner.toLowerCase() === org.toLowerCase()
+        );
+        
+        if (needsFork && this.auth && this.auth.isAuthenticated()) {
+            // Try to use the authenticated user's fork instead
+            const userInfo = this.auth.getUserInfo();
+            const currentUsername = userInfo ? userInfo.login : null;
+            if (currentUsername) {
+                try {
+                    // Try to get file content from the user's fork
+                    console.log(`Trying to get file content from fork ${currentUsername}/${repo}/${path}`);
+                    const forkResponse = await this.request(`/repos/${currentUsername}/${repo}/contents/${path}`);
+                    if (forkResponse.encoding === 'base64') {
+                        return atob(forkResponse.content); // Decode base64
+                    }
+                } catch (error) {
+                    console.log(`Error getting file from fork: ${error.message}`);
+                    // Continue with original repository if fork doesn't exist or other error
+                }
+            }
         }
-        throw new Error('Unsupported encoding');
+        
+        // If we get here, use the original repository
+        try {
+            const response = await this.request(`/repos/${owner}/${repo}/contents/${path}`);
+            if (response.encoding === 'base64') {
+                return atob(response.content); // Decode base64
+            }
+            throw new Error('Unsupported encoding');
+        } catch (error) {
+            // If we get a SAML error, try to create a fork
+            if (error.isSamlError && this.auth && this.auth.isAuthenticated()) {
+                const userInfo = this.auth.getUserInfo();
+                const currentUsername = userInfo ? userInfo.login : null;
+                if (currentUsername && confirm(`This repository (${owner}/${repo}) requires SAML authentication. Would you like to create a fork in your account?`)) {
+                    try {
+                        // Create fork
+                        console.log(`Creating fork of ${owner}/${repo}`);
+                        
+                        if (window.NotificationSystem) {
+                            window.NotificationSystem.showInfo(
+                                'Creating Fork',
+                                `Creating a fork of ${owner}/${repo}...`,
+                                3000
+                            );
+                        }
+                        
+                        const forkResponse = await fetch(`${this.baseUrl}/repos/${owner}/${repo}/forks`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `token ${this.auth.getAccessToken()}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        
+                        if (forkResponse.ok) {
+                            console.log(`Fork created, now trying to get file content from the fork`);
+                            
+                            // Wait a moment for the fork to be ready
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            // Try to get the file from the new fork
+                            const newForkResponse = await this.request(`/repos/${currentUsername}/${repo}/contents/${path}`);
+                            if (newForkResponse.encoding === 'base64') {
+                                if (window.NotificationSystem) {
+                                    window.NotificationSystem.showSuccess(
+                                        'Fork Created',
+                                        `Successfully forked ${owner}/${repo} and retrieved the file`,
+                                        3000
+                                    );
+                                }
+                                return atob(newForkResponse.content); // Decode base64
+                            }
+                        }
+                    } catch (forkError) {
+                        console.error(`Error creating fork or getting file: ${forkError.message}`);
+                    }
+                }
+            }
+            
+            // Re-throw the original error if we couldn't handle it
+            throw error;
+        }
     }
 
     /**
@@ -347,6 +527,69 @@ class GitHubClient {
      * @returns {Promise<string>} - Default branch name
      */
     async getDefaultBranch(owner, repo) {
+        // Check if owner is one of the organizations that might need forking
+        const organizationsToFork = ['Azure', 'Azure-Samples', 'Microsoft'];
+        const needsFork = organizationsToFork.some(
+            org => owner.toLowerCase() === org.toLowerCase()
+        );
+        
+        if (needsFork && this.auth && this.auth.isAuthenticated()) {
+            // Try to use the authenticated user's fork instead
+            const userInfo = this.auth.getUserInfo();
+            const currentUsername = userInfo ? userInfo.login : null;
+            
+            if (currentUsername) {
+                console.log(`Repository ${owner}/${repo} might need forking. Checking if ${currentUsername} has a fork...`);
+                
+                try {
+                    // Check if the user has a fork of this repository
+                    const forkInfo = await this.getRepository(currentUsername, repo);
+                    console.log(`Found existing fork: ${currentUsername}/${repo}`);
+                    return forkInfo.default_branch;
+                } catch (error) {
+                    // User doesn't have a fork or other error occurred
+                    console.log(`No fork found or error checking fork: ${error.message}`);
+                    
+                    // If user confirmed to use fork, create one
+                    if (confirm(`This repository belongs to ${owner} and might be protected. Would you like to fork ${repo} to your account?`)) {
+                        try {
+                            console.log(`Creating fork of ${owner}/${repo} for ${currentUsername}...`);
+                            
+                            // Create fork
+                            const forkResponse = await fetch(`${this.baseUrl}/repos/${owner}/${repo}/forks`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `token ${this.auth.getAccessToken()}`,
+                                    'Accept': 'application/vnd.github.v3+json'
+                                }
+                            });
+                            
+                            if (forkResponse.ok) {
+                                const forkData = await forkResponse.json();
+                                console.log(`Fork created: ${forkData.html_url}`);
+                                
+                                if (window.NotificationSystem) {
+                                    window.NotificationSystem.showSuccess(
+                                        'Fork Created',
+                                        `Successfully forked ${owner}/${repo} to your account`,
+                                        3000
+                                    );
+                                }
+                                
+                                return forkData.default_branch;
+                            } else {
+                                throw new Error(`Failed to create fork: ${forkResponse.status} ${forkResponse.statusText}`);
+                            }
+                        } catch (forkError) {
+                            console.error(`Error creating fork: ${forkError.message}`, forkError);
+                            // Continue with original repository as fallback
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If we get here, use the original repository
         const repoInfo = await this.getRepository(owner, repo);
         return repoInfo.default_branch;
     }
@@ -358,11 +601,101 @@ class GitHubClient {
      * @param {string} ref - Git reference (branch, commit, or tag)
      * @returns {Promise<Array<string>>} - List of file paths
      */
+    /**
+     * List all files in a repository recursively
+     * @param {string} owner - Repository owner
+     * @param {string} repo - Repository name
+     * @param {string} ref - Git reference (branch, commit, or tag)
+     * @returns {Promise<Array<string>>} - List of file paths
+     */
     async listAllFiles(owner, repo, ref = 'HEAD') {
-        const response = await this.request(`/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`);
-        return response.tree
-            .filter(item => item.type === 'blob')
-            .map(item => item.path);
+        // Check if owner is one of the organizations that might need forking
+        const organizationsToFork = ['Azure', 'Azure-Samples', 'Microsoft'];
+        const needsFork = organizationsToFork.some(
+            org => owner.toLowerCase() === org.toLowerCase()
+        );
+        
+        if (needsFork && this.auth && this.auth.isAuthenticated()) {
+            // Try to use the authenticated user's fork instead
+            const userInfo = this.auth.getUserInfo();
+            const currentUsername = userInfo ? userInfo.login : null;
+            if (currentUsername) {
+                try {
+                    // Try to list all files from the user's fork
+                    console.log(`Trying to list all files from fork ${currentUsername}/${repo}`);
+                    const forkResponse = await this.request(`/repos/${currentUsername}/${repo}/git/trees/${ref}?recursive=1`);
+                    return forkResponse.tree
+                        .filter(item => item.type === 'blob')
+                        .map(item => item.path);
+                } catch (error) {
+                    console.log(`Error listing all files from fork: ${error.message}`);
+                    // Continue with original repository if fork doesn't exist or other error
+                }
+            }
+        }
+        
+        // If we get here, use the original repository
+        try {
+            const response = await this.request(`/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`);
+            return response.tree
+                .filter(item => item.type === 'blob')
+                .map(item => item.path);
+        } catch (error) {
+            // If we get a SAML error, try to create a fork
+            if (error.isSamlError && this.auth && this.auth.isAuthenticated()) {
+                const userInfo = this.auth.getUserInfo();
+                const currentUsername = userInfo ? userInfo.login : null;
+                if (currentUsername && confirm(`This repository (${owner}/${repo}) requires SAML authentication. Would you like to create a fork in your account?`)) {
+                    try {
+                        // Create fork
+                        console.log(`Creating fork of ${owner}/${repo}`);
+                        
+                        if (window.NotificationSystem) {
+                            window.NotificationSystem.showInfo(
+                                'Creating Fork',
+                                `Creating a fork of ${owner}/${repo}...`,
+                                3000
+                            );
+                        }
+                        
+                        const forkResponse = await fetch(`${this.baseUrl}/repos/${owner}/${repo}/forks`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `token ${this.auth.getAccessToken()}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        
+                        if (forkResponse.ok) {
+                            console.log(`Fork created, now trying to list all files from the fork`);
+                            
+                            // Wait a moment for the fork to be ready
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            // Try to get the files from the new fork
+                            const newForkResponse = await this.request(`/repos/${currentUsername}/${repo}/git/trees/${ref}?recursive=1`);
+                            
+                            if (window.NotificationSystem) {
+                                window.NotificationSystem.showSuccess(
+                                    'Fork Created',
+                                    `Successfully forked ${owner}/${repo} and retrieved the files`,
+                                    3000
+                                );
+                            }
+                            
+                            return newForkResponse.tree
+                                .filter(item => item.type === 'blob')
+                                .map(item => item.path);
+                        }
+                    } catch (forkError) {
+                        console.error(`Error creating fork or listing files: ${forkError.message}`);
+                    }
+                }
+            }
+            
+            // Re-throw the original error if we couldn't handle it
+            throw error;
+        }
     }
 
     /**
@@ -1026,6 +1359,37 @@ class GitHubClient {
         return this.request(`/repos/${owner}/${repo}/forks`, {
             method: 'POST'
         });
+    }
+    
+    /**
+     * Check if the authenticated user already has a fork of the specified repository
+     * @param {string} owner - The owner of the original repository
+     * @param {string} repo - The name of the original repository
+     * @returns {Promise<boolean>} - True if the user has a fork, false otherwise
+     */
+    async checkUserHasFork(owner, repo) {
+        if (!this.auth.isAuthenticated()) {
+            throw new Error('User not authenticated');
+        }
+        
+        const userInfo = this.auth.getUserInfo();
+        const username = userInfo ? userInfo.login : null;
+        if (!username) {
+            throw new Error('Username not available');
+        }
+        
+        try {
+            // Try to get the user's fork directly
+            await this.request(`/repos/${username}/${repo}`);
+            return true;
+        } catch (error) {
+            // If we get a 404, the user doesn't have a fork
+            if (error.status === 404) {
+                return false;
+            }
+            // Re-throw other errors
+            throw error;
+        }
     }
 }
 
