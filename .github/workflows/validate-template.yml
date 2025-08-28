@@ -114,6 +114,46 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATORS: ${{ github.event.inputs.customValidators || 'azd-provision,ps-rule' }}
 
+      # ======================
+      # OIDC login + Conditional UAA
+      # ======================
+      - name: Login to Azure via OIDC
+        id: azure_login
+        run: |
+          echo "Requesting OIDC token..."
+          resp=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")
+          token=$(echo "$resp" | jq -r .value)
+          echo "OIDC_TOKEN=$token" >> $GITHUB_ENV
+
+      - name: Attempt deployment
+        id: azd_deploy
+        run: |
+          set +e
+          azd provision --environment $AZURE_ENV_NAME 2>deploy.log
+          DEPLOY_EXIT=$?
+          set -e
+          echo "DEPLOY_EXIT=$DEPLOY_EXIT" >> $GITHUB_OUTPUT
+          echo "DEPLOY_LOG<<EOF" >> $GITHUB_OUTPUT
+          cat deploy.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Conditional temporary UAA and retry
+        if: steps.azd_deploy.outputs.DEPLOY_LOG && contains(steps.azd_deploy.outputs.DEPLOY_LOG, 'roleAssignments/write')
+        run: |
+          echo "⚠️ Deployment failed due to roleAssignments/write, granting temporary User Access Administrator..."
+          az role assignment create \
+            --assignee $AZURE_CLIENT_ID \
+            --role "User Access Administrator" \
+            --scope /subscriptions/$AZURE_SUBSCRIPTION_ID
+
+          azd provision --environment $AZURE_ENV_NAME
+
+          az role assignment delete \
+            --assignee $AZURE_CLIENT_ID \
+            --role "User Access Administrator" \
+            --scope /subscriptions/$AZURE_SUBSCRIPTION_ID
+
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
