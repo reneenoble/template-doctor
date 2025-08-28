@@ -27,19 +27,15 @@ jobs:
     outputs:
       repo_urls: ${{ steps.parse_git_diff.outputs.repo_urls }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Parse input URL
         id: parse_git_diff
         run: |
-          repo_urls=$(echo "${{ github.event.inputs.target_validate_template_url }}" | jq -Rsc '[split("\n") | .[]| select(.!="")]')
-          echo "$repo_urls"
+          repo_urls=$(echo "${{ github.event.inputs.target_validate_template_url }}" | jq -Rsc '[split("\n") | .[] | select(.!="")]')
           echo "repo_urls=$repo_urls" >> $GITHUB_OUTPUT
-        shell: bash
-        continue-on-error: true
 
   validation:
     runs-on: ubuntu-22.04
@@ -55,8 +51,7 @@ jobs:
       AZURE_ENV_NAME: template-doctor-${{ github.run_id }}-${{ github.run_attempt }}
       AZURE_LOCATION: eastus
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -66,44 +61,22 @@ jobs:
           repo_name=$(echo "${{ matrix.repo_url }}" | grep -oP '(?<=https:\/\/github\.com\/)[^\/]+\/[^\/]+')
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
           echo "repo_name_short=$(echo $repo_name | cut -d'/' -f2)" >> $GITHUB_OUTPUT
-        shell: bash
 
-      - name: Log validation info
+      # ======================
+      # OIDC Login
+      # ======================
+      - name: Login to Azure via OIDC
         run: |
-          echo "Starting validation for template: ${{ matrix.repo_url }}"
-          echo "Run ID: ${{ github.event.inputs.run_id }}"
-          echo "Custom validators: ${{ github.event.inputs.customValidators }}"
-          echo "Environment name: ${{ env.AZURE_ENV_NAME }}"
-          echo "Location: ${{ env.AZURE_LOCATION }}"
-          echo "Callback URL: ${{ github.event.inputs.callback_url || 'None provided' }}"
-
-      - name: Clone repo
-        working-directory: ${{ runner.temp }}
-        run: |
-          git clone "${{ matrix.repo_url }}" template
-          candidate_hooks_paths=(
-            "./template/hooks"
-            "./template/infra/hooks"
-            "./template/scripts"
-            "./template/deploy/aca/scripts"
-            "./template/deploy/aks/scripts"
-            "./template/deploy/app-service/scripts"
-          )
-          for hooks_path in "${candidate_hooks_paths[@]}"; do
-            if [ -d "$hooks_path" ] && [ "$(ls -A $hooks_path/*.sh 2>/dev/null)" ]; then
-              chmod +x $hooks_path/*.sh
-              echo "Executable permissions set for .sh files in $hooks_path"
-            fi
-          done
-
-      - name: Check for Terraform
-        id: check_terraform
-        run: |
-          if [[ -f "${{ runner.temp }}/template/infra/main.tf" ]]; then
-            echo "RUN_AZD_UP=false" >> $GITHUB_OUTPUT
-          else
-            echo "RUN_AZD_UP=true" >> $GITHUB_OUTPUT
+          echo "Requesting OIDC token..."
+          resp=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")
+          OIDC_TOKEN=$(echo "$resp" | jq -r .value)
+          if [ -z "$OIDC_TOKEN" ] || [ "$OIDC_TOKEN" = "null" ]; then
+            echo "❌ Failed to get OIDC token"
+            exit 1
           fi
+          az login --federated-token "$OIDC_TOKEN" --tenant $AZURE_TENANT_ID --allow-no-subscriptions
+          echo "✅ Logged in via OIDC"
 
       - id: validation
         uses: microsoft/template-validation-action@Latest
@@ -113,46 +86,12 @@ jobs:
           REPOSITORY_NAME: ${{ steps.parse_repo_name.outputs.repo_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATORS: ${{ github.event.inputs.customValidators || 'azd-provision,ps-rule' }}
-
-      # ======================
-      # OIDC login + Conditional UAA
-      # ======================
-      - name: Login to Azure via OIDC
-        id: azure_login
-        run: |
-          echo "Requesting OIDC token..."
-          resp=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")
-          token=$(echo "$resp" | jq -r .value)
-          echo "OIDC_TOKEN=$token" >> $GITHUB_ENV
-
-      - name: Attempt deployment
-        id: azd_deploy
-        run: |
-          set +e
-          azd provision --environment $AZURE_ENV_NAME 2>deploy.log
-          DEPLOY_EXIT=$?
-          set -e
-          echo "DEPLOY_EXIT=$DEPLOY_EXIT" >> $GITHUB_OUTPUT
-          echo "DEPLOY_LOG<<EOF" >> $GITHUB_OUTPUT
-          cat deploy.log >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Conditional temporary UAA and retry
-        if: steps.azd_deploy.outputs.DEPLOY_LOG && contains(steps.azd_deploy.outputs.DEPLOY_LOG, 'roleAssignments/write')
-        run: |
-          echo "⚠️ Deployment failed due to roleAssignments/write, granting temporary User Access Administrator..."
-          az role assignment create \
-            --assignee $AZURE_CLIENT_ID \
-            --role "User Access Administrator" \
-            --scope /subscriptions/$AZURE_SUBSCRIPTION_ID
-
-          azd provision --environment $AZURE_ENV_NAME
-
-          az role assignment delete \
-            --assignee $AZURE_CLIENT_ID \
-            --role "User Access Administrator" \
-            --scope /subscriptions/$AZURE_SUBSCRIPTION_ID
+          # Azure environment variables are already set:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
+          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
 
       - name: Upload result
         uses: actions/upload-artifact@v4
@@ -188,4 +127,3 @@ jobs:
           EOF
           )
           echo "$PAYLOAD" | curl -X POST -H "Content-Type: application/json" -d @- "${{ github.event.inputs.callback_url }}"
-        shell: bash
