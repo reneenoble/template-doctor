@@ -1,23 +1,44 @@
-name: Verify UAMI OIDC Login
-
+name: Template Doctor Validation Workflow
+run-name: TDV ${{ inputs.run_id }}
 on:
   workflow_dispatch:
+    inputs:
+      target_validate_template_url:
+        description: 'Full URL of the template repository to validate'
+        required: true
+      callback_url:
+        description: 'Callback URL to notify when validation is complete'
+        required: false
+      run_id:
+        description: 'Unique ID for this validation run'
+        required: true
+      customValidators:
+        description: 'Comma-separated list of custom validation rules'
+        required: false
 
 permissions:
-  id-token: write       # required for OIDC
   contents: read
+  actions: read
+  id-token: write
 
 jobs:
-  test-uami-login:
+  validation:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        repo_url: ${{ fromJson('["' + github.event.inputs.target_validate_template_url + '"]') }}
     env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}      # UAMI clientId
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}      # Tenant ID
-
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: template-doctor-${{ github.run_id }}-${{ github.run_attempt }}
+      AZURE_LOCATION: eastus
     steps:
       - uses: actions/checkout@v4
 
-      # Get a real OIDC token from GitHub with Azure audience
+      # ======================
+      # Get OIDC token from GitHub
+      # ======================
       - name: Request OIDC token
         id: oidc
         run: |
@@ -26,21 +47,23 @@ jobs:
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")
           token=$(echo "$resp" | jq -r .value)
           if [ -z "$token" ] || [ "$token" = "null" ]; then
-            echo "Failed to get OIDC token"
+            echo "❌ Failed to get OIDC token"
             echo "$resp"
             exit 1
           fi
           echo "OIDC_TOKEN=$token" >> $GITHUB_ENV
 
-      # Decode + show token claims (for debugging)
-      - name: Decode token claims
+      # Decode token claims (for debugging)
+      - name: Decode OIDC token claims
         run: |
           payload=$(echo $OIDC_TOKEN | cut -d '.' -f2)
           case $(( ${#payload} % 4 )) in 2) payload="$payload==";; 3) payload="$payload=";; esac
           payload=$(echo "$payload" | tr '_-' '/+')
           echo "$payload" | base64 -d | jq
 
-      # Federated login (no device code!)
+      # ======================
+      # Federated login to Azure using UAMI
+      # ======================
       - name: Login to Azure using UAMI
         run: |
           az login --service-principal \
@@ -51,3 +74,35 @@ jobs:
 
       - name: Verify login
         run: az account show
+
+      # ======================
+      # Run the template validation action
+      # ======================
+      - id: validation
+        uses: microsoft/template-validation-action@Latest
+        with:
+          workingDirectory: ${{ runner.temp }}/template
+        env:
+          REPOSITORY_NAME: ${{ matrix.repo_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATORS: ${{ github.event.inputs.customValidators || 'azd-provision,ps-rule' }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
+          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-validation-result
+          path: ${{ steps.validation.outputs.resultFile }}
+
+      - name: Check result
+        id: check_result
+        run: |
+          if grep -q "NON-CONFORMING" "${{ steps.validation.outputs.resultFile }}"; then
+            echo "RESULT=FAILED" >> $GITHUB_OUTPUT
+          else
+            echo "RESULT=PASSED" >> $GITHUB_OUTPUT
+          fi

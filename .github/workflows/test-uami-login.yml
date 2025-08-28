@@ -1,0 +1,53 @@
+name: Verify UAMI OIDC Login
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write       # required for OIDC
+  contents: read
+
+jobs:
+  test-uami-login:
+    runs-on: ubuntu-22.04
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}      # UAMI clientId
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}      # Tenant ID
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Get a real OIDC token from GitHub with Azure audience
+      - name: Request OIDC token
+        id: oidc
+        run: |
+          echo "Requesting OIDC token..."
+          resp=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")
+          token=$(echo "$resp" | jq -r .value)
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "Failed to get OIDC token"
+            echo "$resp"
+            exit 1
+          fi
+          echo "OIDC_TOKEN=$token" >> $GITHUB_ENV
+
+      # Decode + show token claims (for debugging)
+      - name: Decode token claims
+        run: |
+          payload=$(echo $OIDC_TOKEN | cut -d '.' -f2)
+          case $(( ${#payload} % 4 )) in 2) payload="$payload==";; 3) payload="$payload=";; esac
+          payload=$(echo "$payload" | tr '_-' '/+')
+          echo "$payload" | base64 -d | jq
+
+      # Federated login (no device code!)
+      - name: Login to Azure using UAMI
+        run: |
+          az login --service-principal \
+                   --username $AZURE_CLIENT_ID \
+                   --tenant $AZURE_TENANT_ID \
+                   --federated-token "$OIDC_TOKEN" \
+                   --allow-no-subscriptions
+
+      - name: Verify login
+        run: az account show
