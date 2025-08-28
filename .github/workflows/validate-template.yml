@@ -113,15 +113,6 @@ jobs:
           REPOSITORY_NAME: ${{ steps.parse_repo_name.outputs.repo_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATORS: ${{ github.event.inputs.customValidators || 'azd-provision,ps-rule' }}
-        continue-on-error: true
-
-      - name: Handle UnmatchedPrincipalType
-        run: |
-          LOG_FILE="${{ steps.validation.outputs.resultFile }}"
-          if [ -f "$LOG_FILE" ] && grep -q "UnmatchedPrincipalType" "$LOG_FILE"; then
-            echo "⚠️ Caught UnmatchedPrincipalType, ignoring error"
-            # Optionally, you could also annotate the summary here
-          fi
 
       - name: Upload result
         uses: actions/upload-artifact@v4
@@ -132,4 +123,29 @@ jobs:
       - name: Check result
         id: check_result
         run: |
-          if grep -q "NON-CONFORMING" "${{ steps.vali
+          if grep -q "NON-CONFORMING" "${{ steps.validation.outputs.resultFile }}"; then
+            echo "RESULT=FAILED" >> $GITHUB_OUTPUT
+          else
+            echo "RESULT=PASSED" >> $GITHUB_OUTPUT
+          fi
+          SUMMARY=$(cat "${{ steps.validation.outputs.resultFile }}" | grep -E "## Summary|:white_check_mark:|:x:|:warning:" | head -10)
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Send callback if URL provided
+        if: github.event.inputs.callback_url != ''
+        run: |
+          PAYLOAD=$(cat <<EOF
+          {
+            "runId": "${{ github.event.inputs.run_id }}",
+            "status": "${{ steps.check_result.outputs.RESULT }}",
+            "templateUrl": "${{ matrix.repo_url }}",
+            "summary": ${{ toJSON(steps.check_result.outputs.summary) }},
+            "artifactUrl": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts"
+          }
+          EOF
+          )
+          echo "$PAYLOAD" | curl -X POST -H "Content-Type: application/json" -d @- "${{ github.event.inputs.callback_url }}"
+        shell: bash
