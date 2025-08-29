@@ -213,8 +213,12 @@
 
     <!-- Debug console (press Alt+D to show) - Must load first for logging -->
     <script src="js/debug-console.js"></script>
-    <!-- Notification system -->
+    <!-- New Notification system -->
+    <script src="js/notification-system.js"></script>
+    <!-- Legacy Notification system (for backward compatibility) -->
     <script src="js/notifications.js"></script>
+    <!-- Notification system compatibility layer -->
+    <script src="js/notifications-compat.js"></script>
     <!-- Notification system initialization -->
     <script src="js/notifications-init.js"></script>
     <!-- Configuration loader - Loads and merges configuration from multiple sources -->
@@ -243,8 +247,8 @@
     <script src="js/github-action-hook.js"></script>
     <!-- AZD Provision functionality -->
     <script src="js/azd-provision.js"></script>
-    <!-- Template validation via GitHub workflow -->
-    <script src="js/github-workflow-validation.js"></script>
+  <!-- Template validation via GitHub workflow -->
+  <script src="js/github-workflow-validation.js?v=20250829"></script>
     <!-- Demo mode for presentations -->
     <script src="js/enable-demo-mode.js"></script>
     <!-- Runtime configuration -->

@@ -5,8 +5,11 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": ["get", "options"],
-      "route": "aca-job-logs/{executionName}"
+      "methods": [
+        "post",
+        "options"
+      ],
+      "route": "validation-cancel"
     },
     {
       "type": "http",

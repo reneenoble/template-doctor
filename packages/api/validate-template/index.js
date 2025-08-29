@@ -1,7 +1,7 @@
 const crypto = require('crypto');
+const { Octokit } = require('@octokit/rest');
 
 module.exports = async function (context, req) {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     context.res = {
       status: 204,
@@ -13,45 +13,41 @@ module.exports = async function (context, req) {
     };
     return;
   }
-  
+
   try {
-    const { targetRepoUrl, callbackUrl } = req.body || {};
-    
-    context.log('validate-template triggered with:');
-    context.log(`targetRepoUrl: ${targetRepoUrl}`);
-    context.log(`callbackUrl: ${callbackUrl || 'not provided'}`);
-    
-    if (!targetRepoUrl) {
-      context.log.warn('Missing required parameter: targetRepoUrl');
+    const { targetRepoUrl, templateUrl, callbackUrl } = req.body || {};
+    const repoUrl = targetRepoUrl || templateUrl;
+
+    if (!repoUrl) {
       context.res = { 
         status: 400, 
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: { error: "targetRepoUrl is required" } 
+        body: { error: "targetRepoUrl or templateUrl is required" } 
       };
       return;
     }
 
-    const runId = crypto.randomUUID();
+    // Our local run ID (not the GitHub one)
+    const localRunId = crypto.randomUUID();
 
-    const owner = "Template-Doctor";
-    const repo = "template-doctor";
-    const workflowFile = "validate-template.yml";
+  const owner = process.env.GITHUB_REPO_OWNER || "Template-Doctor";
+  const repo = process.env.GITHUB_REPO_NAME || "template-doctor";
+  const workflowFile = "validation-template.yml";
     const token = process.env.GH_WORKFLOW_TOKEN;
     if (!token) throw new Error("Missing GH_WORKFLOW_TOKEN app setting");
 
     const ghUrl = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${encodeURIComponent(workflowFile)}/dispatches`;
 
     const payload = {
-      ref: "main",
+      ref: process.env.GITHUB_REPO_BRANCH || "main",
       inputs: {
-        target_validate_template_url: targetRepoUrl,
+        target_validate_template_url: repoUrl,
         callback_url: callbackUrl || "",
-        run_id: runId,
-        customValidators: "azd-up,azd-down"  // Only run azd-up and azd-down validators
+        // IMPORTANT: use the input name expected by the workflow YAML
+        run_id: localRunId,
+        customValidators: "azd-up,azd-down"
       }
     };
-
-    context.log("Dispatching workflow", ghUrl, payload);
 
     const dispatchRes = await fetch(ghUrl, {
       method: "POST",
@@ -69,17 +65,60 @@ module.exports = async function (context, req) {
       throw new Error(`GitHub dispatch failed: ${dispatchRes.status} ${dispatchRes.statusText} - ${errText}`);
     }
 
+  // Try to discover the GitHub run_id quickly so the client can link directly.
+  const branch = process.env.GITHUB_REPO_BRANCH || 'main';
+
+    const octokit = new Octokit({ auth: token, userAgent: 'TemplateDoctorApp' });
+
+    let githubRunId = null;
+    let githubRunUrl = null;
+
+    // Poll a few times for the run to appear (workflow_dispatch may take a moment)
+    const maxAttempts = 10; // up to ~10-20 seconds total depending on delay
+    const delayMs = 1500;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const runsResp = await octokit.actions.listWorkflowRuns({ owner, repo, workflow_id: workflowFile, branch, event: 'workflow_dispatch', per_page: 25 });
+        const candidates = runsResp.data.workflow_runs || [];
+        const found = candidates.find(r => {
+          const title = r.display_title || r.name || '';
+          const commitMsg = (r.head_commit && r.head_commit.message) ? String(r.head_commit.message) : '';
+          return (title && String(title).includes(localRunId)) || commitMsg.includes(localRunId);
+        });
+        if (found) {
+          githubRunId = found.id;
+          githubRunUrl = found.html_url;
+          break;
+        }
+      } catch (e) {
+        context.log.warn(`Run discovery attempt ${attempt} failed: ${e.message}`);
+      }
+      // wait before next attempt
+      await new Promise(res => setTimeout(res, delayMs));
+    }
+
     context.res = {
       status: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: { runId, message: "Workflow triggered successfully" }
+      body: {
+        runId: localRunId,
+        githubRunId: githubRunId || null,
+        githubRunUrl: githubRunUrl || null,
+        message: githubRunId ? "Workflow triggered successfully" : "Workflow triggered; run discovery in progress"
+      }
     };
   } catch (err) {
     context.log.error("validate-template error:", err);
+    const isGitHubError = err.message && err.message.includes('GitHub dispatch failed');
     context.res = { 
-      status: 500, 
+      status: isGitHubError ? 502 : 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: { error: err.message } 
+      body: { 
+        error: err.message,
+        type: isGitHubError ? 'github_api_error' : 'server_error',
+        details: isGitHubError ? 'Error communicating with GitHub API' : 'Internal server error',
+        timestamp: new Date().toISOString()
+      } 
     };
   }
-}
+};

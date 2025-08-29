@@ -1,7 +1,7 @@
 {
     "name": "template-doctor",
     "version": "0.0.1",
-    "description": "An Azure Developer CLI template analysis and healing agent",
+    "description": "An Azure template analysis and healing app",
     "main": "bin/cli.js",
     "private": true,
     "workspaces": [
@@ -11,9 +11,7 @@
         "template-doctor": "dist/cli.js"
     },
     "scripts": {
-        "build": "tsc",
-        "build:all": "npm run -ws build",
-        "start": "node --experimental-json-modules dist/cli.js",
+        "setup:uami": "bash ./scripts/setup.sh",
         "test": "npm run -w packages/app test",
         "test:ui": "npm run -w packages/app test:ui",
         "test:debug": "npm run -w packages/app test:debug"
@@ -27,8 +25,7 @@
     "license": "MIT",
     "devDependencies": {
         "@playwright/test": "^1.54.1",
-        "@types/node": "^24.0.14",
-        "typescript": "^5.8.3"
+        "@types/node": "^24.0.14"
     },
     "dependencies": {
     "@actions/core": "^1.11.1",

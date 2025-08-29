@@ -131,7 +131,7 @@ async function runTemplateValidation(templateName, apiBase) {
 
   try {
     // Call the template validation API
-    const response = await fetch(`${apiBase}/api/template-validation`, {
+    const response = await fetch(`${apiBase}/api/validation-template`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -146,7 +146,26 @@ async function runTemplateValidation(templateName, apiBase) {
     }
 
     const data = await response.json();
-    const correlationId = data.correlationId;
+    const correlationId = data.runId;
+
+    // If API already returned GitHub run info, store it so polling can use it right away
+    if (data.githubRunId) {
+      try {
+        localStorage.setItem(`validation_${correlationId}`, JSON.stringify({
+          githubRunId: data.githubRunId,
+          githubRunUrl: data.githubRunUrl || `https://github.com/Template-Doctor/template-doctor/actions/runs/${data.githubRunId}`,
+          timestamp: new Date().toISOString()
+        }));
+        localStorage.setItem('lastValidationRunInfo', JSON.stringify({
+          githubRunId: data.githubRunId,
+          githubRunUrl: data.githubRunUrl || `https://github.com/Template-Doctor/template-doctor/actions/runs/${data.githubRunId}`,
+          correlationId,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error('Error pre-storing GitHub run info:', e);
+      }
+    }
 
     // Simulate progress (we don't have real progress feedback)
     validationProgress.style.width = '20%';
@@ -186,6 +205,42 @@ async function pollValidationStatus(apiBase, correlationId) {
   let attempts = 0;
   const maxAttempts = 30; // Maximum number of polling attempts (5 minutes at 10-second intervals)
   
+  // Load stored GitHub run ID from localStorage (if available)
+  let githubRunInfo = null;
+  try {
+    const storedInfo = localStorage.getItem(`validation_${correlationId}`);
+    if (storedInfo) {
+      githubRunInfo = JSON.parse(storedInfo);
+      console.log(`Loaded stored GitHub run info for ${correlationId}:`, githubRunInfo);
+    }
+  } catch (e) {
+    console.error('Error loading GitHub run info from localStorage:', e);
+  }
+  
+  // For persistent storage across browser sessions
+  const storeGitHubRunInfo = (info) => {
+    if (!info || !info.githubRunId) return;
+    
+    try {
+      // Store specific to this correlation ID
+      localStorage.setItem(`validation_${correlationId}`, JSON.stringify({
+        ...info,
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Also store as the most recent validation info
+      localStorage.setItem('lastValidationRunInfo', JSON.stringify({
+        ...info,
+        correlationId,
+        timestamp: new Date().toISOString()
+      }));
+      
+      console.log(`Stored GitHub run info for ${correlationId}:`, info);
+    } catch (e) {
+      console.error('Error storing GitHub run info in localStorage:', e);
+    }
+  };
+  
   while (!complete && attempts < maxAttempts) {
     try {
       // Wait before polling (except for the first attempt)
@@ -197,14 +252,38 @@ async function pollValidationStatus(apiBase, correlationId) {
       progress = Math.min(progress + 5, 90);
       validationProgress.style.width = `${progress}%`;
       
+      // Construct the polling URL with GitHub run ID if available
+      let statusUrl = `${apiBase}/api/validation-status?runId=${correlationId}`;
+      
+      // Add query parameters for GitHub run ID if available
+      if (githubRunInfo && githubRunInfo.githubRunId) {
+        statusUrl += `&githubRunId=${githubRunInfo.githubRunId}`;
+        if (githubRunInfo.githubRunUrl) {
+          statusUrl += `&githubRunUrl=${encodeURIComponent(githubRunInfo.githubRunUrl)}`;
+        }
+      }
+      
+      console.log(`Polling validation status: ${statusUrl}`);
+      
       // Poll for status
-      const response = await fetch(`${apiBase}/api/template-validation-status?id=${correlationId}`);
+      const response = await fetch(statusUrl);
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
       
       const statusData = await response.json();
+      
+      // Store GitHub run ID if provided in the response
+      if (statusData.githubRunId) {
+        githubRunInfo = {
+          githubRunId: statusData.githubRunId,
+          githubRunUrl: statusData.runUrl
+        };
+        
+        // Store for future use
+        storeGitHubRunInfo(githubRunInfo);
+      }
       
       // Check if validation is complete
       if (statusData.status === 'completed') {
@@ -221,17 +300,67 @@ async function pollValidationStatus(apiBase, correlationId) {
         if (statusData.conclusion === 'success') {
           validationSummary.className = 'validation-summary success';
           validationSummary.innerHTML = '<strong>Success!</strong> The template passed all validation checks.';
+          
+          // Show passed checks if available
+          if (statusData.results && statusData.results.details) {
+            const passedChecks = statusData.results.details.filter(d => d.status === 'pass');
+            if (passedChecks.length > 0) {
+              validationIssues.innerHTML = `
+                <h5>Passed Checks:</h5>
+                <ul>
+                  ${passedChecks.map(check => `<li><strong>${check.category}:</strong> ${check.message}</li>`).join('')}
+                </ul>
+              `;
+            }
+          }
         } else {
           validationSummary.className = 'validation-summary failure';
           validationSummary.innerHTML = '<strong>Validation Failed</strong> The template has issues that need to be addressed.';
           
-          if (statusData.results && statusData.results.issues && statusData.results.issues.length > 0) {
-            validationIssues.innerHTML = `
-              <h5>Issues Found:</h5>
-              <ul>
-                ${statusData.results.issues.map(issue => `<li><strong>${issue.rule}:</strong> ${issue.message}</li>`).join('')}
-              </ul>
-            `;
+          // Show all checks, both passed and failed
+          if (statusData.results && statusData.results.details) {
+            let failedChecksHtml = '';
+            let warningChecksHtml = '';
+            let passedChecksHtml = '';
+            
+            const failedChecks = statusData.results.details.filter(d => d.status === 'fail');
+            const warningChecks = statusData.results.details.filter(d => d.status === 'warn');
+            const passedChecks = statusData.results.details.filter(d => d.status === 'pass');
+            
+            if (failedChecks.length > 0) {
+              failedChecksHtml = `
+                <h5>Issues Found:</h5>
+                <ul>
+                  ${failedChecks.map(check => {
+                    let issuesHtml = '';
+                    if (check.issues && check.issues.length) {
+                      issuesHtml = `<ul>${check.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`;
+                    }
+                    return `<li><strong>❌ ${check.category}:</strong> ${check.message}${issuesHtml}</li>`;
+                  }).join('')}
+                </ul>
+              `;
+            }
+            
+            if (warningChecks.length > 0) {
+              warningChecksHtml = `
+                <h5>Warnings:</h5>
+                <ul>
+                  ${warningChecks.map(check => `<li><strong>⚠️ ${check.category}:</strong> ${check.message}</li>`).join('')}
+                </ul>
+              `;
+            }
+            
+            if (passedChecks.length > 0) {
+              passedChecksHtml = `
+                <h5>Passed Checks:</h5>
+                <ul>
+                  ${passedChecks.map(check => `<li><strong>✅ ${check.category}:</strong> ${check.message}</li>`).join('')}
+                </ul>
+              `;
+            }
+            
+            validationIssues.innerHTML = failedChecksHtml + warningChecksHtml + passedChecksHtml;
           }
         }
         
@@ -259,6 +388,11 @@ async function pollValidationStatus(apiBase, correlationId) {
       <strong>Timeout:</strong> The validation is taking longer than expected. 
       <p>You can check the status later using correlation ID: ${correlationId}</p>
     `;
+    
+    // Add link to GitHub Actions run if available
+    if (githubRunInfo && githubRunInfo.githubRunUrl) {
+      validationSummary.innerHTML += `<p><a href="${githubRunInfo.githubRunUrl}" target="_blank">View GitHub workflow run</a></p>`;
+    }
   }
   
   // Reset button
