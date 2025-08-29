@@ -46,13 +46,14 @@ async function submitAnalysisToGitHub(result, username) {
     };
 
     // Get the API URL from configuration or default to the main repo
-    const targetRepo = 'anfibiacreativa/template-doctor';
+    const cfg = window.TemplateDoctorConfig || {};
+    const targetRepo = cfg.githubActionRepo || cfg.GITHUB_ACTION_REPO || 'Template-Doctor/template-doctor';
     const apiUrl =
-      window.config?.githubActionWebhookUrl ||
+      cfg.githubActionWebhookUrl || cfg.GITHUB_ACTION_WEBHOOK_URL ||
       `https://api.github.com/repos/${targetRepo}/dispatches`;
 
-    console.log(`Submitting to repository: ${targetRepo}`);
-    console.log(`API URL: ${apiUrl}`);
+  console.log(`Submitting to repository: ${targetRepo}`);
+  console.log(`API URL: ${apiUrl}`);
 
     // Get the GitHub token
     const token = window.GitHubClient?.auth?.getToken();

@@ -37,6 +37,13 @@
           mapped.functionKey = config.FUNCTION_KEY;
         }
         
+        // Surface GitHub Action overrides at the top level
+        if (config.GITHUB_ACTION_REPO && !mapped.githubActionRepo) {
+          mapped.githubActionRepo = config.GITHUB_ACTION_REPO;
+        }
+        if (config.GITHUB_ACTION_WEBHOOK_URL && !mapped.githubActionWebhookUrl) {
+          mapped.githubActionWebhookUrl = config.GITHUB_ACTION_WEBHOOK_URL;
+        }
         window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
         return;
       }

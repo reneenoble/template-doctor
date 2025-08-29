@@ -33,10 +33,6 @@ jobs:
           echo "Timestamp: ${{ github.event.client_payload.timestamp }}"
           echo "Upstream: ${{ github.event.client_payload.upstream }}"
           echo "Origin Upstream: ${{ github.event.client_payload.originUpstream }}"
-          if [ -z "${{ github.event.client_payload.originUpstream }}" ] && [ -z "${{ github.event.client_payload.upstream }}" ]; then
-            echo "ERROR: originUpstream (preferred) or upstream must be provided in repository_dispatch.client_payload to run azd init."
-            exit 1
-          fi
           
       - name: Process analysis result
         id: process
@@ -66,8 +62,8 @@ jobs:
             - Scanned by: ${{ github.event.client_payload.username }}
             - Date: ${{ github.event.client_payload.timestamp }}
             
-            Compliance: ${{ github.event.client_payload.compliance.percentage }}% 
-            (${{ github.event.client_payload.compliance.passed }} passed, ${{ github.event.client_payload.compliance.issues }} issues)
+            Compliance: ${{ fromJSON(steps.process.outputs.template-data).compliance.percentage }}% 
+            (${{ fromJSON(steps.process.outputs.template-data).compliance.passed }} passed, ${{ fromJSON(steps.process.outputs.template-data).compliance.issues }} issues)
           branch: template-analysis-${{ github.run_id }}
           delete-branch: true
           base: main

@@ -18,6 +18,10 @@ module.exports = async function (context, req) {
   // GitHub OAuth settings from environment
   const githubClientId = process.env.GITHUB_CLIENT_ID || '';
 
+  // GitHub Action dispatch target overrides
+  const actionRepo = process.env.GITHUB_ACTION_REPO || process.env.TD_GITHUB_ACTION_REPO || '';
+  const actionWebhookUrl = process.env.GITHUB_ACTION_WEBHOOK_URL || process.env.TD_GITHUB_ACTION_WEBHOOK_URL || '';
+
   context.res = {
     status: 200,
     headers,
@@ -28,7 +32,9 @@ module.exports = async function (context, req) {
   // WARNING: This exposes a function key to the client. Ensure you accept
   // this tradeoff or prefer a server-side proxy to avoid secrets in the browser.
   functionKey: functionKey || ''
-      }
+      },
+      GITHUB_ACTION_REPO: actionRepo,
+      GITHUB_ACTION_WEBHOOK_URL: actionWebhookUrl
     }
   };
 };

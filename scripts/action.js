@@ -18,10 +18,12 @@ async function run() {
     if (upstreamInput) core.info(`Upstream (from input): ${upstreamInput}`);
     if (originUpstreamInput) core.info(`Origin Upstream (from input): ${originUpstreamInput}`);
 
-    // Parse analysis data
+    // Parse analysis data (robust to double-encoded JSON)
     let analysisData;
     try {
-      analysisData = JSON.parse(analysisDataRaw);
+      const first = JSON.parse(analysisDataRaw);
+      // If first parse yields a string, try parsing again (double-encoded payloads)
+      analysisData = typeof first === 'string' ? JSON.parse(first) : first;
       core.info('Analysis data parsed successfully');
     } catch (parseError) {
       core.warning(`Failed to parse analysis data: ${parseError.message}`);
@@ -29,11 +31,12 @@ async function run() {
       return;
     }
 
-    // Repo folder name
-    const repoUrlParts = repoUrl.split('/');
+    // Repo folder name (sanitize URL: strip trailing slash and .git)
+    const sanitizedRepoUrl = String(repoUrl).replace(/\/+$/, '').replace(/\.git$/i, '');
+    const repoUrlParts = sanitizedRepoUrl.split('/');
     const repoName = repoUrlParts.length >= 2
       ? `${repoUrlParts[repoUrlParts.length - 2]}-${repoUrlParts[repoUrlParts.length - 1]}`
-      : repoUrl.split('/').pop();
+      : sanitizedRepoUrl.split('/').pop();
 
     // Compliance summary
     const complianceSummary = analysisData.compliance?.compliant?.find(c => c.id === 'compliance-summary');
@@ -47,8 +50,7 @@ async function run() {
     // Canonical upstream
     const canonicalOriginUpstream = (originUpstreamInput || upstreamInput || '').trim();
     if (!canonicalOriginUpstream) {
-      core.setFailed('origin-upstream (or upstream) is required but missing. Provide owner/repo, e.g. Azure-Samples/openai-langchainjs');
-      return;
+      core.warning('origin-upstream (or upstream) is not provided. Proceeding without canonical upstream.');
     }
 
     // Template data
@@ -65,7 +67,7 @@ async function run() {
       },
       scannedBy: [username],
       relativePath: `${repoName}/${fileTimestamp}-dashboard.html`,
-      originUpstream: canonicalOriginUpstream,
+  ...(canonicalOriginUpstream ? { originUpstream: canonicalOriginUpstream } : {}),
     };
 
     // Resolve root of repo (scripts/ is under root)
@@ -108,7 +110,9 @@ async function run() {
       existing.ruleSet = ruleSet;
       existing.compliance = templateData.compliance;
       existing.relativePath = templateData.relativePath;
-      existing.originUpstream = canonicalOriginUpstream;
+      if (canonicalOriginUpstream) {
+        existing.originUpstream = canonicalOriginUpstream;
+      }
       templatesData[existingIndex] = existing;
     } else {
       templatesData.unshift(templateData);

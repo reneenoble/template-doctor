@@ -1,0 +1,93 @@
+name: Test Submit Analysis Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      repoUrl:
+        description: 'Repository URL to show in the dashboard (https://github.com/owner/repo)'
+        required: true
+        type: string
+      ruleSet:
+        description: 'Ruleset used for the analysis'
+        required: true
+        default: 'dod'
+        type: choice
+        options:
+          - dod
+          - partner
+          - custom
+      username:
+        description: 'GitHub username who ran the analysis'
+        required: true
+        type: string
+      timestamp:
+        description: 'ISO timestamp for the analysis'
+        required: true
+        default: '${{ github.event.repository.updated_at }}'
+        type: string
+      upstream:
+        description: 'Optional canonical upstream repo (owner/repo)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate sample analysis data
+        id: gen
+        shell: bash
+        run: |
+          cat > analysis.json << 'JSON'
+          {
+            "compliance": {
+              "compliant": [
+                { "id": "compliance-summary", "details": { "percentageCompliant": 83 } },
+                { "id": "doc-readme" }
+              ],
+              "issues": [
+                { "id": "missing-license" },
+                { "id": "missing-codeowners" }
+              ]
+            }
+          }
+          JSON
+          printf 'analysisData=%s\n' "$(cat analysis.json | tr -d '\n' | sed 's/\r//g')" >> "$GITHUB_OUTPUT"
+
+      - name: Run action (no PR, just generate files)
+        id: action
+        uses: ./
+        with:
+          repo-url: ${{ inputs.repoUrl }}
+          rule-set: ${{ inputs.ruleSet }}
+          username: ${{ inputs.username }}
+          timestamp: ${{ inputs.timestamp }}
+          analysis-data: ${{ steps.gen.outputs.analysisData }}
+          upstream: ${{ inputs.upstream }}
+
+      - name: Show action output
+        run: |
+          echo "Template data output:" \
+          && echo '${{ steps.action.outputs.template-data }}' | sed 's/\\n/\n/g'
+
+      - name: Upload generated results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-analysis-results
+          path: |
+            packages/app/results/**
+          if-no-files-found: warn

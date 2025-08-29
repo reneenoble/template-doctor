@@ -6,5 +6,7 @@
   "backend": {
     "baseUrl": "",
     "functionKey": ""
-  }
+  },
+  "githubActionRepo": "Template-Doctor/template-doctor",
+  "githubActionWebhookUrl": ""
 }
