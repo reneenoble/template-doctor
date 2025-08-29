@@ -116,6 +116,12 @@ class TemplateAnalyzer {
    * @returns {Object} - The configuration for the selected rule set
    */
   getConfig(ruleSet = 'dod') {
+    if (!ruleSet || ruleSet === 'dod') {
+      const cfg = window.TemplateDoctorConfig || {};
+      if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
+        ruleSet = cfg.defaultRuleSet;
+      }
+    }
     switch (ruleSet) {
       case 'partner':
         return this.ruleSetConfigs.partner;
@@ -260,6 +266,12 @@ class TemplateAnalyzer {
    * @returns {Promise<Object>} - The analysis result
    */
   async analyzeTemplate(repoUrl, ruleSet = 'dod') {
+    if (!ruleSet || ruleSet === 'dod') {
+      const cfg = window.TemplateDoctorConfig || {};
+      if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
+        ruleSet = cfg.defaultRuleSet;
+      }
+    }
     // Get the appropriate configuration based on the rule set
     const config = this.getConfig(ruleSet);
     const repoInfo = this.extractRepoInfo(repoUrl);

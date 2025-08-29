@@ -8,5 +8,7 @@
     "functionKey": ""
   },
   "githubActionRepo": "Template-Doctor/template-doctor",
-  "githubActionWebhookUrl": ""
+  "githubActionWebhookUrl": "",
+  "defaultRuleSet": "dod",
+  "requireAuthForResults": true
 }

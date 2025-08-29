@@ -342,6 +342,13 @@ let internalAnalyzeRepo;
 
 // Export analyzeRepo to window object so it can be used by other components
 window.analyzeRepo = async function (repoUrl, ruleSet = 'dod') {
+  // Override default with config if provided
+  if (!ruleSet || ruleSet === 'dod') {
+    const cfg = window.TemplateDoctorConfig || {};
+    if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
+      ruleSet = cfg.defaultRuleSet;
+    }
+  }
   // Call the internal analyzeRepo function with the same parameters
   if (typeof internalAnalyzeRepo === 'function') {
     return internalAnalyzeRepo(repoUrl, ruleSet);
@@ -2399,6 +2406,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Analysis Flow ---
   // Define the internal analyzeRepo function and store a reference to it
   internalAnalyzeRepo = async function (repoUrl, ruleSet = 'dod') {
+    if (!ruleSet || ruleSet === 'dod') {
+      const cfg = window.TemplateDoctorConfig || {};
+      if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
+        ruleSet = cfg.defaultRuleSet;
+      }
+    }
     // First verify we have necessary modules initialized
     if (!appAnalyzer || !appDashboard) {
       debug('app', 'Required services not available, attempting to reinitialize');

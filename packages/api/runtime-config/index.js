@@ -22,6 +22,10 @@ module.exports = async function (context, req) {
   const actionRepo = process.env.GITHUB_ACTION_REPO || process.env.TD_GITHUB_ACTION_REPO || '';
   const actionWebhookUrl = process.env.GITHUB_ACTION_WEBHOOK_URL || process.env.TD_GITHUB_ACTION_WEBHOOK_URL || '';
 
+  // Frontend behavior overrides
+  const defaultRuleSet = process.env.DEFAULT_RULE_SET || process.env.TD_DEFAULT_RULE_SET || '';
+  const requireAuthForResults = process.env.REQUIRE_AUTH_FOR_RESULTS || process.env.TD_REQUIRE_AUTH_FOR_RESULTS || '';
+
   context.res = {
     status: 200,
     headers,
@@ -34,7 +38,9 @@ module.exports = async function (context, req) {
   functionKey: functionKey || ''
       },
       GITHUB_ACTION_REPO: actionRepo,
-      GITHUB_ACTION_WEBHOOK_URL: actionWebhookUrl
+      GITHUB_ACTION_WEBHOOK_URL: actionWebhookUrl,
+      DEFAULT_RULE_SET: defaultRuleSet,
+      REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults
     }
   };
 };

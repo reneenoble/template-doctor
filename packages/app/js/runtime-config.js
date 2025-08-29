@@ -7,6 +7,8 @@
     // Keep a working default for now; override via config.json in production
     // Prefer same-origin by default; override via config.json in production
     apiBase: `${window.location.origin}`,
+    defaultRuleSet: 'dod',
+    requireAuthForResults: true,
   };
 
   // Initialize with defaults so consumers have something synchronously
@@ -36,6 +38,14 @@
         if (config.FUNCTION_KEY) {
           mapped.functionKey = config.FUNCTION_KEY;
         }
+        // Map frontend overrides
+        if (config.DEFAULT_RULE_SET) {
+          mapped.defaultRuleSet = String(config.DEFAULT_RULE_SET).toLowerCase();
+        }
+        if (typeof config.REQUIRE_AUTH_FOR_RESULTS !== 'undefined' && config.REQUIRE_AUTH_FOR_RESULTS !== null) {
+          const v = String(config.REQUIRE_AUTH_FOR_RESULTS).trim().toLowerCase();
+          mapped.requireAuthForResults = /^(1|true|yes|on)$/i.test(v);
+        }
         
         // Surface GitHub Action overrides at the top level
         if (config.GITHUB_ACTION_REPO && !mapped.githubActionRepo) {
@@ -60,6 +70,12 @@
           }
           if (cfg.backend && typeof cfg.backend.functionKey === 'string') {
             mapped.functionKey = cfg.backend.functionKey;
+          }
+          if (cfg.defaultRuleSet) {
+            mapped.defaultRuleSet = String(cfg.defaultRuleSet).toLowerCase();
+          }
+          if (typeof cfg.requireAuthForResults === 'boolean') {
+            mapped.requireAuthForResults = cfg.requireAuthForResults;
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

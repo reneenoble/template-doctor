@@ -15,7 +15,7 @@ This repository is structured as a monorepo with independent deployable packages
 
 1. Create a GitHub OAuth app with appropriate callback URL
 2. Configure environment variables or config.json settings
-3. See [OAuth Configuration Guide](docs/OAUTH_CONFIGURATION.md) for detailed instructions
+3. See [OAuth Configuration Guide](docs/development/OAUTH_CONFIGURATION.md) for detailed instructions
 
 > [!WARNING]
 > You will need different app registrations for local and prod.
@@ -24,7 +24,7 @@ This repository is structured as a monorepo with independent deployable packages
 
 Run `npm run setup:uami` before you get started
 Make sure to create an .env file at the root, with [./.env.example](./.env.example) as guide.
-[Read more](docs/UAMI_SETUP_INSTRUCTIONS.md)
+[Read more](docs/development/UAMI_SETUP_INSTRUCTIONS.md)
 
 ## Monorepo layout
 

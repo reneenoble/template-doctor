@@ -8,7 +8,6 @@ Previously, environment variables were spread across multiple `.env` files:
 - `/.env` (root)
 - `/packages/app/.env`
 - `/packages/api/.env`
-- `/packages/functions-aca/.env`
 
 These have now been consolidated into a single `.env` file at the root level. This approach simplifies setup and ensures consistency across different parts of the application.
 
@@ -19,6 +18,7 @@ These have now been consolidated into a single `.env` file at the root level. Th
 | Variable | Description | Required | Used In |
 |----------|-------------|----------|---------|
 | `GITHUB_TOKEN` | GitHub personal access token used for API calls | Yes | API, GitHub Action |
+| `GH_WORKFLOW_TOKEN` | GitHub personal access token used for API calls | Yes | API, GitHub Action |
 | `GITHUB_CLIENT_ID` | OAuth client ID for GitHub authentication | Yes | Frontend, API |
 | `GITHUB_CLIENT_SECRET` | OAuth client secret for GitHub authentication | Yes | API (github-oauth-token) |
 
@@ -29,36 +29,6 @@ These have now been consolidated into a single `.env` file at the root level. Th
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | Yes | API, Functions |
 | `AZURE_TENANT_ID` | Azure tenant ID | Yes | API, Functions |
 | `AZURE_CLIENT_ID` | Azure managed identity client ID | For ACA | Functions |
-
-### Container Registry
-
-| Variable | Description | Required | Used In |
-|----------|-------------|----------|---------|
-| `ACR_NAME` | Azure Container Registry name | For ACA | Deploy scripts |
-
-### Azure Container Apps
-
-| Variable | Description | Required | Used In |
-|----------|-------------|----------|---------|
-| `ACA_RESOURCE_GROUP` | Resource group for Azure Container Apps | For ACA | Functions, Deploy scripts |
-| `ACA_JOB_NAME` | Name of the ACA job | For ACA | Functions |
-| `ACA_JOB_IMAGE` | Docker image for the ACA job | For ACA | Functions |
-
-### Log Analytics
-
-| Variable | Description | Required | Used In |
-|----------|-------------|----------|---------|
-| `LOG_ANALYTICS_WORKSPACE` | Log Analytics workspace name | For monitoring | Functions |
-| `LOG_ANALYTICS_WORKSPACE_ID` | Log Analytics workspace ID | For monitoring | Functions |
-
-### Backend Configuration
-
-| Variable | Description | Required | Used In |
-|----------|-------------|----------|---------|
-| `TD_BACKEND_BASE_URL` | Base URL for the backend API | No | Frontend |
-| `TD_BACKEND_FUNCTION_KEY` | Function key for the backend API | No | Frontend |
-| `BACKEND_BASE_URL` | Legacy version of TD_BACKEND_BASE_URL | No | Frontend |
-| `BACKEND_FUNCTION_KEY` | Legacy version of TD_BACKEND_FUNCTION_KEY | No | Frontend |
 
 ### Azure Functions Configuration (Local Development)
 
@@ -96,8 +66,6 @@ See the [OAuth Setup Guide](./oauth-setup.md) for more detailed instructions.
 For production deployments, configure the environment variables in your hosting environment:
 
 - **Azure Static Web Apps**: Configure Application Settings in the Azure Portal
-- **GitHub Pages**: Set Repository Secrets for GitHub Actions
-- **Other Hosting**: Refer to your hosting provider's documentation for environment variable configuration
 
 ## Security Considerations
 
