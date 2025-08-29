@@ -1,4 +1,4 @@
-name: Template Doctor Validation Workflow
+name: Template Doctor Validate Azure Developer CLI
 run-name: TDV ${{ inputs.run_id }}
 
 on:
