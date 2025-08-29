@@ -138,48 +138,7 @@ These security checks can be enabled/disabled in each rule set configuration by 
 }
 ```
 
-## Documentation
 
-- [Security Analysis Features](docs/SECURITY_ANALYSIS.md)
-- [OAuth Configuration Guide](docs/OAUTH_CONFIGURATION.md)
-- [Environment Variables](docs/ENVIRONMENT_VARIABLES.md)
-
----
-
-For issues, please open a GitHub issue.
-
-
-- Add/update tests for features and fixes. Frontend E2E tests live in the app package; run from root via `npm test`.
-- Avoid native browser dialogs; use notifications to keep tests stable.
-- Format code before committing (packages may include prettier configs and scripts).
-- Don't commit generated artifacts like `node_modules/` or large reports.
-- Update docs and workflows when changing paths or behavior.
-
-## Security Analysis Features
-
-Template Doctor now includes enhanced security analysis for Bicep files:
-
-1. **Managed Identity Detection**: Identifies when Managed Identity is properly used in Azure resources.
-2. **Insecure Authentication Detection**: Identifies and flags insecure authentication methods like:
-   - Connection strings with embedded credentials
-   - Access keys
-   - SAS tokens
-   - Storage account keys
-   - KeyVault secrets accessed without Managed Identity
-
-3. **Anonymous Access Detection**: Identifies Azure resources that typically require authentication but may be configured for anonymous access.
-
-These security checks can be enabled/disabled in each rule set configuration by setting the `bicepChecks.securityBestPractices` properties:
-
-```json
-"bicepChecks": {
-  "requiredResources": [...],
-  "securityBestPractices": {
-    "preferManagedIdentity": true,
-    "detectInsecureAuth": true,
-    "checkAnonymousAccess": true
-  }
-}
 ```
 
 
