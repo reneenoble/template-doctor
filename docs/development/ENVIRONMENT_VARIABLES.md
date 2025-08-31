@@ -19,6 +19,16 @@ These have now been consolidated into a single `.env` file at the root level. Th
 |----------|-------------|----------|---------|
 | `GITHUB_TOKEN` | GitHub personal access token used for API calls | Yes | API, GitHub Action |
 | `GH_WORKFLOW_TOKEN` | GitHub personal access token used for API calls | Yes | API, GitHub Action |
+### GitHub Action Dispatch Target
+
+| Variable | Description | Required | Used In |
+|----------|-------------|----------|---------|
+| `GITHUB_ACTION_REPO` | Target repository for saving results (format: `owner/repo`). If omitted, the server will use `GITHUB_REPOSITORY` when available, otherwise it falls back to `Template-Doctor/template-doctor`. | No | API (submit-analysis-dispatch) |
+
+Notes:
+- Set this only on the server (Functions or SWA API). The client no longer needs to know or set this value.
+- If the application and action live in the same repository, you can omit this and rely on `GITHUB_REPOSITORY` or the default fallback.
+
 | `GITHUB_CLIENT_ID` | OAuth client ID for GitHub authentication | Yes | Frontend, API |
 | `GITHUB_CLIENT_SECRET` | OAuth client secret for GitHub authentication | Yes | API (github-oauth-token) |
 
@@ -28,7 +38,9 @@ These have now been consolidated into a single `.env` file at the root level. Th
 |----------|-------------|----------|---------|
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | Yes | API, Functions |
 | `AZURE_TENANT_ID` | Azure tenant ID | Yes | API, Functions |
-| `AZURE_CLIENT_ID` | Azure managed identity client ID | For ACA | Functions |
+| `AZURE_CLIENT_ID` | Azure managed identity client ID | For managed identity | Functions |
+| `AZURE_RESOURCE_GROUP` | Azure resource group | For managed identity  | Scripts |
+
 
 ### Azure Functions Configuration (Local Development)
 

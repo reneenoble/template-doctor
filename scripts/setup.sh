@@ -17,7 +17,7 @@ export $(grep -v '^#' "$ENV_FILE" | xargs)
 # Derived values
 # ==========================
 IDENTITY_NAME="template-doctor-identity-UAMIOIDC"   # fixed UAMI name
-RESOURCE_GROUP="${ACA_RESOURCE_GROUP}"     # reuse ACA RG
+RESOURCE_GROUP="${AZURE_RESOURCE_GROUP}"     # use same RG than the one your SWA is on
 SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
 
 # ==========================
