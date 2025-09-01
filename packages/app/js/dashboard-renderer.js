@@ -1014,14 +1014,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const res = await window.submitAnalysisToGitHub(original, username);
                 if (res && res.success) {
+                  const msg = 'A pull request is being created with your analysis results. Once the PR is merged, results will appear on the site after the nightly deployment. If you are an admin, you can deploy the site manually to publish immediately.';
                   if (window.NotificationSystem) {
                     window.NotificationSystem.showSuccess(
                       'Save Requested',
-                      'A pull request is being created with your analysis results.',
-                      5000
+                      msg,
+                      9000
                     );
                   } else {
-                    alert('Save requested. A PR will be created with your analysis results.');
+                    alert('Save requested. ' + msg);
                   }
                 } else {
                   const msg = (res && (res.error || res.message)) || 'Unknown error';

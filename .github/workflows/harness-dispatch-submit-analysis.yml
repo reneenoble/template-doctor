@@ -6,45 +6,30 @@ on:
       repoUrl:
         description: 'Repository URL to display in PR body (e.g., https://github.com/owner/repo)'
         required: true
-        type: string
       ruleSet:
         description: 'Ruleset used for the analysis'
         required: true
-        default: 'dod'
-        type: choice
-        options:
-          - dod
-          - partner
-          - custom
+        default: dod
       username:
         description: 'GitHub username who ran the analysis (defaults to github.actor)'
         required: false
-        type: string
       timestamp:
         description: 'ISO timestamp for the analysis (defaults to now UTC)'
         required: false
-        type: string
       upstream:
         description: 'Optional canonical upstream repo (owner/repo)'
         required: false
-        type: string
       originUpstream:
         description: 'Optional origin upstream repo (owner/repo)'
         required: false
-        type: string
       archiveEnabled:
         description: 'Archive metadata to central collection (true/false)'
         required: false
         default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
       archiveCollection:
         description: 'Archive collection name (if archiving)'
         required: false
         default: 'aigallery'
-        type: string
 
 permissions:
   contents: write

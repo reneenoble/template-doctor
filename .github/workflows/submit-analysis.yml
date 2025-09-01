@@ -96,6 +96,9 @@ jobs:
             echo "Archive API base not configured; skipping." && exit 0
           fi
 
+          # Normalize API base (strip any trailing slash)
+          API_BASE="${API_BASE%/}"
+
           repoUrl="$PAYLOAD_REPO_URL"
           repoName=$(echo "$repoUrl" | awk -F/ '{print $(NF-1)"-"$NF}' | sed 's/.git$//')
           analysisId="${GITHUB_RUN_ID}"
@@ -123,6 +126,17 @@ jobs:
             '{collection:$collection, repoUrl:$repoUrl, repoName:$repoName, analysisId:$analysisId, username:$username, timestamp:$timestamp, metadata:$metadata}')
 
           echo "Calling archive function with collection=$collection repo=$repoName"
-          curl -sSf -X POST "$API_BASE/archive-collection" \
+          # Call archive endpoint; treat 409 Conflict as non-fatal (already archived)
+          HTTP_CODE=$(curl -sS -o response.txt -w "%{http_code}" -X POST "$API_BASE/archive-collection" \
             -H 'Content-Type: application/json' \
-            -d "$payload"
+            -d "$payload")
+          echo "Archive HTTP status: $HTTP_CODE"
+          echo "Archive response body:" && cat response.txt || true
+          if [ "$HTTP_CODE" = "409" ]; then
+            echo "Archive already exists (409). Skipping without failing the job."
+            exit 0
+          fi
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Archive request failed with status $HTTP_CODE" >&2
+            exit 1
+          fi

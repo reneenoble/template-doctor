@@ -1,0 +1,46 @@
+name: Nightly Static Web Apps Deploy
+
+on:
+  schedule:
+    # Nightly at 02:15 UTC
+    - cron: '15 2 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Reason for manual deploy
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swa-deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install SWA CLI
+        run: npm i -g @azure/static-web-apps-cli
+
+      - name: Deploy Static Web App (PRODUCTION)
+        env:
+          SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.SWA_CLI_DEPLOYMENT_TOKEN }}
+        run: |
+          if [ -z "$SWA_CLI_DEPLOYMENT_TOKEN" ]; then
+            echo "SWA_CLI_DEPLOYMENT_TOKEN secret is not set. Please add it in repo or org secrets." >&2
+            exit 1
+          fi
+          npx swa --version
+          # swa-cli.config.json in repo defines locations. This mirrors local 'swa deploy --env=PRODUCTION'.
+          swa deploy --env=PRODUCTION

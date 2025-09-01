@@ -71,9 +71,19 @@ Workflows under `.github/workflows/`:
 	- `app_location: /packages/app`
 	- `api_location: /packages/api`
 
+  - Nightly Static Web Apps Deploy (SWA CLI):
+    - Workflow: `.github/workflows/nightly-swa-deploy.yml`
+    - Runs nightly at 02:15 UTC and can be triggered manually via "Run workflow"
+    - Requires repo secret `SWA_CLI_DEPLOYMENT_TOKEN` (Static Web App deployment token)
+    - See details: [docs/usage/DEPLOYMENT.md](docs/usage/DEPLOYMENT.md)
+
 - Submit Template Analysis (repository_dispatch):
   - Saves scan results and opens a PR using `peter-evans/create-pull-request`
   - See setup guide (including bot token fallback): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
+
+Publishing results
+
+- After “Save Results” creates a PR and the PR is merged, results appear on the site after the nightly deploy. Admins can run the deploy workflow manually to publish immediately. The UI shows a notification to inform users of this timing.
 
 ### Centralized Archive (optional)
 

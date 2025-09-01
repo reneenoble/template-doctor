@@ -69,6 +69,12 @@ Client/runtime flags
 | `AZURE_CLIENT_ID` | Azure managed identity client ID | For managed identity | Functions |
 | `AZURE_RESOURCE_GROUP` | Azure resource group | For managed identity  | Scripts |
 
+### Azure Static Web Apps Deployment
+
+| Variable | Description | Required | Used In |
+|----------|-------------|----------|---------|
+| `SWA_CLI_DEPLOYMENT_TOKEN` | Static Web Apps deployment token used by the nightly/manual deploy workflow to publish the site via SWA CLI. Obtain from your SWA resource in Azure Portal. | Yes (for nightly/manual deploy) | GitHub Actions (nightly-swa-deploy.yml) |
+
 
 ### Azure Functions Configuration (Local Development)
 
