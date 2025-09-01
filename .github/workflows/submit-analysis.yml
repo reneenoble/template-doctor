@@ -12,8 +12,6 @@ permissions:
 jobs:
   submit-analysis:
     runs-on: ubuntu-latest
-    env:
-      ACTIONS_BOT_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -50,42 +48,11 @@ jobs:
           origin-upstream: ${{ github.event.client_payload.originUpstream || github.event.client_payload.upstream }}
           upstream: ${{ github.event.client_payload.upstream }}
 
-      # Prefer a fine-grained PAT from a service/bot account to create PRs.
-      # Some organizations block GITHUB_TOKEN from creating/approving PRs, which causes
-      # peter-evans/create-pull-request to fail with:
-      # "GitHub Actions is not permitted to create or approve pull requests."
-      # If ACTIONS_BOT_TOKEN is not set, we fall back to GITHUB_TOKEN.
-      - name: Create Pull Request (bot token)
-        if: ${{ env.ACTIONS_BOT_TOKEN != '' }}
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ env.ACTIONS_BOT_TOKEN }}
-          commit-message: "[PR:BOT] update template analysis for ${{ github.event.client_payload.repoUrl }}"
-          title: "[PR:BOT] add template analysis for ${{ github.event.client_payload.repoUrl }}"
-          body: |
-            This PR adds a new template analysis result:
-            
-            - Repository: ${{ github.event.client_payload.repoUrl }}
-            - Ruleset: ${{ github.event.client_payload.ruleSet }}
-            - Scanned by: ${{ github.event.client_payload.username }}
-            - Date: ${{ github.event.client_payload.timestamp }}
-            
-            Compliance: ${{ fromJSON(steps.process.outputs.template-data).compliance.percentage }}% 
-            (${{ fromJSON(steps.process.outputs.template-data).compliance.passed }} passed, ${{ fromJSON(steps.process.outputs.template-data).compliance.issues }} issues)
-          branch: template-analysis-${{ github.run_id }}
-          delete-branch: true
-          base: main
-
-      - name: Debug token path (bot)
-        if: ${{ always() && env.ACTIONS_BOT_TOKEN != '' }}
-        run: echo "PR created using ACTIONS_BOT_TOKEN path"
-
-      - name: Create Pull Request (GITHUB_TOKEN fallback)
-        if: ${{ env.ACTIONS_BOT_TOKEN == '' }}
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "[PR:BOT] update template analysis for ${{ github.event.client_payload.repoUrl }}"
+          commit-message: "Update template analysis for ${{ github.event.client_payload.repoUrl }}"
           title: "Add template analysis for ${{ github.event.client_payload.repoUrl }}"
           body: |
             This PR adds a new template analysis result:
@@ -100,10 +67,6 @@ jobs:
           branch: template-analysis-${{ github.run_id }}
           delete-branch: true
           base: main
-
-      - name: Debug token path (fallback)
-        if: ${{ always() && env.ACTIONS_BOT_TOKEN == '' }}
-        run: echo "PR created using GITHUB_TOKEN fallback path"
 
       - name: PR Creation Status
         if: steps.process.outcome == 'success'
