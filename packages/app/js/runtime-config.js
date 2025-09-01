@@ -9,6 +9,7 @@
     apiBase: `${window.location.origin}`,
     defaultRuleSet: 'dod',
     requireAuthForResults: true,
+    autoSaveResults: false,
   };
 
   // Initialize with defaults so consumers have something synchronously
@@ -46,14 +47,11 @@
           const v = String(config.REQUIRE_AUTH_FOR_RESULTS).trim().toLowerCase();
           mapped.requireAuthForResults = /^(1|true|yes|on)$/i.test(v);
         }
+        if (typeof config.AUTO_SAVE_RESULTS !== 'undefined' && config.AUTO_SAVE_RESULTS !== null) {
+          const v2 = String(config.AUTO_SAVE_RESULTS).trim().toLowerCase();
+          mapped.autoSaveResults = /^(1|true|yes|on)$/i.test(v2);
+        }
         
-        // Surface GitHub Action overrides at the top level
-        if (config.GITHUB_ACTION_REPO && !mapped.githubActionRepo) {
-          mapped.githubActionRepo = config.GITHUB_ACTION_REPO;
-        }
-        if (config.GITHUB_ACTION_WEBHOOK_URL && !mapped.githubActionWebhookUrl) {
-          mapped.githubActionWebhookUrl = config.GITHUB_ACTION_WEBHOOK_URL;
-        }
         window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
         return;
       }
@@ -76,6 +74,9 @@
           }
           if (typeof cfg.requireAuthForResults === 'boolean') {
             mapped.requireAuthForResults = cfg.requireAuthForResults;
+          }
+          if (typeof cfg.autoSaveResults === 'boolean') {
+            mapped.autoSaveResults = cfg.autoSaveResults;
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

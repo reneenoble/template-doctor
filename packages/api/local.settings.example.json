@@ -9,7 +9,8 @@
     "GITHUB_REPO_NAME": "",
     "GITHUB_TOKEN": "",
     "GH_WORKFLOW_TOKEN": "",
-    "GITHUB_REPOSITORY": "Template-Doctor/template-doctor"
+    "GITHUB_REPOSITORY": "Template-Doctor/template-doctor",
+    "GITHUB_ACTION_REPO": "Template-Doctor/template-doctor"
   },
   "Host": {
     "LocalHttpPort": 7071,

@@ -2586,7 +2586,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const helpLink = document.createElement('div');
                 helpLink.style.marginTop = '10px';
                 helpLink.innerHTML = `
-                                    <a href="/docs/GITHUB_ACTION_SETUP.md" target="_blank" style="color: #0078d4; text-decoration: underline;">
+                                    <a href="/docs/usage/GITHUB_ACTION_SETUP.md" target="_blank" style="color: #0078d4; text-decoration: underline;">
                                         View GitHub Action setup guide
                                     </a>
                                 `;
@@ -2608,7 +2608,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const helpLink = document.createElement('div');
             helpLink.style.marginTop = '10px';
             helpLink.innerHTML = `
-                            <a href="/docs/GITHUB_ACTION_SETUP.md" target="_blank" style="color: #0078d4; text-decoration: underline;">
+                            <a href="/docs/usage/GITHUB_ACTION_SETUP.md" target="_blank" style="color: #0078d4; text-decoration: underline;">
                                 View GitHub Action setup guide
                             </a>
                         `;

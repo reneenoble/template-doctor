@@ -86,6 +86,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Clear the container
         container.innerHTML = '';
 
+        // Persist both original and adapted data for other modules (e.g., Save Results)
+        try {
+          window.reportDataOriginal = result;
+        } catch (_) {}
+
         // First, add the action buttons at the top with explicit inline styles
         const actionHtml = `
                     <div id="action-section" class="action-footer action-header" style="background: white !important; border-radius: 5px !important; padding: 16px !important; margin-bottom: 20px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; width: 100% !important;">
@@ -105,7 +110,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                     style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #0078d4 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: auto !important;">
                                 <i class="fas fa-rocket"></i> Test AZD Provision
                             </button>
+              <button id="save-results-btn" class="btn"
+                  title="Opens a PR in the configured repository to save this analysis report"
+                  style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #198754 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: auto !important;">
+                <i class="fas fa-save"></i> Save Results
+              </button>
                         </div>
+            <div style="margin-top: 8px; color: #6c757d; font-size: 0.9rem; text-align: center;">
+              Clicking "Save Results" will open a pull request to store this analysis under the results directory in the configured repo.
+            </div>
                     </div>
                 `;
 
@@ -955,6 +968,69 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.testAzdProvision();
               } else {
                 alert('AZD provision testing is not available in this view');
+              }
+            });
+          }
+
+          // Save Results button
+          const saveBtn = document.getElementById('save-results-btn');
+          if (saveBtn) {
+            // Replace to clear old listeners
+            const newSaveBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode && saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+            newSaveBtn.addEventListener('click', async () => {
+              try {
+                if (!window.submitAnalysisToGitHub) {
+                  alert('Saving is not available right now. Please refresh and try again.');
+                  return;
+                }
+                if (!window.GitHubClient || !window.GitHubClient.auth?.isAuthenticated()) {
+                  alert('Please sign in with GitHub to save results.');
+                  return;
+                }
+
+                const username = window.GitHubClient.auth.getUsername();
+                const original = window.reportDataOriginal || data; // fall back to adapted if needed
+
+                newSaveBtn.disabled = true;
+                const originalLabel = newSaveBtn.innerHTML;
+                newSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+                const res = await window.submitAnalysisToGitHub(original, username);
+                if (res && res.success) {
+                  if (window.NotificationSystem) {
+                    window.NotificationSystem.showSuccess(
+                      'Save Requested',
+                      'A pull request is being created with your analysis results.',
+                      5000
+                    );
+                  } else {
+                    alert('Save requested. A PR will be created with your analysis results.');
+                  }
+                } else {
+                  const msg = (res && (res.error || res.message)) || 'Unknown error';
+                  if (window.NotificationSystem) {
+                    window.NotificationSystem.showWarning(
+                      'Save Failed',
+                      `Could not save results: ${msg}`,
+                      8000
+                    );
+                  } else {
+                    alert(`Could not save results: ${msg}`);
+                  }
+                }
+
+                newSaveBtn.innerHTML = originalLabel;
+                newSaveBtn.disabled = false;
+              } catch (e) {
+                console.error('Save results error:', e);
+                if (window.NotificationSystem) {
+                  window.NotificationSystem.showError('Save Failed', e.message || String(e), 8000);
+                } else {
+                  alert(`Save failed: ${e.message || e}`);
+                }
+                newSaveBtn.disabled = false;
               }
             });
           }

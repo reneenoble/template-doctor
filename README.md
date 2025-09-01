@@ -71,6 +71,10 @@ Workflows under `.github/workflows/`:
 	- `app_location: /packages/app`
 	- `api_location: /packages/api`
 
+- Submit Template Analysis (repository_dispatch):
+  - Saves scan results and opens a PR using `peter-evans/create-pull-request`
+  - See setup guide (including bot token fallback): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
+
 
 ## Local development
 

@@ -18,13 +18,12 @@ module.exports = async function (context, req) {
   // GitHub OAuth settings from environment
   const githubClientId = process.env.GITHUB_CLIENT_ID || '';
 
-  // GitHub Action dispatch target overrides
-  const actionRepo = process.env.GITHUB_ACTION_REPO || process.env.TD_GITHUB_ACTION_REPO || '';
-  const actionWebhookUrl = process.env.GITHUB_ACTION_WEBHOOK_URL || process.env.TD_GITHUB_ACTION_WEBHOOK_URL || '';
+  // GitHub Action dispatch target is server-side only now; no longer exposed to client
 
   // Frontend behavior overrides
   const defaultRuleSet = process.env.DEFAULT_RULE_SET || process.env.TD_DEFAULT_RULE_SET || '';
   const requireAuthForResults = process.env.REQUIRE_AUTH_FOR_RESULTS || process.env.TD_REQUIRE_AUTH_FOR_RESULTS || '';
+  const autoSaveResults = process.env.AUTO_SAVE_RESULTS || process.env.TD_AUTO_SAVE_RESULTS || '';
 
   context.res = {
     status: 200,
@@ -37,10 +36,9 @@ module.exports = async function (context, req) {
   // this tradeoff or prefer a server-side proxy to avoid secrets in the browser.
   functionKey: functionKey || ''
       },
-      GITHUB_ACTION_REPO: actionRepo,
-      GITHUB_ACTION_WEBHOOK_URL: actionWebhookUrl,
       DEFAULT_RULE_SET: defaultRuleSet,
-      REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults
+      REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
+      AUTO_SAVE_RESULTS: autoSaveResults
     }
   };
 };

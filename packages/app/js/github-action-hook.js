@@ -45,51 +45,32 @@ async function submitAnalysisToGitHub(result, username) {
       },
     };
 
-    // Get the API URL from configuration or default to the main repo
+    // Post via server to avoid org OAuth restrictions (uses server GH_WORKFLOW_TOKEN)
     const cfg = window.TemplateDoctorConfig || {};
-    const targetRepo = cfg.githubActionRepo || cfg.GITHUB_ACTION_REPO || 'Template-Doctor/template-doctor';
-    const apiUrl =
-      cfg.githubActionWebhookUrl || cfg.GITHUB_ACTION_WEBHOOK_URL ||
-      `https://api.github.com/repos/${targetRepo}/dispatches`;
+    const apiBase = cfg.apiBase || window.location.origin;
+    const serverUrl = `${apiBase.replace(/\/$/, '')}/api/submit-analysis-dispatch`;
+    console.log(`Submitting via server endpoint: ${serverUrl}`);
 
-  console.log(`Submitting to repository: ${targetRepo}`);
-  console.log(`API URL: ${apiUrl}`);
-
-    // Get the GitHub token
-    const token = window.GitHubClient?.auth?.getToken();
-    if (!token) {
-      console.error('Cannot submit analysis: No GitHub token available');
-      return {
-        success: false,
-        error:
-          'No GitHub token available. Please ensure you are logged in with a GitHub account that has write access to the repository.',
-        details:
-          'The GitHub token is required to create a pull request with your analysis results.',
-      };
+    // Build headers; include function key if provided by runtime config
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (cfg.functionKey) {
+      headers['x-functions-key'] = cfg.functionKey;
     }
 
-    // Make sure the token has proper permissions
-    console.log('Using token with permissions:', {
-      tokenAvailable: !!token,
-      tokenLength: token ? token.length : 0,
-    });
-
-    // Make the API request
-    console.log('Sending repository_dispatch event...');
-    const response = await fetch(apiUrl, {
+    // Make the API request to our server function
+    console.log('Sending repository_dispatch event via server...');
+    const response = await fetch(serverUrl, {
       method: 'POST',
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         event_type: 'template-analysis-completed',
         client_payload: payload,
       }),
     });
 
-    console.log('GitHub API response status:', response.status);
+    console.log('Server dispatch response status:', response.status);
 
     if (!response.ok) {
       const errorData = await response.text();
@@ -97,20 +78,16 @@ async function submitAnalysisToGitHub(result, username) {
 
       // Provide more helpful error messages based on status code
       if (response.status === 404) {
-        throw new Error(
-          `Repository not found (404): The repository '${targetRepo}' either doesn't exist or you don't have access to it.`,
-        );
-      } else if (response.status === 403) {
-        throw new Error(
-          `Permission denied (403): Your GitHub token doesn't have permission to trigger workflows. Please check that your token has the 'repo' scope.`,
-        );
-      } else if (response.status === 401) {
-        throw new Error(
-          `Unauthorized (401): Your GitHub authentication token is invalid or expired. Please log out and log in again.`,
-        );
-      } else {
-        throw new Error(`GitHub API error (${response.status}): ${errorData}`);
+        throw new Error('Endpoint not found (404): Check that the submit-analysis-dispatch function is deployed and apiBase is correct.');
       }
+      if (response.status === 401) {
+        throw new Error('Unauthorized (401): Function key missing or invalid for the server endpoint.');
+      }
+      if (response.status === 403) {
+        throw new Error('Permission denied (403): The server token may lack required scopes or org SSO. Contact an admin to approve GH_WORKFLOW_TOKEN for the org.');
+      }
+
+      throw new Error(`Server error (${response.status}): ${errorData || 'Unknown error'}`);
     }
 
     return {
