@@ -98,7 +98,6 @@
         "relativePath": "todo-nodejs-mongo-swa/1753423566922-dashboard.html"
       }
     ];
-    debugger;
   // Only populate the data if the user is authenticated
   if (!window.templatesData) {
     // Initialize templatesData if it doesn't exist yet
