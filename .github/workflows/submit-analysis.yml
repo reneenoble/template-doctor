@@ -12,6 +12,8 @@ permissions:
 jobs:
   submit-analysis:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_BOT_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -54,10 +56,10 @@ jobs:
       # "GitHub Actions is not permitted to create or approve pull requests."
       # If ACTIONS_BOT_TOKEN is not set, we fall back to GITHUB_TOKEN.
       - name: Create Pull Request (bot token)
-        if: ${{ secrets.ACTIONS_BOT_TOKEN != '' }}
+        if: ${{ env.ACTIONS_BOT_TOKEN != '' }}
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.ACTIONS_BOT_TOKEN }}
+          token: ${{ env.ACTIONS_BOT_TOKEN }}
           commit-message: "[PR:BOT] update template analysis for ${{ github.event.client_payload.repoUrl }}"
           title: "[PR:BOT] add template analysis for ${{ github.event.client_payload.repoUrl }}"
           body: |
@@ -75,11 +77,11 @@ jobs:
           base: main
 
       - name: Debug token path (bot)
-        if: ${{ always() && secrets.ACTIONS_BOT_TOKEN != '' }}
+        if: ${{ always() && env.ACTIONS_BOT_TOKEN != '' }}
         run: echo "PR created using ACTIONS_BOT_TOKEN path"
 
       - name: Create Pull Request (GITHUB_TOKEN fallback)
-        if: ${{ !secrets.ACTIONS_BOT_TOKEN }}
+        if: ${{ env.ACTIONS_BOT_TOKEN == '' }}
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -100,7 +102,7 @@ jobs:
           base: main
 
       - name: Debug token path (fallback)
-        if: ${{ always() && !secrets.ACTIONS_BOT_TOKEN }}
+        if: ${{ always() && env.ACTIONS_BOT_TOKEN == '' }}
         run: echo "PR created using GITHUB_TOKEN fallback path"
 
       - name: PR Creation Status
