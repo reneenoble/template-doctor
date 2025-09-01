@@ -19,14 +19,26 @@ module.exports = async function (context, req) {
       return;
     }
 
+    // Parse request body safely
+    const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+
+    // Parse request body safely
     // Determine target repository slug (owner/repo)
-    // Precedence: explicit in payload (client_payload.targetRepo), then env GH_TARGET_REPO, then GITHUB_REPOSITORY, then default
-    const body = req.body || {};
-    const payloadRepo = (body.client_payload && (body.client_payload.targetRepo || body.client_payload.repoSlug)) || '';
-    const repoSlug = (payloadRepo && typeof payloadRepo === 'string' ? payloadRepo : '')
-      || process.env.GH_TARGET_REPO
-      || process.env.GITHUB_REPOSITORY
-      || 'Template-Doctor/template-doctor';
+    // Precedence:
+    // 1) Explicit in payload: client_payload.targetRepo or client_payload.repoSlug
+    // 2) Derive from payload repoUrl (https://github.com/owner/repo[.git])
+    // 3) Environment: GH_TARGET_REPO, then GITHUB_REPOSITORY
+    // 4) Default: Template-Doctor/template-doctor
+    const cp = body.client_payload || {};
+    const fromPayload = (typeof cp.targetRepo === 'string' && cp.targetRepo) || (typeof cp.repoSlug === 'string' && cp.repoSlug) || '';
+    let fromRepoUrl = '';
+    if (typeof cp.repoUrl === 'string' && cp.repoUrl.includes('github.com')) {
+      const m = cp.repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?(?:$|\/)/);
+      if (m && m[1] && m[2]) {
+        fromRepoUrl = `${m[1]}/${m[2].replace(/\.git$/, '')}`;
+      }
+    }
+    const repoSlug = fromPayload || fromRepoUrl || process.env.GH_TARGET_REPO || process.env.GITHUB_REPOSITORY || 'Template-Doctor/template-doctor';
     const apiUrl = `https://api.github.com/repos/${repoSlug}/dispatches`;
 
     if (!body.event_type || !body.client_payload) {
