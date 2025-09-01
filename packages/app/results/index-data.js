@@ -1,14 +1,10 @@
 // Control visibility of results via runtime config
 (function() {
-  console.log('[index-data] Loading template data, authentication check:',
+  console.log('###############[index-data] Loading template data, authentication check:',
               window.GitHubAuth ? 'GitHubAuth exists' : 'GitHubAuth missing',
               window.GitHubAuth?.isAuthenticated ? 'Auth method exists' : 'Auth method missing',
               window.GitHubAuth?.isAuthenticated ? 'Auth state: ' + window.GitHubAuth.isAuthenticated() : 'Cannot check auth state');
-              
-  // Only populate the data if the user is authenticated
-  if (!window.templatesData) {
-    // Initialize templatesData if it doesn't exist yet
-    window.templatesData = [
+  let seed = [
       {
         "timestamp": "2025-09-01T12:54:12.843Z",
         "dashboardPath": "1756731277912-dashboard.html",
@@ -102,6 +98,11 @@
         "relativePath": "todo-nodejs-mongo-swa/1753423566922-dashboard.html"
       }
     ];
+    debugger;
+  // Only populate the data if the user is authenticated
+  if (!window.templatesData) {
+    // Initialize templatesData if it doesn't exist yet
+    window.templatesData = [ ...seed];
   }
   
   const cfg = window.TemplateDoctorConfig || {};
@@ -109,10 +110,13 @@
   const isAuthed = !!(window.GitHubAuth && window.GitHubAuth.isAuthenticated && window.GitHubAuth.isAuthenticated());
 
   if (!requireAuth || isAuthed) {
-    console.log('[index-data] User is authenticated; using existing template data');
+    console.log('#########[index-data] User is authenticated; using existing template data');
+
     if (!Array.isArray(window.templatesData)) {
-      window.templatesData = [];
+      window.templatesData = [...seed];
     }
+      window.templatesData = [...seed];
+
   } else {
     // If not authenticated, set an empty array
     console.log('[index-data] User is not authenticated, setting empty template data');
