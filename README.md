@@ -75,6 +75,24 @@ Workflows under `.github/workflows/`:
   - Saves scan results and opens a PR using `peter-evans/create-pull-request`
   - See setup guide (including bot token fallback): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
 
+### Centralized Archive (optional)
+
+Template Doctor can also archive a small JSON metadata file to a central repository for each analysis.
+
+- How to enable and required variables: see
+  - Env vars reference: [docs/development/ENVIRONMENT_VARIABLES.md](docs/development/ENVIRONMENT_VARIABLES.md)
+  - Action setup (archive section): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md#6-centralized-archive-of-analysis-metadata-optional)
+
+Quick checklist
+- In GitHub repo (Settings → Secrets and variables → Actions):
+  - Set `TD_API_BASE` to your API base (e.g., `https://<your-swa>.azurestaticapps.net/api`).
+  - Optionally set `TD_ARCHIVE_COLLECTION` (defaults to `aigallery`).
+- In Azure Functions (Application Settings):
+  - Set `GH_WORKFLOW_TOKEN` with Contents & Pull requests write access to the central archive repo (authorize SSO if needed).
+- Enable archiving:
+  - Globally: set `archiveEnabled: true` in runtime-config, or
+  - Per-run: check the “Also save metadata to the centralized archive for this analysis” box in the analyze modal when global is off.
+
 
 ## Local development
 

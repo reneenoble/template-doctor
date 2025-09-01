@@ -82,3 +82,31 @@ If you use an auto-approve step, the same restriction applies. Either:
 - Error: 401/403 from GitHub
   - Check that `GH_WORKFLOW_TOKEN` has `repo` and `workflow` scopes and is authorized for the org (SSO).
 
+## 6) Centralized archive of analysis metadata (optional)
+
+Template Doctor can also create a small JSON metadata file in a central archive repository for each analysis. This is separate from the local PR that stores the detailed results.
+
+Where it runs
+- The archive is executed as a step at the end of `.github/workflows/submit-analysis.yml` when enabled.
+
+How it’s enabled
+- Globally via runtime config: set `archiveEnabled: true` on the server’s runtime-config to archive every analysis.
+- Per-run via UI toggle: when global archive is off, a checkbox appears in the analyze modal (“Also save metadata to the centralized archive for this analysis”). Checking it archives only that run.
+
+Required variables/secrets
+- In GitHub (repo → Settings → Secrets and variables → Actions):
+  - `TD_API_BASE`: Base URL to your API (e.g., `https://<your-swa>.azurestaticapps.net/api`). If missing, the step will safely skip with a log message.
+  - Optional: `TD_ARCHIVE_COLLECTION` (or `TD_COLLECTION`): Default collection name (defaults to `aigallery`).
+- In Azure Functions (hosting the `/archive-collection` endpoint):
+  - `GH_WORKFLOW_TOKEN`: PAT with access to the central archive repo (Contents and Pull requests read/write). If your org uses SSO, authorize the token for the org.
+  - Optional: `ARCHIVE_REPO_SLUG` to override the default central repo.
+
+What the step does
+- Constructs a payload from the analysis (repo, timestamp, user, and compliance summary) and POSTs to `${TD_API_BASE}/archive-collection`.
+- The function creates a branch, commits a JSON file under `<collection>/<repoOwner-repoName>/<timestamp>-<username>-<analysisId>.json`, and opens a PR in the central repo.
+
+Verifying it works
+- Ensure `client_payload.archiveEnabled` is `true` in the workflow run (printed in the Debug payload step or inspect the dispatch payload).
+- Check that the Archive step ran; if `TD_API_BASE` was missing, it logs and skips.
+- Check the central repo for a new PR. If it fails with permissions, re-check `GH_WORKFLOW_TOKEN` scopes and SSO authorization.
+
