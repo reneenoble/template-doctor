@@ -114,3 +114,45 @@ jobs:
         run: |
           echo "⚠️ Error creating pull request!"
           echo "Check action logs for details"
+
+      - name: Archive to central (if enabled)
+        if: ${{ github.event.client_payload.archiveEnabled == true || github.event.client_payload.archiveEnabled == 'true' }}
+        env:
+          API_BASE: ${{ vars.TD_API_BASE || secrets.TD_API_BASE }}
+          PAYLOAD_REPO_URL: ${{ github.event.client_payload.repoUrl }}
+          PAYLOAD_RULE_SET: ${{ github.event.client_payload.ruleSet }}
+          PAYLOAD_USERNAME: ${{ github.event.client_payload.username }}
+          PAYLOAD_TIMESTAMP: ${{ github.event.client_payload.timestamp }}
+          PAYLOAD_COLLECTION: ${{ github.event.client_payload.archiveCollection || vars.TD_ARCHIVE_COLLECTION || vars.TD_COLLECTION || 'aigallery' }}
+          TEMPLATE_DATA: ${{ steps.process.outputs.template-data }}
+        run: |
+          if [ -z "$API_BASE" ]; then
+            echo "Archive API base not configured; skipping." && exit 0
+          fi
+
+          repoUrl="$PAYLOAD_REPO_URL"
+          repoName=$(echo "$repoUrl" | awk -F/ '{print $(NF-1)"-"$NF}' | sed 's/.git$//')
+          analysisId="${GITHUB_RUN_ID}"
+          username="${PAYLOAD_USERNAME:-${GITHUB_ACTOR}}"
+          timestamp="$PAYLOAD_TIMESTAMP"
+          collection="$PAYLOAD_COLLECTION"
+
+          # Extract compliance metadata from template-data output if present
+          compliance=$(echo "${TEMPLATE_DATA:-{}}" | jq -c '.compliance // {}')
+          ruleSet="$PAYLOAD_RULE_SET"
+          meta=$(jq -n --arg ruleSet "$ruleSet" --argjson compliance "$compliance" '{ruleSet:$ruleSet, compliance:$compliance}')
+
+          payload=$(jq -n \
+            --arg collection "$collection" \
+            --arg repoUrl "$repoUrl" \
+            --arg repoName "$repoName" \
+            --arg analysisId "$analysisId" \
+            --arg username "$username" \
+            --arg timestamp "$timestamp" \
+            --argjson metadata "$meta" \
+            '{collection:$collection, repoUrl:$repoUrl, repoName:$repoName, analysisId:$analysisId, username:$username, timestamp:$timestamp, metadata:$metadata}')
+
+          echo "Calling archive function with collection=$collection repo=$repoName"
+          curl -sSf -X POST "$API_BASE/archive-collection" \
+            -H 'Content-Type: application/json' \
+            -d "$payload"
