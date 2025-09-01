@@ -23,7 +23,7 @@ on:
       timestamp:
         description: 'ISO timestamp for the analysis'
         required: true
-        default: '${{ github.event.repository.updated_at }}'
+        default: ''
         type: string
       upstream:
         description: 'Optional canonical upstream repo (owner/repo)'
@@ -68,6 +68,16 @@ jobs:
           JSON
           printf 'analysisData=%s\n' "$(cat analysis.json | tr -d '\n' | sed 's/\r//g')" >> "$GITHUB_OUTPUT"
 
+      - name: Compute timestamp (when not provided)
+        id: now
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.timestamp }}" ]; then
+            echo "timestamp=${{ inputs.timestamp }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run action (no PR, just generate files)
         id: action
         uses: ./
@@ -75,7 +85,7 @@ jobs:
           repo-url: ${{ inputs.repoUrl }}
           rule-set: ${{ inputs.ruleSet }}
           username: ${{ inputs.username }}
-          timestamp: ${{ inputs.timestamp }}
+          timestamp: ${{ steps.now.outputs.timestamp }}
           analysis-data: ${{ steps.gen.outputs.analysisData }}
           upstream: ${{ inputs.upstream }}
 

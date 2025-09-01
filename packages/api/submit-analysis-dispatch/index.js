@@ -19,10 +19,16 @@ module.exports = async function (context, req) {
       return;
     }
 
-      'Template-Doctor/template-doctor';
+    // Determine target repository slug (owner/repo)
+    // Precedence: explicit in payload (client_payload.targetRepo), then env GH_TARGET_REPO, then GITHUB_REPOSITORY, then default
+    const body = req.body || {};
+    const payloadRepo = (body.client_payload && (body.client_payload.targetRepo || body.client_payload.repoSlug)) || '';
+    const repoSlug = (payloadRepo && typeof payloadRepo === 'string' ? payloadRepo : '')
+      || process.env.GH_TARGET_REPO
+      || process.env.GITHUB_REPOSITORY
+      || 'Template-Doctor/template-doctor';
     const apiUrl = `https://api.github.com/repos/${repoSlug}/dispatches`;
 
-    const body = req.body || {};
     if (!body.event_type || !body.client_payload) {
       context.res = { status: 400, headers, body: { error: 'Missing event_type or client_payload' } };
       return;
