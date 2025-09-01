@@ -52,10 +52,10 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update template analysis for ${{ github.event.client_payload.repoUrl }}"
-          title: "Add template analysis for ${{ github.event.client_payload.repoUrl }}"
+          commit-message: "[TD:BOT]: update template analysis for ${{ github.event.client_payload.repoUrl }}"
+          title: "[TD:BOT]: add template analysis for ${{ github.event.client_payload.repoUrl }}"
           body: |
-            This PR adds a new template analysis result:
+            This PR adds a new template analysis result, performed by Template Doctor:
             
             - Repository: ${{ github.event.client_payload.repoUrl }}
             - Ruleset: ${{ github.event.client_payload.ruleSet }}
@@ -89,7 +89,8 @@ jobs:
           PAYLOAD_USERNAME: ${{ github.event.client_payload.username }}
           PAYLOAD_TIMESTAMP: ${{ github.event.client_payload.timestamp }}
           PAYLOAD_COLLECTION: ${{ github.event.client_payload.archiveCollection || vars.TD_ARCHIVE_COLLECTION || vars.TD_COLLECTION || 'aigallery' }}
-          TEMPLATE_DATA: ${{ steps.process.outputs.template-data }}
+          # Extract only the compliance object as JSON to avoid large env JSON parsing issues
+          COMPLIANCE_JSON: ${{ toJSON(fromJSON(steps.process.outputs.template-data).compliance) }}
         run: |
           if [ -z "$API_BASE" ]; then
             echo "Archive API base not configured; skipping." && exit 0
@@ -102,8 +103,12 @@ jobs:
           timestamp="$PAYLOAD_TIMESTAMP"
           collection="$PAYLOAD_COLLECTION"
 
-          # Extract compliance metadata from template-data output if present
-          compliance=$(echo "${TEMPLATE_DATA:-{}}" | jq -c '.compliance // {}')
+          # Use precomputed compliance JSON from env; coerce null to {}
+          if [ "${COMPLIANCE_JSON}" = "null" ] || [ -z "${COMPLIANCE_JSON}" ]; then
+            compliance='{}'
+          else
+            compliance="${COMPLIANCE_JSON}"
+          fi
           ruleSet="$PAYLOAD_RULE_SET"
           meta=$(jq -n --arg ruleSet "$ruleSet" --argjson compliance "$compliance" '{ruleSet:$ruleSet, compliance:$compliance}')
 
