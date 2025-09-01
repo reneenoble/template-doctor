@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <div align="center">
 
-<img src="./assets/images/logo.svg" alt="template-doctor" align="center" height="128" />
+<img src="./assets/images/templatedoctor.svg" alt="template-doctor" align="center" height="128" />
 
 # Template Doctor
 
