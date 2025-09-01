@@ -27,6 +27,8 @@ module.exports = async function (context, req) {
   // Centralized archive settings
   const archiveEnabled = process.env.TD_ARCHIVE_ENABLED || process.env.ARCHIVE_ENABLED || '';
   const archiveCollection = process.env.TD_ARCHIVE_COLLECTION || process.env.ARCHIVE_COLLECTION || '';
+  // Optional: specify the exact repo (owner/repo) that hosts the workflow to dispatch to
+  const dispatchTargetRepo = process.env.DISPATCH_TARGET_REPO || process.env.TD_DISPATCH_TARGET_REPO || '';
 
   context.res = {
     status: 200,
@@ -39,6 +41,7 @@ module.exports = async function (context, req) {
   // this tradeoff or prefer a server-side proxy to avoid secrets in the browser.
   functionKey: functionKey || ''
       },
+  DISPATCH_TARGET_REPO: dispatchTargetRepo,
       DEFAULT_RULE_SET: defaultRuleSet,
       REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
       AUTO_SAVE_RESULTS: autoSaveResults,

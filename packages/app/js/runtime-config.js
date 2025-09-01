@@ -12,6 +12,8 @@
   autoSaveResults: false,
   archiveEnabled: false,
   archiveCollection: 'aigallery',
+  // Optional: explicit workflow host repo to dispatch to (owner/repo)
+  dispatchTargetRepo: '',
   };
 
   // Initialize with defaults so consumers have something synchronously
@@ -40,6 +42,9 @@
         }
         if (config.FUNCTION_KEY) {
           mapped.functionKey = config.FUNCTION_KEY;
+        }
+        if (config.DISPATCH_TARGET_REPO) {
+          mapped.dispatchTargetRepo = config.DISPATCH_TARGET_REPO;
         }
         // Map frontend overrides
         if (config.DEFAULT_RULE_SET) {
@@ -85,6 +90,9 @@
           }
           if (typeof cfg.archiveCollection === 'string') {
             mapped.archiveCollection = cfg.archiveCollection;
+          }
+          if (typeof cfg.dispatchTargetRepo === 'string') {
+            mapped.dispatchTargetRepo = cfg.dispatchTargetRepo;
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

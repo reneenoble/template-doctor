@@ -22,23 +22,21 @@ module.exports = async function (context, req) {
     // Parse request body safely
     const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
 
-    // Parse request body safely
     // Determine target repository slug (owner/repo)
+    // IMPORTANT: The dispatch must hit the repository that contains the workflow.
+    // We DO NOT infer from repoUrl by default (that's the analyzed repo, not the workflow host).
     // Precedence:
-    // 1) Explicit in payload: client_payload.targetRepo or client_payload.repoSlug
-    // 2) Derive from payload repoUrl (https://github.com/owner/repo[.git])
-    // 3) Environment: GH_TARGET_REPO, then GITHUB_REPOSITORY
-    // 4) Default: Template-Doctor/template-doctor
+    // 1) Explicit override in payload: client_payload.targetRepo or client_payload.repoSlug (owner/repo)
+    // 2) Environment: GH_TARGET_REPO, then GITHUB_REPOSITORY (provided by Actions runtime)
+    // 3) Default: Template-Doctor/template-doctor
     const cp = body.client_payload || {};
     const fromPayload = (typeof cp.targetRepo === 'string' && cp.targetRepo) || (typeof cp.repoSlug === 'string' && cp.repoSlug) || '';
-    let fromRepoUrl = '';
-    if (typeof cp.repoUrl === 'string' && cp.repoUrl.includes('github.com')) {
-      const m = cp.repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?(?:$|\/)/);
-      if (m && m[1] && m[2]) {
-        fromRepoUrl = `${m[1]}/${m[2].replace(/\.git$/, '')}`;
-      }
+    let repoSlug = fromPayload || process.env.GH_TARGET_REPO || process.env.GITHUB_REPOSITORY || 'Template-Doctor/template-doctor';
+    // Defensive fallback in case something went wrong above
+    if (typeof repoSlug !== 'string' || !repoSlug.includes('/')) {
+      repoSlug = 'Template-Doctor/template-doctor';
     }
-    const repoSlug = fromPayload || fromRepoUrl || process.env.GH_TARGET_REPO || process.env.GITHUB_REPOSITORY || 'Template-Doctor/template-doctor';
+    context.log && context.log(`[submit-analysis-dispatch] Dispatching event '${body.event_type}' to repo '${repoSlug}'`);
     const apiUrl = `https://api.github.com/repos/${repoSlug}/dispatches`;
 
     if (!body.event_type || !body.client_payload) {
@@ -65,7 +63,9 @@ module.exports = async function (context, req) {
       return;
     }
 
-    context.res = { status: 204, headers };
+  // Add debug header so we can verify which repoSlug was used
+  const debugHeaders = { ...headers, 'x-template-doctor-repo-slug': repoSlug };
+  context.res = { status: 204, headers: debugHeaders };
   } catch (e) {
     context.res = { status: 500, headers, body: { error: e.message } };
   }

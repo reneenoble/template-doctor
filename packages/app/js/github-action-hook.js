@@ -42,6 +42,10 @@ async function submitAnalysisToGitHub(result, username) {
     }
     const archiveCollection = cfg.archiveCollection || 'aigallery';
 
+    // Optionally allow front-end config to specify the target repo for repository_dispatch
+    // Useful when the API environment cannot infer the workflow host repo from env
+    const targetRepo = cfg.dispatchTargetRepo || '';
+
     // Extract necessary data from the result
     const payload = {
       repoUrl: result.repoUrl,
@@ -52,6 +56,8 @@ async function submitAnalysisToGitHub(result, username) {
       // Pass through centralized archive preferences so the workflow can act on them
       archiveEnabled,
       archiveCollection,
+      // Optional override for the server to choose where to dispatch
+      ...(targetRepo ? { targetRepo } : {}),
       compliance: {
         percentage:
           result.compliance.compliant.find((c) => c.id === 'compliance-summary')?.details
