@@ -116,9 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <i class="fas fa-save"></i> Save Results
               </button>
                         </div>
-            <div style="margin-top: 8px; color: #6c757d; font-size: 0.9rem; text-align: center;">
-              Clicking "Save Results" will open a pull request to store this analysis under the results directory in the configured repo.
-            </div>
+            <div id="save-results-note" style="margin-top: 8px; color: #6c757d; font-size: 0.9rem; text-align: center;"></div>
                     </div>
                 `;
 
@@ -978,6 +976,23 @@ document.addEventListener('DOMContentLoaded', function () {
             // Replace to clear old listeners
             const newSaveBtn = saveBtn.cloneNode(true);
             saveBtn.parentNode && saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+            // Honor autoSaveResults config by disabling the button if enabled
+            try {
+              const cfg = window.TemplateDoctorConfig || {};
+              const noteEl = document.getElementById('save-results-note');
+              if (cfg.autoSaveResults) {
+                newSaveBtn.disabled = true;
+                newSaveBtn.title = 'Auto-save is enabled; results are saved automatically.';
+                if (noteEl) {
+                  noteEl.textContent = 'Auto-save is enabled; results are saved automatically.';
+                }
+              } else {
+                if (noteEl) {
+                  noteEl.textContent = 'Clicking "Save Results" will open a pull request to store this analysis under the results directory in the configured repo.';
+                }
+              }
+            } catch (_) {}
 
             newSaveBtn.addEventListener('click', async () => {
               try {

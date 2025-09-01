@@ -9,5 +9,7 @@
   },
   "defaultRuleSet": "dod",
   "requireAuthForResults": true,
-  "autoSaveResults": false
+  "autoSaveResults": false,
+  "archiveEnabled": false,
+  "archiveCollection": "aigallery"
 }

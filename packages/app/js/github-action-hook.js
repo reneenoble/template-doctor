@@ -29,6 +29,19 @@ async function submitAnalysisToGitHub(result, username) {
       },
     });
 
+    // Determine archiving flags (global config + one-time override)
+    const cfg = window.TemplateDoctorConfig || {};
+    // If a one-time override is set (from ruleset modal), prefer it when global is false
+    let archiveEnabled = !!cfg.archiveEnabled;
+    const hasOverride = Object.prototype.hasOwnProperty.call(cfg, 'nextAnalysisArchiveEnabledOverride');
+    if (!archiveEnabled && hasOverride) {
+      archiveEnabled = !!cfg.nextAnalysisArchiveEnabledOverride;
+      // Clear one-time override after reading so it only applies to the next submission
+      delete cfg.nextAnalysisArchiveEnabledOverride;
+      window.TemplateDoctorConfig = cfg;
+    }
+    const archiveCollection = cfg.archiveCollection || 'aigallery';
+
     // Extract necessary data from the result
     const payload = {
       repoUrl: result.repoUrl,
@@ -36,6 +49,9 @@ async function submitAnalysisToGitHub(result, username) {
       username: username,
       timestamp: result.timestamp,
       analysisData: result,
+      // Pass through centralized archive preferences so the workflow can act on them
+      archiveEnabled,
+      archiveCollection,
       compliance: {
         percentage:
           result.compliance.compliant.find((c) => c.id === 'compliance-summary')?.details
@@ -46,7 +62,7 @@ async function submitAnalysisToGitHub(result, username) {
     };
 
     // Post via server to avoid org OAuth restrictions (uses server GH_WORKFLOW_TOKEN)
-    const cfg = window.TemplateDoctorConfig || {};
+  // cfg already defined above
     const apiBase = cfg.apiBase || window.location.origin;
     const serverUrl = `${apiBase.replace(/\/$/, '')}/api/submit-analysis-dispatch`;
     console.log(`Submitting via server endpoint: ${serverUrl}`);

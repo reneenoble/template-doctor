@@ -24,6 +24,9 @@ module.exports = async function (context, req) {
   const defaultRuleSet = process.env.DEFAULT_RULE_SET || process.env.TD_DEFAULT_RULE_SET || '';
   const requireAuthForResults = process.env.REQUIRE_AUTH_FOR_RESULTS || process.env.TD_REQUIRE_AUTH_FOR_RESULTS || '';
   const autoSaveResults = process.env.AUTO_SAVE_RESULTS || process.env.TD_AUTO_SAVE_RESULTS || '';
+  // Centralized archive settings
+  const archiveEnabled = process.env.TD_ARCHIVE_ENABLED || process.env.ARCHIVE_ENABLED || '';
+  const archiveCollection = process.env.TD_ARCHIVE_COLLECTION || process.env.ARCHIVE_COLLECTION || '';
 
   context.res = {
     status: 200,
@@ -38,7 +41,9 @@ module.exports = async function (context, req) {
       },
       DEFAULT_RULE_SET: defaultRuleSet,
       REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
-      AUTO_SAVE_RESULTS: autoSaveResults
+      AUTO_SAVE_RESULTS: autoSaveResults,
+      ARCHIVE_ENABLED: archiveEnabled,
+      ARCHIVE_COLLECTION: archiveCollection
     }
   };
 };

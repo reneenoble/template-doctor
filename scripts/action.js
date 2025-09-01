@@ -59,6 +59,7 @@ async function run() {
       dashboardPath: `${fileTimestamp}-dashboard.html`,
       dataPath: `${fileTimestamp}-data.js`,
       repoUrl,
+      collection: 'aigallery',
       ruleSet,
       compliance: {
         percentage: percentageCompliant,
@@ -107,7 +108,8 @@ async function run() {
       existing.timestamp = timestamp;
       existing.dashboardPath = templateData.dashboardPath;
       existing.dataPath = templateData.dataPath;
-      existing.ruleSet = ruleSet;
+  existing.ruleSet = ruleSet;
+  existing.collection = 'aigallery';
       existing.compliance = templateData.compliance;
       existing.relativePath = templateData.relativePath;
       if (canonicalOriginUpstream) {
@@ -124,8 +126,19 @@ async function run() {
       fs.mkdirSync(resultsRootDir, { recursive: true });
     }
 
-    // Write index-data.js
-    const newIndexDataText = `window.templatesData = ${JSON.stringify(templatesData, null, 2)};`;
+    // Write index-data.js preserving the existing wrapper/auth logic
+    const arrayJson = JSON.stringify(templatesData, null, 2);
+    const replaceRe = /(window\.templatesData\s*=\s*)(\[[\s\S]*?\])(\s*;?)/;
+    let newIndexDataText;
+    if (replaceRe.test(indexDataText)) {
+      // Replace only the array content inside the existing file, preserving wrapper and auth gating
+      newIndexDataText = indexDataText.replace(replaceRe, `$1${arrayJson}$3`);
+      core.info('Updated templatesData array within existing index-data.js wrapper.');
+    } else {
+      // Fallback: create a minimal wrapper that preserves auth gating semantics
+      core.warning('Could not find templatesData array in index-data.js; writing a guarded wrapper as fallback.');
+      newIndexDataText = `// Control visibility of results via runtime config\n(function() {\n  try {\n    if (!window.templatesData) window.templatesData = [];\n    const cfg = window.TemplateDoctorConfig || {};\n    const requireAuth = typeof cfg.requireAuthForResults === 'boolean' ? cfg.requireAuthForResults : true;\n    const isAuthed = !!(window.GitHubAuth && window.GitHubAuth.isAuthenticated && window.GitHubAuth.isAuthenticated());\n    if (!requireAuth || isAuthed) {\n      window.templatesData = ${arrayJson};\n    } else {\n      window.templatesData = [];\n    }\n  } catch (e) {\n    // In case runtime config or auth is unavailable, fall back to exposing data\n    window.templatesData = ${arrayJson};\n  }\n})();\n`;
+    }
     fs.writeFileSync(indexDataPath, newIndexDataText);
 
     // Repository-specific results dir inside packages/app/results

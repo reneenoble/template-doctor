@@ -9,7 +9,9 @@
     apiBase: `${window.location.origin}`,
     defaultRuleSet: 'dod',
     requireAuthForResults: true,
-    autoSaveResults: false,
+  autoSaveResults: false,
+  archiveEnabled: false,
+  archiveCollection: 'aigallery',
   };
 
   // Initialize with defaults so consumers have something synchronously
@@ -77,6 +79,12 @@
           }
           if (typeof cfg.autoSaveResults === 'boolean') {
             mapped.autoSaveResults = cfg.autoSaveResults;
+          }
+          if (typeof cfg.archiveEnabled === 'boolean') {
+            mapped.archiveEnabled = cfg.archiveEnabled;
+          }
+          if (typeof cfg.archiveCollection === 'string') {
+            mapped.archiveCollection = cfg.archiveCollection;
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

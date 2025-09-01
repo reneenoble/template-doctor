@@ -76,6 +76,16 @@ function initRulesetModal() {
                         </p>
                     </div>
                 </form>
+
+        <div id="archive-override-container" class="form-group" style="display: none; margin-top: 12px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="archive-override" />
+          <span>
+            Also save metadata to the centralized archive for this analysis
+            <span id="archive-override-hint" style="display:block; font-size: 12px; color: #666; margin-top: 4px;"></span>
+          </span>
+          </label>
+        </div>
             </div>
             <div class="modal-footer">
                 <button id="analyze-with-ruleset-btn" class="btn">Analyze Template</button>
@@ -97,6 +107,9 @@ function setupRulesetModalHandlers() {
   const closeBtn = modal.querySelector('.close');
   const analyzeBtn = modal.querySelector('#analyze-with-ruleset-btn');
   const rulesetForm = modal.querySelector('#ruleset-form');
+  const archiveOverrideContainer = modal.querySelector('#archive-override-container');
+  const archiveOverrideCheckbox = modal.querySelector('#archive-override');
+  const archiveOverrideHint = modal.querySelector('#archive-override-hint');
   const customConfigContainer = modal.querySelector('#custom-config-container');
   const customConfigInput = modal.querySelector('#custom-config-json');
   const gistUrlInput = modal.querySelector('#gist-url');
@@ -263,6 +276,18 @@ function setupRulesetModalHandlers() {
 
       const selectedRuleset = rulesetForm.querySelector('input[name="ruleset"]:checked').value;
 
+      // Capture per-run archive override if visible
+      try {
+        const cfg = window.TemplateDoctorConfig || {};
+        // Only set override when globally disabled and checkbox is present
+        if (archiveOverrideContainer && archiveOverrideContainer.style.display !== 'none') {
+          const shouldArchiveThisRun = !!(archiveOverrideCheckbox && archiveOverrideCheckbox.checked);
+          // Store as a one-time override to be picked up by submitAnalysisToGitHub
+          cfg.nextAnalysisArchiveEnabledOverride = shouldArchiveThisRun;
+          window.TemplateDoctorConfig = cfg;
+        }
+      } catch (_) {}
+
       // Save custom config if selected
       if (selectedRuleset === 'custom') {
         try {
@@ -311,6 +336,20 @@ function setupRulesetModalHandlers() {
       modal.style.display = 'none';
     }
   };
+
+  // Initialize archive override UI based on global config
+  try {
+    const cfg = window.TemplateDoctorConfig || {};
+    if (cfg.archiveEnabled === true) {
+      // Globally enabled: hide the override (not needed)
+      if (archiveOverrideContainer) archiveOverrideContainer.style.display = 'none';
+    } else {
+      // Globally disabled: show the opt-in checkbox
+      if (archiveOverrideContainer) archiveOverrideContainer.style.display = 'block';
+      if (archiveOverrideCheckbox) archiveOverrideCheckbox.checked = false;
+      if (archiveOverrideHint) archiveOverrideHint.textContent = 'Global archive is OFF. Check this to archive this single run.';
+    }
+  } catch (_) {}
 }
 
 // Function to show the ruleset modal
@@ -322,6 +361,22 @@ function showRulesetModal(repoUrl) {
   if (modal) {
     // Store the repo URL as a data attribute
     modal.setAttribute('data-repo-url', repoUrl);
+
+    // Refresh archive override UI based on current runtime config (handles cases where
+    // the modal was initialized earlier with different config state)
+    try {
+      const cfg = window.TemplateDoctorConfig || {};
+      const container = modal.querySelector('#archive-override-container');
+      const checkbox = modal.querySelector('#archive-override');
+      const hint = modal.querySelector('#archive-override-hint');
+      if (cfg.archiveEnabled === true) {
+        if (container) container.style.display = 'none';
+      } else {
+        if (container) container.style.display = 'block';
+        if (checkbox) checkbox.checked = false;
+        if (hint) hint.textContent = 'Global archive is OFF. Check this to archive this single run.';
+      }
+    } catch (_) {}
 
     // Show the modal
     modal.style.display = 'block';

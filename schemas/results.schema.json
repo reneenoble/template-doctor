@@ -4,6 +4,10 @@
   "type": "object",
   "required": ["repoUrl", "timestamp", "compliance"],
   "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Collection identifier in the format collection:[name]"
+    },
     "repoUrl": {
       "type": "string",
       "format": "uri",
