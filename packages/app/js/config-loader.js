@@ -54,7 +54,7 @@ async function loadEnvironmentVariables() {
 // Load config.json
 async function loadConfigJson() {
   try {
-    const response = await fetch('./config.json');
+    const response = await fetch('./config.json', { cache: 'no-store' });
     if (!response.ok) {
       console.warn('Unable to fetch config.json', response.status);
       return {};
@@ -74,15 +74,60 @@ async function loadConfig() {
   const configJson = await loadConfigJson();
   const envVars = await loadEnvironmentVariables();
   
-  // Deep merge
+  // Start with config.json
   const config = { ...configJson };
   
-  // Override OAuth client ID from environment if available
-  if (envVars.GITHUB_CLIENT_ID && config.githubOAuth) {
-    config.githubOAuth.clientId = envVars.GITHUB_CLIENT_ID;
+  // If the environment endpoint provided a backend section, merge it
+  if (envVars && typeof envVars === 'object') {
+    // Merge backend baseUrl and functionKey if provided by env (non-empty only)
+    if (envVars.backend && typeof envVars.backend === 'object') {
+      const mergedBackend = { ...(config.backend || {}) };
+      if (
+        typeof envVars.backend.baseUrl === 'string' &&
+        envVars.backend.baseUrl.trim().length > 0
+      ) {
+        mergedBackend.baseUrl = envVars.backend.baseUrl;
+      }
+      if (
+        typeof envVars.backend.functionKey === 'string' &&
+        envVars.backend.functionKey.trim().length > 0
+      ) {
+        mergedBackend.functionKey = envVars.backend.functionKey;
+      }
+      config.backend = mergedBackend;
+    }
+    // Merge OAuth client id if present
+    if (envVars.GITHUB_CLIENT_ID) {
+      config.githubOAuth = {
+        ...(config.githubOAuth || {}),
+        clientId: envVars.GITHUB_CLIENT_ID,
+        // Preserve existing scope/redirect if present
+        scope: (config.githubOAuth && config.githubOAuth.scope) || 'repo read:user',
+        redirectUri: (config.githubOAuth && config.githubOAuth.redirectUri) || '',
+      };
+    }
+    // Frontend behavior flags from env (strings); leave mapping to runtime-config.js
+    if (typeof envVars.DEFAULT_RULE_SET === 'string' && envVars.DEFAULT_RULE_SET.trim().length > 0) {
+      config.DEFAULT_RULE_SET = envVars.DEFAULT_RULE_SET;
+    }
+    if (typeof envVars.REQUIRE_AUTH_FOR_RESULTS === 'string' && envVars.REQUIRE_AUTH_FOR_RESULTS.trim().length > 0) {
+      config.REQUIRE_AUTH_FOR_RESULTS = envVars.REQUIRE_AUTH_FOR_RESULTS;
+    }
+    if (typeof envVars.AUTO_SAVE_RESULTS === 'string' && envVars.AUTO_SAVE_RESULTS.trim().length > 0) {
+      config.AUTO_SAVE_RESULTS = envVars.AUTO_SAVE_RESULTS;
+    }
+    if (typeof envVars.ARCHIVE_ENABLED === 'string' && envVars.ARCHIVE_ENABLED.trim().length > 0) {
+      config.ARCHIVE_ENABLED = envVars.ARCHIVE_ENABLED;
+    }
+    if (typeof envVars.ARCHIVE_COLLECTION === 'string' && envVars.ARCHIVE_COLLECTION.trim().length > 0) {
+      config.ARCHIVE_COLLECTION = envVars.ARCHIVE_COLLECTION;
+    }
+    if (typeof envVars.DISPATCH_TARGET_REPO === 'string' && envVars.DISPATCH_TARGET_REPO.trim().length > 0) {
+      config.DISPATCH_TARGET_REPO = envVars.DISPATCH_TARGET_REPO;
+    }
   }
   
-  // Add additional environment variables as needed
+  // Additional env variables can be merged above as needed
   
   console.log('Consolidated config:', config);
   return config;

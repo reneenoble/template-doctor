@@ -2703,7 +2703,25 @@ document.addEventListener('DOMContentLoaded', () => {
               errorSection.style.display = 'none';
               loadingContainer.style.display = 'flex';
 
-              // Use the internal analyze function to analyze the forked repo
+              // Prefer confirmed fork URL if available (poll client for availability)
+              try {
+                if (window.GitHubClient && typeof window.GitHubClient.waitForForkAvailability === 'function') {
+                  const urlParts = forkUrl.split('github.com/')[1].split('/');
+                  const forkOwner = urlParts[0];
+                  const forkRepo = urlParts[1];
+                  const confirmed = await window.GitHubClient.waitForForkAvailability(owner, repo);
+                  if (confirmed?.html_url) {
+                    forkUrl = confirmed.html_url;
+                  } else if (forkOwner && forkRepo) {
+                    // Compose canonical URL just in case
+                    forkUrl = `https://github.com/${forkOwner}/${forkRepo}`;
+                  }
+                }
+              } catch (confirmErr) {
+                console.warn('[App] Fork confirmation failed, proceeding with initial URL:', confirmErr?.message || confirmErr);
+              }
+
+              // Use the internal analyze function to analyze the forked repo (confirmed URL if available)
               internalAnalyzeRepo(forkUrl, ruleSet);
             } catch (forkError) {
               // Remove loading indicator

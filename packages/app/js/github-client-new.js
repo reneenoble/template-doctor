@@ -1003,6 +1003,54 @@ class GitHubClient {
   }
 
   /**
+   * Get the current authenticated username (login)
+   * @returns {string|null}
+   */
+  getCurrentUsername() {
+    try {
+      // Prefer auth helper if available
+      if (this.auth && typeof this.auth.getUsername === 'function') {
+        const u = this.auth.getUsername();
+        if (u) return u;
+      }
+    } catch (_) {}
+
+    // Fallback to cached currentUser
+    return this.currentUser?.login || null;
+  }
+
+  /**
+   * Check if the current user already has a fork of the given repository
+   * @param {string} owner - Original repository owner
+   * @param {string} repo - Repository name
+   * @returns {Promise<boolean>} - True if a fork exists under the current user
+   */
+  async checkUserHasFork(owner, repo) {
+    const username = this.getCurrentUsername();
+    if (!username) {
+      console.warn('[GitHubClient] checkUserHasFork called without authenticated user');
+      return false;
+    }
+
+    try {
+      // Check if the repo exists under the user's namespace and is a fork of the original repo
+      const repoData = await this.request(`/repos/${username}/${repo}`);
+      if (repoData.fork === true && repoData.parent && repoData.parent.full_name === `${owner}/${repo}`) {
+        return true;
+      }
+      // Repo exists but is not a fork of the original
+      return false;
+    } catch (err) {
+      if (err && err.status === 404) {
+        // Not found means no fork exists
+        return false;
+      }
+      console.warn('[GitHubClient] Error checking for existing fork:', err?.message || err);
+      return false;
+    }
+  }
+
+  /**
    * Find existing issues by title and label (optional)
    * @param {string} owner
    * @param {string} repo
@@ -1160,7 +1208,51 @@ class GitHubClient {
       );
     }
 
+    // After initiating the fork, wait until it becomes available under the user's namespace
+    try {
+      const confirmed = await this.waitForForkAvailability(owner, repo);
+      if (confirmed) return confirmed; // Prefer returning the confirmed repo info
+    } catch (e) {
+      console.warn('[GitHubClient] Fork availability polling failed:', e?.message || e);
+    }
+    // Fall back to returning the immediate result if confirmation fails
     return result;
+  }
+
+  /**
+   * Poll until the fork appears under the authenticated user's namespace.
+   * Returns the repo info when available, or null on timeout.
+   */
+  async waitForForkAvailability(owner, repo, timeoutMs = 60000, intervalMs = 1500) {
+    const username = this.getCurrentUsername();
+    if (!username) return null;
+
+    const started = Date.now();
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    while (Date.now() - started < timeoutMs) {
+      try {
+        const info = await this.request(`/repos/${username}/${repo}`);
+        // Basic sanity: ensure it's a fork and (when available) parent matches
+        const isFork = info?.fork === true;
+        const parentMatches = info?.parent?.full_name
+          ? info.parent.full_name.toLowerCase() === `${owner}/${repo}`.toLowerCase()
+          : true; // parent may not be populated immediately; don't block solely on this
+        if (isFork && parentMatches) {
+          console.log('[GitHubClient] Fork is now available:', info.full_name);
+          return info;
+        }
+      } catch (err) {
+        // 404 means not ready yet; other errors we still retry briefly
+        if (err?.status && err.status !== 404) {
+          console.warn('[GitHubClient] waitForForkAvailability transient error:', err.message);
+        }
+      }
+      await sleep(intervalMs);
+    }
+
+    console.warn('[GitHubClient] Timed out waiting for fork availability');
+    return null;
   }
 }
 
