@@ -41,20 +41,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Confirmation dialog compatibility
         showConfirmation: (title, message, confirmLabel, cancelLabel, callback) => {
+          const uid = Date.now();
           // Create confirm/cancel buttons that use our new notification system
           const notificationId = window.NotificationSystem.showWarning(
             title,
             `${message}<div class="notification-actions" style="margin-top: 10px; display: flex; gap: 8px;">
-              <button id="notification-cancel-${Date.now()}" class="btn" style="flex: 1; padding: 6px 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;">${cancelLabel || 'Cancel'}</button>
-              <button id="notification-confirm-${Date.now()}" class="btn btn-primary" style="flex: 1; padding: 6px 12px; background: #2da44e; color: white; border: 1px solid #2da44e; border-radius: 6px;">${confirmLabel || 'Confirm'}</button>
+              <button id="notification-cancel-${uid}" class="btn notification-action" style="flex: 1; padding: 6px 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;">${cancelLabel || 'Cancel'}</button>
+              <button id="notification-confirm-${uid}" class="btn btn-primary notification-action" style="flex: 1; padding: 6px 12px; background: #2da44e; color: white; border: 1px solid #2da44e; border-radius: 6px;">${confirmLabel || 'Confirm'}</button>
             </div>`,
             0 // Do not auto-dismiss
           );
           
           // Wait for DOM to update, then add event listeners
           setTimeout(() => {
-            const confirmBtn = document.querySelector(`#notification-confirm-${Date.now()}`);
-            const cancelBtn = document.querySelector(`#notification-cancel-${Date.now()}`);
+            const confirmBtn = document.querySelector(`#notification-confirm-${uid}`);
+            const cancelBtn = document.querySelector(`#notification-cancel-${uid}`);
             
             if (confirmBtn) {
               confirmBtn.addEventListener('click', () => {

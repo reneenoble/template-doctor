@@ -289,6 +289,51 @@
      */
     showInfo: function(title, message, duration = 5000) {
       return showNotification('info', title, message, duration);
+    },
+
+    // Minimal confirm support to align with richer API used by tests
+    // Provides a warning-style notification with inline actions.
+    confirm: function(title, message, { confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm = () => {}, onCancel = () => {} } = {}) {
+      const el = showNotification('warning', title, message, 0);
+      // Build actions area inside content
+      const content = el.querySelector('.notification-content');
+      if (content) {
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'notification-actions';
+        actionsDiv.style.marginTop = '10px';
+        actionsDiv.style.display = 'flex';
+        actionsDiv.style.gap = '8px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn notification-action';
+        cancelBtn.style.flex = '1';
+        cancelBtn.style.padding = '6px 12px';
+        cancelBtn.style.background = '#f6f8fa';
+        cancelBtn.style.border = '1px solid #d0d7de';
+        cancelBtn.style.borderRadius = '6px';
+        cancelBtn.textContent = cancelLabel;
+        cancelBtn.addEventListener('click', () => {
+          try { onCancel(); } finally { el?.remove(); }
+        });
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn btn-primary notification-action';
+        confirmBtn.style.flex = '1';
+        confirmBtn.style.padding = '6px 12px';
+        confirmBtn.style.background = '#2da44e';
+        confirmBtn.style.color = 'white';
+        confirmBtn.style.border = '1px solid #2da44e';
+        confirmBtn.style.borderRadius = '6px';
+        confirmBtn.textContent = confirmLabel;
+        confirmBtn.addEventListener('click', () => {
+          try { onConfirm(); } finally { el?.remove(); }
+        });
+
+        actionsDiv.appendChild(cancelBtn);
+        actionsDiv.appendChild(confirmBtn);
+        content.appendChild(actionsDiv);
+      }
+      return el?.id;
     }
   };
 })();

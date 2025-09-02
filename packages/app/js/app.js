@@ -1867,6 +1867,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!query) return;
     searchResults.innerHTML = '<div>Searching...</div>';
 
+    // Defensive fallback: if scanned templates haven't been populated yet but
+    // window.templatesData exists (e.g., tests or late load), populate now to
+    // avoid race conditions with the template-data-loaded event
+    if ((!scannedTemplates || scannedTemplates.length === 0) && Array.isArray(window.templatesData) && window.templatesData.length > 0) {
+      scannedTemplates = window.templatesData;
+    }
+
     // First check if this matches an already scanned template
     const matchedTemplate = findScannedTemplate(query);
     if (matchedTemplate) {

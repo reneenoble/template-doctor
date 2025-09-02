@@ -157,6 +157,19 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Run Playwright focused search test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test",
+				"--",
+				"-g",
+				"should handle search functionality",
+				"packages/app/tests/app.spec.js"
+			]
 		}
 	]
 }
