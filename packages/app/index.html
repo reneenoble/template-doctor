@@ -12,7 +12,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-  <link rel="icon" href="assets/images/logo.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/images/templatedoctor.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/templates.css" />
     <link rel="stylesheet" href="css/tooltips.css" />
@@ -22,13 +22,37 @@
     <link rel="stylesheet" href="css/notifications.css" />
     <link rel="stylesheet" href="css/modal.css" />
     <link rel="stylesheet" href="css/validate-button.css" />
+    <style>
+      /* Inline styles for the product icon menu */
+      .product-menu {
+        width: 500px;
+        margin: 0 auto 30px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .product-menu a {
+        display: inline-flex;
+        align-items: center;
+      }
+      .product-menu img {
+        height: 128px;
+        width: auto;
+        display: block;
+      }
+      @media (max-width: 600px) {
+        .product-menu img { height: 32px; }
+      }
+    </style>
     <script src="https://d3js.org/d3.v7.min.js"></script>
   </head>
   <body>
     <header>
       <div class="container header-content">
         <div class="logo">
-          <img src="assets/images/logo.svg" alt="Template Doctor Logo" />
+          <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" />
           <h1>Template Doctor</h1>
         </div>
         <div id="user-info" class="user-info">
@@ -48,14 +72,27 @@
 
     <main class="container">
       <section id="welcome-section" class="welcome-section">
-        <h2>Azure Template Compliance Checker</h2>
+        <h2>Azure Samples and Templates Framework Suite</h2>
+        <!-- Product icon menu -->
+        <nav class="product-menu" aria-label="Related products">
+          <a href="https://github.com/Azure-Samples/azd-template-artifacts" class="product-link" title="Template Framework" aria-label="Template Framework">
+            <img src="assets/images/templateframework.svg" alt="Template Framework" />
+          </a>
+          <a href="https://github.com/Template-Doctor/template-framework-mcp" class="product-link" title="Template MCP" aria-label="Template MCP">
+            <img src="assets/images/templatemcp.svg" alt="Template MCP" />
+          </a>
+          <a href="https://github.com/Template-Doctor/template-doctor" class="product-link" title="Template Doctor" aria-label="Template Doctor">
+            <img src="assets/images/templatedoctor.svg" alt="Template Doctor" />
+          </a>
+        </nav>
+        
         <p class="welcome-text">
-          Welcome to Template Doctor! This tool helps you analyze Azure Developer CLI (AZD)
-          templates for compliance with the official
+          Welcome to Template Doctor, part of the Templates Framework Suite! This tool helps you analyze Azure samples and templates
+          for compliance with a configurable definition of done, including the official
           <a
             href="https://github.com/Azure-Samples/azd-template-artifacts/blob/main/docs/development-guidelines/definition-of-done.md"
             target="_blank"
-            >Definition of Done</a
+            >Azure Developer CLI Definition of Done</a
           >. Login with GitHub to get started, then search for a repository to analyze.
         </p>
 
@@ -68,7 +105,12 @@
           <div class="feature-item">
             <i class="fas fa-check-circle"></i>
             <h3>Check Compliance</h3>
-            <p>Analyze the template against the Definition of Done requirements</p>
+            <p>Analyze the template against a Definition of Done requirements</p>
+          </div>
+          <div class="feature-item">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h3>Test Deployment</h3>
+            <p>Get recommendations to fix compliance issues or create GitHub issues</p>
           </div>
           <div class="feature-item">
             <i class="fas fa-code"></i>
