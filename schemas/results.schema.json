@@ -81,7 +81,8 @@
             "functionalRequirements": { "$ref": "#/definitions/categoryCompliance" },
             "deployment": { "$ref": "#/definitions/categoryCompliance" },
             "security": { "$ref": "#/definitions/categoryCompliance" },
-            "testing": { "$ref": "#/definitions/categoryCompliance" }
+            "testing": { "$ref": "#/definitions/categoryCompliance" },
+            "ai": { "$ref": "#/definitions/categoryCompliance" }
           },
           "additionalProperties": false
         },

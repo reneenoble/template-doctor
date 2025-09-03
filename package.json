@@ -12,9 +12,9 @@
     },
     "scripts": {
         "setup:uami": "bash ./scripts/setup.sh",
-        "test": "npm run -w packages/app test",
-        "test:ui": "npm run -w packages/app test:ui",
-        "test:debug": "npm run -w packages/app test:debug"
+        "test": "npm run -w packages/app test --",
+        "test:ui": "npm run -w packages/app test:ui --",
+        "test:debug": "npm run -w packages/app test:debug --"
     },
     "keywords": [
         "azd",

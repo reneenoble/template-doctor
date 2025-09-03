@@ -12,6 +12,8 @@
     autoSaveResults: false,
     archiveEnabled: false,
     archiveCollection: 'aigallery',
+  // Global deployment method switch: Azure Developer CLI enablement
+  azureDeveloperCliEnabled: true,
     // Optional: explicit workflow host repo to dispatch to (owner/repo)
     dispatchTargetRepo: '',
   };
@@ -45,6 +47,10 @@
         }
         if (config.DISPATCH_TARGET_REPO) {
           mapped.dispatchTargetRepo = config.DISPATCH_TARGET_REPO;
+        }
+        if (typeof config.AZURE_DEVELOPER_CLI_ENABLED !== 'undefined') {
+          const v3 = String(config.AZURE_DEVELOPER_CLI_ENABLED).trim().toLowerCase();
+          mapped.azureDeveloperCliEnabled = /^(1|true|yes|on)$/i.test(v3);
         }
         // Map frontend overrides
         if (config.DEFAULT_RULE_SET) {
@@ -96,6 +102,9 @@
           }
           if (typeof cfg.dispatchTargetRepo === 'string') {
             mapped.dispatchTargetRepo = cfg.dispatchTargetRepo;
+          }
+          if (typeof cfg.azureDeveloperCliEnabled === 'boolean') {
+            mapped.azureDeveloperCliEnabled = cfg.azureDeveloperCliEnabled;
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

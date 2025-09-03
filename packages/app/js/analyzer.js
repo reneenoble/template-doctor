@@ -314,7 +314,9 @@ class TemplateAnalyzer {
       const compliant = [];
 
       // Determine category enablement
-      const enabled = normalizeCategorySelection(ruleSet, selectedCategories);
+  const enabled = normalizeCategorySelection(ruleSet, selectedCategories);
+  const cfgGlobal = window.TemplateDoctorConfig || {};
+  const azdGloballyEnabled = cfgGlobal.azureDeveloperCliEnabled !== false;
 
       // Prepare categorized containers
       const categories = {
@@ -323,6 +325,7 @@ class TemplateAnalyzer {
         deployment: { enabled: enabled.deployment, issues: [], compliant: [], summary: '', percentage: 0 },
         security: { enabled: enabled.security, issues: [], compliant: [], summary: '', percentage: 0 },
         testing: { enabled: enabled.testing, issues: [], compliant: [], summary: '', percentage: 0 },
+        ai: { enabled: azdGloballyEnabled, issues: [], compliant: [], summary: '', percentage: 0 },
       };
 
       // Run repository-level configuration validations early (docs-config rules)
@@ -519,7 +522,7 @@ class TemplateAnalyzer {
 
       // Check for azure.yaml or azure.yml
       const azureYamlPath = files.find((f) => f === 'azure.yaml' || f === 'azure.yml');
-      if (enabled.functionalRequirements && azureYamlPath) {
+      if (azdGloballyEnabled && enabled.functionalRequirements && azureYamlPath) {
         categories.functionalRequirements.compliant.push({
           id: 'azure-yaml-exists',
           category: 'azureYaml',
@@ -536,18 +539,18 @@ class TemplateAnalyzer {
             azureYamlPath,
           );
           if (
-            enabled.deployment &&
+            enabled.functionalRequirements &&
             config.azureYamlRules?.mustDefineServices &&
             !/services\s*:/i.test(azureYamlContent)
           ) {
-            categories.deployment.issues.push({
+            categories.functionalRequirements.issues.push({
               id: 'azure-yaml-missing-services',
               severity: 'error',
               message: `No "services:" defined in ${azureYamlPath}`,
               error: `File ${azureYamlPath} does not define required "services:" section`,
             });
-          } else if (enabled.deployment && config.azureYamlRules?.mustDefineServices) {
-            categories.deployment.compliant.push({
+          } else if (enabled.functionalRequirements && config.azureYamlRules?.mustDefineServices) {
+            categories.functionalRequirements.compliant.push({
               id: 'azure-yaml-services-defined',
               category: 'azureYaml',
               message: `"services:" section found in ${azureYamlPath}`,
@@ -564,7 +567,7 @@ class TemplateAnalyzer {
             error: `Failed to read file ${azureYamlPath}`,
           });
         }
-      } else if (enabled.functionalRequirements) {
+      } else if (azdGloballyEnabled && enabled.functionalRequirements) {
         categories.functionalRequirements.issues.push({
           id: 'missing-azure-yaml',
           severity: 'error',
@@ -573,42 +576,47 @@ class TemplateAnalyzer {
         });
       }
 
-      // --- Always-on global checks ---
-      // AI model deprecation scan (independent of category selection)
+      // --- Global checks (conditional) ---
+      // Only run the AI model deprecation scan if deployment method is Azure Developer CLI
+      // Heuristic: presence of azure.yaml or azure.yml in repo root
       const globalIssues = [];
       const globalCompliant = [];
-      try {
-        await this.runAIDeprecationCheck(
-          files,
-          repoInfo,
-          globalIssues,
-          globalCompliant,
-        );
-      } catch (e) {
-        globalIssues.push({
-          id: 'ai-model-deprecation-check-error',
-          severity: 'warning',
-          message: 'Test AI model deprecation: check failed',
-          error: e instanceof Error ? e.message : String(e),
-        });
+      const cfgForGlobal = window.TemplateDoctorConfig || {};
+      const aiToggleEnabled = cfgForGlobal.aiDeprecationCheckEnabled !== false; // default true
+      if (azdGloballyEnabled && azureYamlPath && aiToggleEnabled) {
+        try {
+          await this.runAIDeprecationCheck(
+            files,
+            repoInfo,
+            categories.ai.issues,
+            categories.ai.compliant,
+          );
+        } catch (e) {
+          categories.ai.issues.push({
+            id: 'ai-model-deprecation-check-error',
+            severity: 'warning',
+            message: 'Test AI model deprecation: check failed',
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
       }
 
       // Flatten legacy arrays from categories and merge global checks
       const allIssues = [
-        ...globalIssues,
         ...categories.repositoryManagement.issues,
         ...categories.functionalRequirements.issues,
         ...categories.deployment.issues,
         ...categories.security.issues,
         ...categories.testing.issues,
+        ...categories.ai.issues,
       ];
       const allCompliant = [
-        ...globalCompliant,
         ...categories.repositoryManagement.compliant,
         ...categories.functionalRequirements.compliant,
         ...categories.deployment.compliant,
         ...categories.security.compliant,
         ...categories.testing.compliant,
+        ...categories.ai.compliant,
       ];
 
       // Calculate category summaries
@@ -640,8 +648,8 @@ class TemplateAnalyzer {
 
       // Map minimal global checks status (currently only AI model deprecation)
       const globalChecks = [];
-      const aiIssue = globalIssues.find((i) => i.id === 'ai-model-deprecation');
-      const aiCompliant = globalCompliant.find((c) => c.id === 'ai-model-deprecation');
+      const aiIssue = categories.ai.issues.find((i) => i.id === 'ai-model-deprecation');
+      const aiCompliant = categories.ai.compliant.find((c) => c.id === 'ai-model-deprecation');
       if (aiIssue || aiCompliant) {
         globalChecks.push({
           id: 'ai-model-deprecation',
