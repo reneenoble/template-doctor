@@ -68,9 +68,11 @@ test.describe('Archive toggle in ruleset modal', () => {
     await expect(checkbox).not.toBeChecked();
 
     // Opt-in for this single run
+    await checkbox.scrollIntoViewIfNeeded();
     await checkbox.check();
 
     // Clicking Analyze sets the per-run override; we stubbed analyzeRepo to no-op
+    await analyzeBtn.scrollIntoViewIfNeeded();
     await analyzeBtn.click();
 
     // Now submitting should carry archiveEnabled=true in the client_payload
@@ -94,9 +96,10 @@ test.describe('Archive toggle in ruleset modal', () => {
     page,
   }) => {
     await openRulesetModal(page, { archiveEnabledGlobal: false });
-
     // Do not check the box, click Analyze
-    await page.locator('#analyze-with-ruleset-btn').click();
+    const analyzeBtn = page.locator('#analyze-with-ruleset-btn');
+    await analyzeBtn.scrollIntoViewIfNeeded();
+    await analyzeBtn.click();
 
     const requests = await submitWithIntercept(page);
     const last = requests[requests.length - 1];

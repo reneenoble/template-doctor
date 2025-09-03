@@ -75,6 +75,20 @@ function initRulesetModal() {
                             <a href="https://gist.github.com/anfibiacreativa/d8f29b232397069ec3157c8be799c1ac" target="_blank">Learn More</a>
                         </p>
                     </div>
+          <div id="advanced-config" class="form-group" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+            <strong>Advanced: Select categories to check</strong>
+            </div>
+            <div id="advanced-checkboxes" style="display:grid; grid-template-columns: repeat(2, minmax(200px, 1fr)); gap:6px 16px;">
+            <label><input type="checkbox" name="adv-category" value="repositoryManagement"> Repository management</label>
+            <label><input type="checkbox" name="adv-category" value="functionalRequirements"> Functional requirements</label>
+            <label><input type="checkbox" name="adv-category" value="deployment"> Deployment</label>
+            <label><input type="checkbox" name="adv-category" value="security"> Security</label>
+            <label><input type="checkbox" name="adv-category" value="testing"> Testing</label>
+            </div>
+            <div style="font-size:12px; color:#666; margin-top:6px;">Presets will preselect these automatically. You can tweak before analyzing.</div>
+          </div>
                 </form>
 
         <div id="archive-override-container" class="form-group" style="display: none; margin-top: 12px;">
@@ -107,6 +121,10 @@ function setupRulesetModalHandlers() {
   const closeBtn = modal.querySelector('.close');
   const analyzeBtn = modal.querySelector('#analyze-with-ruleset-btn');
   const rulesetForm = modal.querySelector('#ruleset-form');
+  const advancedContainer = modal.querySelector('#advanced-config');
+  const advancedBoxes = () => Array.from(
+    modal.querySelectorAll('input[name="adv-category"]')
+  );
   const archiveOverrideContainer = modal.querySelector('#archive-override-container');
   const archiveOverrideCheckbox = modal.querySelector('#archive-override');
   const archiveOverrideHint = modal.querySelector('#archive-override-hint');
@@ -264,6 +282,9 @@ function setupRulesetModalHandlers() {
         } else {
           customConfigContainer.style.display = 'none';
         }
+
+        // Apply preset defaults to advanced checkboxes
+        applyPresetToAdvanced(radio.value);
       };
     });
   }
@@ -275,6 +296,7 @@ function setupRulesetModalHandlers() {
       e.stopPropagation();
 
       const selectedRuleset = rulesetForm.querySelector('input[name="ruleset"]:checked').value;
+      const selectedCategories = getSelectedCategories();
 
       // Capture per-run archive override if visible
       try {
@@ -327,7 +349,7 @@ function setupRulesetModalHandlers() {
 
       // Call the analyze function
       if (repoUrl && window.analyzeRepo) {
-        window.analyzeRepo(repoUrl, selectedRuleset);
+        window.analyzeRepo(repoUrl, selectedRuleset, selectedCategories);
       }
     };
   }
@@ -385,8 +407,65 @@ function showRulesetModal(repoUrl) {
 
     // Show the modal
     modal.style.display = 'block';
+
+    // Initialize advanced checkboxes based on the currently selected preset
+    try {
+      const selectedRuleset = modal.querySelector('input[name="ruleset"]:checked')?.value || 'dod';
+      applyPresetToAdvanced(selectedRuleset);
+    } catch (_) {}
   }
 }
 
 // Expose the function globally
 window.showRulesetModal = showRulesetModal;
+
+// Helpers within module scope
+function applyPresetToAdvanced(preset) {
+  const modal = document.getElementById('ruleset-modal');
+  if (!modal) return;
+  const form = modal;
+  const set = (name, checked) => {
+    const input = form.querySelector(`input[name="adv-category"][value="${name}"]`);
+    if (input) input.checked = !!checked;
+  };
+  if (preset === 'dod') {
+    set('repositoryManagement', true);
+    set('functionalRequirements', true);
+    set('deployment', true);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'partner') {
+    set('repositoryManagement', false);
+    set('functionalRequirements', true);
+    set('deployment', true);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'docs') {
+    set('repositoryManagement', true);
+    set('functionalRequirements', true);
+    set('deployment', false);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'custom') {
+    set('repositoryManagement', false);
+    set('functionalRequirements', false);
+    set('deployment', false);
+    set('security', false);
+    set('testing', false);
+  }
+}
+
+function getSelectedCategories() {
+  const modal = document.getElementById('ruleset-modal');
+  if (!modal) return null;
+  const selected = Array.from(modal.querySelectorAll('input[name="adv-category"]:checked')).map(
+    (i) => i.value,
+  );
+  return {
+    repositoryManagement: selected.includes('repositoryManagement'),
+    functionalRequirements: selected.includes('functionalRequirements'),
+    deployment: selected.includes('deployment'),
+    security: selected.includes('security'),
+    testing: selected.includes('testing'),
+  };
+}
