@@ -97,7 +97,8 @@ function runAzdProvisionTest() {
 
   // Prefer upstream template name if provided in report data; otherwise use owner/repo from the report URL
   let templateName = null;
-  const upstreamFromReport = (window.reportData && (window.reportData.upstreamTemplate || window.reportData.upstream)) || '';
+  const upstreamFromReport =
+    (window.reportData && (window.reportData.upstreamTemplate || window.reportData.upstream)) || '';
   if (typeof upstreamFromReport === 'string' && upstreamFromReport.includes('/')) {
     templateName = upstreamFromReport.trim();
   } else if (owner && repo) {
@@ -105,7 +106,11 @@ function runAzdProvisionTest() {
   }
   if (!templateName) {
     const msg = '[error] Could not determine template name from repository URL.';
-    try { appendLog(document.getElementById('azd-provision-logs') || console, msg); } catch { console.error(msg); }
+    try {
+      appendLog(document.getElementById('azd-provision-logs') || console, msg);
+    } catch {
+      console.error(msg);
+    }
     return;
   }
   // Normalize to repo-only for azd init -t
@@ -138,7 +143,8 @@ function runAzdProvisionTest() {
   if (!logEl) {
     logEl = document.createElement('pre');
     logEl.id = 'azd-provision-logs';
-    logEl.style.cssText = 'max-height: 300px; overflow:auto; background:#0b0c0c; color:#d0d0d0; padding:20px; border-radius:6px 0 0 6px; font-size:12px; margin:10px 0 50px 0;';
+    logEl.style.cssText =
+      'max-height: 300px; overflow:auto; background:#0b0c0c; color:#d0d0d0; padding:20px; border-radius:6px 0 0 6px; font-size:12px; margin:10px 0 50px 0;';
     const header = document.querySelector('.report-actions') || document.body;
     header.parentNode.insertBefore(logEl, header.nextSibling);
     // Add controls row (Stop button)
@@ -168,7 +174,11 @@ function runAzdProvisionTest() {
     }
   } catch {}
 
-  const baseUrl = window.location.origin + (window.location.pathname.includes('/index.html') ? window.location.pathname.replace('/index.html','') : window.location.pathname);
+  const baseUrl =
+    window.location.origin +
+    (window.location.pathname.includes('/index.html')
+      ? window.location.pathname.replace('/index.html', '')
+      : window.location.pathname);
 
   let notification;
   if (window.Notifications) {
@@ -185,7 +195,7 @@ function runAzdProvisionTest() {
     return;
   }
   console.log('[azd] apiBase:', apiBase);
-  
+
   // Add debug log to show we're using the latest frontend code
   appendLog(logEl, `[debug] Using updated frontend code with enhanced debugging`);
   appendLog(logEl, `[debug] Template repo: ${templateRepo}, Template name: ${templateName}`);
@@ -316,7 +326,6 @@ function runAzdProvisionTest() {
         }
         return false;
       };
-
       const loop = async () => {
         if (attempts === 0) {
           appendLog(logEl, '[info] Monitoring GitHub workflow status…');
@@ -346,7 +355,7 @@ function runAzdProvisionTest() {
 }
 
 function appendLog(el, line) {
-  el.textContent += (line.endsWith('\n') ? line : line + '\n');
+  el.textContent += line.endsWith('\n') ? line : line + '\n';
   el.scrollTop = el.scrollHeight;
   // Also scroll the viewport so the console is fully visible: target Stop button + 200px
   try {
