@@ -17,6 +17,7 @@
 
 > [!IMPORTANT]
 > This app has been built with vanilla JavaScript for fast prototyping and will be migrated to TypeScript for robustness.
+> progress to be tracked here https://github.com/Template-Doctor/template-doctor/pull/89
 
 Template Doctor analyzes and validates samples and templates, including but not limited to Azure Developer CLI (azd) templates. It provides a web UI to view analysis results and take action, including opening GitHub issues and assigning them to GitHub copilot in one go. It also automates PR updates with scan results.
 
