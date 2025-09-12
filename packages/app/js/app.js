@@ -313,6 +313,55 @@ function directLoadDataFile(folderName, dataFileName, successCallback, errorCall
 
 // Initialize key services
 let appAuth, appGithub, appAnalyzer, appDashboard;
+// Queue analyses requested before services fully initialize
+const pendingAnalysisQueue = [];
+let serviceReadinessPolling = false;
+
+function enqueueAnalysisRequest(args) {
+  pendingAnalysisQueue.push(args);
+  debug('app', `Enqueued analysis request. Queue length=${pendingAnalysisQueue.length}`);
+  pollForServiceReadiness();
+}
+
+function drainAnalysisQueue() {
+  if (!appAnalyzer || !appDashboard) return;
+  if (pendingAnalysisQueue.length === 0) return;
+  debug('app', `Draining ${pendingAnalysisQueue.length} queued analysis request(s)`);
+  // Copy then clear to avoid reentrancy issues
+  const queue = pendingAnalysisQueue.slice();
+  pendingAnalysisQueue.length = 0;
+  for (const { repoUrl, ruleSet, selectedCategories } of queue) {
+    // Fire and forget; internalAnalyzeRepo already handles its own async flow
+    internalAnalyzeRepo(repoUrl, ruleSet, selectedCategories);
+  }
+}
+
+function pollForServiceReadiness(maxAttempts = 10, intervalMs = 500) {
+  if (serviceReadinessPolling) return;
+  serviceReadinessPolling = true;
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    appAuth = window.GitHubAuth || appAuth;
+    appGithub = window.GitHubClient || appGithub;
+    appAnalyzer = window.TemplateAnalyzer || appAnalyzer;
+    appDashboard = window.DashboardRenderer || appDashboard;
+    if (appAnalyzer && appGithub && appDashboard) {
+      clearInterval(timer);
+      serviceReadinessPolling = false;
+      debug('app', 'All services became ready during polling');
+      drainAnalysisQueue();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(timer);
+      serviceReadinessPolling = false;
+      debug('app', 'Service readiness polling exhausted attempts', {
+        analyzer: !!appAnalyzer,
+        github: !!appGithub,
+        dashboard: !!appDashboard,
+      });
+    }
+  }, intervalMs);
+}
 
 // Function to initialize the app with dependencies
 function initializeApp() {
@@ -2426,21 +2475,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // First verify we have necessary modules initialized
     if (!appAnalyzer || !appDashboard) {
-      debug('app', 'Required services not available, attempting to reinitialize');
-
-      // Try to reinitialize all services
+      debug('app', 'Required services not available at analysis request time');
       const servicesAvailable = tryReinitializeServices();
-
       if (!servicesAvailable) {
+        enqueueAnalysisRequest({ repoUrl, ruleSet, selectedCategories });
         if (window.NotificationSystem) {
-          window.NotificationSystem.showError(
-            'Services Not Ready',
-            'Some required services are not available. Please wait a moment or refresh the page to try again.',
-            5000,
+          window.NotificationSystem.showWarning(
+            'Initializing Services',
+            'Services are still starting up. Your request was queued and will run automatically.',
+            4500,
           );
         }
-        debug('app', 'Required services still unavailable after reinitialization attempt');
-        return;
+        return; // Will resume once services ready
       }
     }
 
@@ -2971,6 +3017,7 @@ document.addEventListener('template-analyzer-ready', () => {
         3000,
       );
     }
+    drainAnalysisQueue();
   } else {
     debug('app', 'Template analyzer still not available after ready event');
   }
