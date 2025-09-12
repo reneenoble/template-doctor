@@ -520,10 +520,10 @@ class TemplateAnalyzer {
         }
       }
 
-      // Check for azure.yaml or azure.yml
+      // Check for azure.yaml or azure.yml (deployment category: governs infrastructure orchestration)
       const azureYamlPath = files.find((f) => f === 'azure.yaml' || f === 'azure.yml');
-      if (azdGloballyEnabled && enabled.functionalRequirements && azureYamlPath) {
-        categories.functionalRequirements.compliant.push({
+      if (azdGloballyEnabled && enabled.deployment && azureYamlPath) {
+        categories.deployment.compliant.push({
           id: 'azure-yaml-exists',
           category: 'azureYaml',
           message: `Found azure.yaml file: ${azureYamlPath}`,
@@ -539,18 +539,18 @@ class TemplateAnalyzer {
             azureYamlPath,
           );
           if (
-            enabled.functionalRequirements &&
+            enabled.deployment &&
             config.azureYamlRules?.mustDefineServices &&
             !/services\s*:/i.test(azureYamlContent)
           ) {
-            categories.functionalRequirements.issues.push({
+            categories.deployment.issues.push({
               id: 'azure-yaml-missing-services',
               severity: 'error',
               message: `No "services:" defined in ${azureYamlPath}`,
               error: `File ${azureYamlPath} does not define required "services:" section`,
             });
-          } else if (enabled.functionalRequirements && config.azureYamlRules?.mustDefineServices) {
-            categories.functionalRequirements.compliant.push({
+          } else if (enabled.deployment && config.azureYamlRules?.mustDefineServices) {
+            categories.deployment.compliant.push({
               id: 'azure-yaml-services-defined',
               category: 'azureYaml',
               message: `"services:" section found in ${azureYamlPath}`,
@@ -560,15 +560,15 @@ class TemplateAnalyzer {
             });
           }
         } catch {
-          categories.functionalRequirements.issues.push({
+          categories.deployment.issues.push({
             id: 'azure-yaml-read-error',
             severity: 'warning',
             message: `Could not read ${azureYamlPath}`,
             error: `Failed to read file ${azureYamlPath}`,
           });
         }
-      } else if (azdGloballyEnabled && enabled.functionalRequirements) {
-        categories.functionalRequirements.issues.push({
+      } else if (azdGloballyEnabled && enabled.deployment) {
+        categories.deployment.issues.push({
           id: 'missing-azure-yaml',
           severity: 'error',
           message: 'Missing azure.yaml or azure.yml file',
