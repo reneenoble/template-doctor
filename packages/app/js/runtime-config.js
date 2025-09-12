@@ -14,6 +14,8 @@
     archiveCollection: 'aigallery',
     // Optional: explicit workflow host repo to dispatch to (owner/repo)
     dispatchTargetRepo: '',
+    // Optional: enable AI enrichment on issue bodies (set via env/config)
+    issueAIEnabled: false,
   };
 
   // Initialize with defaults so consumers have something synchronously
@@ -45,6 +47,10 @@
         }
         if (config.DISPATCH_TARGET_REPO) {
           mapped.dispatchTargetRepo = config.DISPATCH_TARGET_REPO;
+        }
+        if (config.ISSUE_AI_ENABLED) {
+          const v = String(config.ISSUE_AI_ENABLED).trim().toLowerCase();
+          mapped.issueAIEnabled = /^(1|true|yes|on)$/i.test(v);
         }
         // Map frontend overrides
         if (config.DEFAULT_RULE_SET) {
@@ -96,6 +102,12 @@
           }
           if (typeof cfg.dispatchTargetRepo === 'string') {
             mapped.dispatchTargetRepo = cfg.dispatchTargetRepo;
+          }
+          if (typeof cfg.issueAIEnabled === 'boolean') {
+            mapped.issueAIEnabled = cfg.issueAIEnabled;
+          } else if (typeof cfg.ISSUE_AI_ENABLED === 'string') {
+            const v = cfg.ISSUE_AI_ENABLED.trim().toLowerCase();
+            mapped.issueAIEnabled = /^(1|true|yes|on)$/i.test(v);
           }
           window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
           console.log('[runtime-config] loaded config.json');

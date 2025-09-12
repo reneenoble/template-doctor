@@ -35,6 +35,23 @@ Notes:
 | `GITHUB_CLIENT_ID` | OAuth client ID for GitHub authentication | Yes | Frontend, API |
 | `GITHUB_CLIENT_SECRET` | OAuth client secret for GitHub authentication | Yes | API (github-oauth-token) |
 
+### Issue AI Enrichment (Optional)
+
+| Variable | Description | Required | Used In |
+|----------|-------------|----------|---------|
+| `ISSUE_AI_ENABLED` | Master flag enabling AI enrichment of issue bodies (`true/1/yes/on`) | No | API (runtime-config), Frontend (issue-ai-provider) |
+| `ISSUE_AI_PROVIDER` | Force provider selection (`azure` or `github`) | No (auto) | API |
+| `ISSUE_AI_MODEL` | Generic model name (fallback for GitHub; also default Azure deployment name if specific not set) | No | API |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL | Yes (if azure) | API (issue-ai-proxy) |
+| `AZURE_OPENAI_DEPLOYMENT` | Azure OpenAI deployment name (model alias) | Yes (if azure) | API (issue-ai-proxy) |
+| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | No | API |
+| `AZURE_OPENAI_API_KEY` | Azure OpenAI API key (dev only; prefer MSI in prod) | Yes (if no MSI) | API |
+| `GITHUB_MODELS_TOKEN` | Token for GitHub Models (if using GitHub provider) | Yes (if github) | API |
+| `ISSUE_AI_RATE_LIMIT_MAX` | Requests allowed per window per key | No (20) | API |
+| `ISSUE_AI_RATE_LIMIT_WINDOW_MS` | Window length in ms for rate limiter | No (60000) | API |
+| `ISSUE_AI_CACHE_TTL_MS` | Cache TTL in ms for enriched responses | No (300000) | API |
+| `ISSUE_AI_CACHE_MAX` | Max cached entries (approx LRU eviction) | No (500) | API |
+
 ### Centralized Archive (Optional)
 
 These variables enable saving a metadata JSON into a centralized archive repository (separate from the results PR). There are variables set in GitHub Actions and variables set in Azure Functions.
@@ -119,3 +136,5 @@ For production deployments, configure the environment variables in your hosting 
 - Use secrets management for production deployments
 - Rotate credentials regularly
 - Consider using managed identities in Azure where possible
+- Do not expose AI provider keys to the frontend; only the server performs enrichment calls
+- Monitor rate limiting metrics to detect abuse of the enrichment endpoint

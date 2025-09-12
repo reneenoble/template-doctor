@@ -12,7 +12,7 @@ module.exports = defineConfig({
   reporter: 'html', // Use HTML reporter
 
   use: {
-    baseURL: 'http://localhost:8080', // Ensure tests navigate to the correct server
+    baseURL: 'http://localhost:4000', // Ensure tests navigate to the correct server
     trace: 'on', // Capture traces for all tests
     screenshot: 'only-on-failure', // Capture screenshots on failure
     video: 'on-first-retry', // Record video on retry
@@ -26,8 +26,8 @@ module.exports = defineConfig({
   ],
 
   webServer: {
-    command: 'python3 -m http.server 8080',
-    url: 'http://localhost:8080',
+    command: 'python3 -m http.server 4000',
+    url: 'http://localhost:4000',
     reuseExistingServer: true, // Reuse server to avoid port conflicts
     timeout: 120000, // Allow more time for server to start
     stdout: 'pipe',

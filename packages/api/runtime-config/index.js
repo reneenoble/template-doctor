@@ -29,6 +29,8 @@ module.exports = async function (context, req) {
   const archiveCollection = process.env.TD_ARCHIVE_COLLECTION || process.env.ARCHIVE_COLLECTION || '';
   // Optional: specify the exact repo (owner/repo) that hosts the workflow to dispatch to
   const dispatchTargetRepo = process.env.DISPATCH_TARGET_REPO || process.env.TD_DISPATCH_TARGET_REPO || '';
+  // Optional: enable AI enrichment for issue bodies
+  const issueAIEnabled = process.env.ISSUE_AI_ENABLED || process.env.TD_ISSUE_AI_ENABLED || '';
 
   context.res = {
     status: 200,
@@ -46,7 +48,8 @@ module.exports = async function (context, req) {
       REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
       AUTO_SAVE_RESULTS: autoSaveResults,
       ARCHIVE_ENABLED: archiveEnabled,
-      ARCHIVE_COLLECTION: archiveCollection
+      ARCHIVE_COLLECTION: archiveCollection,
+      ISSUE_AI_ENABLED: issueAIEnabled
     }
   };
 };

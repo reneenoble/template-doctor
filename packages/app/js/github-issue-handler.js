@@ -382,37 +382,32 @@ async function processIssueCreation(github) {
             );
           }
 
-          // Create a child issue body
-          let childBody = `# ${issue.message}\n\n`;
-          if (issue.error) childBody += `## Details\n\n${issue.error}\n\n`;
-
-          childBody += `## How to fix\n\n`;
-
-          // Generate a fix hint based on the issue type
-          if (issue.id.includes('missing-file') || issue.id.includes('missing-folder')) {
-            childBody += `Create the missing ${issue.id.includes('file') ? 'file' : 'folder'} in your repository.\n\n`;
-          } else if (issue.id.includes('missing-workflow')) {
-            childBody += 'Add the required workflow file to your .github/workflows directory.\n\n';
-          } else if (issue.id.includes('readme')) {
-            childBody += 'Update your README.md with the required headings and content.\n\n';
-          } else if (issue.id.includes('bicep')) {
-            childBody += 'Add the missing resources to your Bicep files.\n\n';
-          } else if (issue.id.includes('azure-yaml')) {
-            childBody += 'Update your azure.yaml file to include required sections.\n\n';
-          } else {
-            childBody += 'Review the issue details and make appropriate changes.\n\n';
+          // Use the new Issue Template Engine
+          let childTitle;
+          let childBody;
+          try {
+            if (window.IssueTemplateEngine && window.IssueTemplateEngine.generateChildIssue) {
+              const generated = await window.IssueTemplateEngine.generateChildIssue(issue, {
+                mainIssue,
+                ruleSet,
+                ruleSetDisplay,
+                customGistUrl,
+              });
+              childTitle = generated.title;
+              childBody = generated.body;
+            } else {
+              // Fallback: minimal body
+              childTitle = `${issue.message} [${issue.id}]`;
+              childBody = `# ${issue.message}\n\n${issue.error || ''}`;
+            }
+          } catch (e) {
+            console.warn('Issue template generation failed, using fallback', e);
+            childTitle = `${issue.message} [${issue.id}]`;
+            childBody = `# ${issue.message}\n\n${issue.error || ''}`;
           }
 
-          // Add severity + configuration context
           const severity = (issue.severity || 'warning').toLowerCase();
-          const severityDisplay =
-            severity === 'error' ? 'High' : severity === 'warning' ? 'Medium' : 'Low';
-          childBody += `## Context\n\n- Severity: ${severityDisplay}\n- Rule Set: ${ruleSetDisplay}${customGistUrl ? ` (custom from ${customGistUrl})` : ''}\n`;
-
-          childBody += `\n---\n*This is a child issue created by Template Doctor. Parent issue: #${mainIssue.number}*`;
-          childBody += `\n\n<!-- Parent Issue: ${mainIssue.id} -->`;
-
-          const childTitle = `${issue.message} [${issue.id}]`;
+          const severityDisplay = severity === 'error' ? 'High' : severity === 'warning' ? 'Medium' : 'Low';
 
           // Map severity to standardized label values
           const sevLabel =

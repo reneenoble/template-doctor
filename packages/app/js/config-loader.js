@@ -140,6 +140,12 @@ async function loadConfig() {
     ) {
       config.DISPATCH_TARGET_REPO = envVars.DISPATCH_TARGET_REPO;
     }
+    if (
+      typeof envVars.ISSUE_AI_ENABLED === 'string' &&
+      envVars.ISSUE_AI_ENABLED.trim().length > 0
+    ) {
+      config.ISSUE_AI_ENABLED = envVars.ISSUE_AI_ENABLED;
+    }
   }
 
   // Additional env variables can be merged above as needed
