@@ -18,6 +18,9 @@
   width: 80%;
   max-width: 600px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  /* Ensure long content stays within the viewport and can scroll */
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -138,4 +141,21 @@
 #fetch-gist-btn {
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* Advanced category checkboxes spacing */
+#advanced-checkboxes label {
+  display: flex;
+  align-items: center;
+}
+
+#advanced-checkboxes input[type='checkbox'] {
+  margin-right: 8px;
+}
+
+/* Global checks indicator */
+#global-checks label.always-on {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

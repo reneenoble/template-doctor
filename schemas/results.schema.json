@@ -28,7 +28,7 @@
         },
         "issues": {
           "type": "array",
-          "description": "List of issues found",
+          "description": "List of issues found (legacy flat list for backward compatibility)",
           "items": {
             "type": "object",
             "required": ["id", "severity", "message"],
@@ -52,8 +52,105 @@
               }
             }
           }
+        },
+        "percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall compliance percentage (legacy numeric field for backward compatibility)"
+        },
+        "compliant": {
+          "type": "array",
+          "description": "List of passed checks (legacy flat list for backward compatibility)",
+          "items": {
+            "type": "object",
+            "required": ["id", "message"],
+            "properties": {
+              "id": { "type": "string" },
+              "message": { "type": "string" },
+              "category": { "type": "string" },
+              "details": { "type": ["object", "null"] }
+            }
+          }
+        },
+        "categories": {
+          "type": "object",
+          "description": "Categorized compliance breakdown",
+          "properties": {
+            "repositoryManagement": { "$ref": "#/definitions/categoryCompliance" },
+            "functionalRequirements": { "$ref": "#/definitions/categoryCompliance" },
+            "deployment": { "$ref": "#/definitions/categoryCompliance" },
+            "security": { "$ref": "#/definitions/categoryCompliance" },
+            "testing": { "$ref": "#/definitions/categoryCompliance" },
+            "ai": { "$ref": "#/definitions/categoryCompliance" }
+          },
+          "additionalProperties": false
+        },
+        "globalChecks": {
+          "type": "array",
+          "description": "Optional list of global checks executed regardless of category selection (e.g., AI model deprecation)",
+          "items": {
+            "type": "object",
+            "required": ["id", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "status": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+              "details": { "type": ["object", "null"] }
+            }
+          }
         }
-      }
+      },
+      "additionalProperties": true
+    }
+  }
+  ,
+  "definitions": {
+    "categoryCompliance": {
+      "type": "object",
+      "required": ["enabled", "issues", "compliant", "summary", "percentage"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this category of checks was enabled for the analysis run"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Category compliance summary"
+        },
+        "percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of passed checks in this category"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "severity", "message"],
+            "properties": {
+              "id": { "type": "string" },
+              "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+              "message": { "type": "string" },
+              "error": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "compliant": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "message"],
+            "properties": {
+              "id": { "type": "string" },
+              "message": { "type": "string" },
+              "category": { "type": "string" },
+              "details": { "type": ["object", "null"] }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

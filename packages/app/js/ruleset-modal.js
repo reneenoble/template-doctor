@@ -75,6 +75,28 @@ function initRulesetModal() {
                             <a href="https://gist.github.com/anfibiacreativa/d8f29b232397069ec3157c8be799c1ac" target="_blank">Learn More</a>
                         </p>
                     </div>
+          <div id="advanced-config" class="form-group" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+            <strong>Advanced: Select categories to check</strong>
+            </div>
+            <div id="advanced-checkboxes" style="display:grid; grid-template-columns: repeat(2, minmax(200px, 1fr)); gap:6px 16px;">
+            <label><input type="checkbox" name="adv-category" value="repositoryManagement"> Repository management</label>
+            <label><input type="checkbox" name="adv-category" value="functionalRequirements"> Functional requirements</label>
+            <label><input type="checkbox" name="adv-category" value="deployment"> Deployment</label>
+            <label><input type="checkbox" name="adv-category" value="security"> Security</label>
+            <label><input type="checkbox" name="adv-category" value="testing"> Testing</label>
+            </div>
+            <div style="font-size:12px; color:#666; margin-top:6px;">Presets will preselect these automatically. You can tweak before analyzing.</div>
+            <div id="global-checks" style="margin-top:12px; padding-top:10px; border-top:1px dashed #e5e5e5;">
+              <div style="font-weight:600; margin-bottom:6px;">Global checks</div>
+              <label class="always-on" title="Runs when Azure Developer CLI (azure.yaml or azure.yml) is detected.">
+                <input type="checkbox" id="ai-deprecation-toggle" checked />
+                AI model deprecation (Az Dev CLI only)
+              </label>
+              <div id="ai-deprecation-hint" class="helper-text">Enabled by default. Uses TemplateDoctorConfig.deprecatedModels. Auto-disabled if template is not AI-powered.</div>
+            </div>
+          </div>
                 </form>
 
         <div id="archive-override-container" class="form-group" style="display: none; margin-top: 12px;">
@@ -107,9 +129,15 @@ function setupRulesetModalHandlers() {
   const closeBtn = modal.querySelector('.close');
   const analyzeBtn = modal.querySelector('#analyze-with-ruleset-btn');
   const rulesetForm = modal.querySelector('#ruleset-form');
+  const advancedContainer = modal.querySelector('#advanced-config');
+  const advancedBoxes = () => Array.from(
+    modal.querySelectorAll('input[name="adv-category"]')
+  );
   const archiveOverrideContainer = modal.querySelector('#archive-override-container');
   const archiveOverrideCheckbox = modal.querySelector('#archive-override');
   const archiveOverrideHint = modal.querySelector('#archive-override-hint');
+  const aiToggle = modal.querySelector('#ai-deprecation-toggle');
+  const aiHint = modal.querySelector('#ai-deprecation-hint');
   const customConfigContainer = modal.querySelector('#custom-config-container');
   const customConfigInput = modal.querySelector('#custom-config-json');
   const gistUrlInput = modal.querySelector('#gist-url');
@@ -264,6 +292,9 @@ function setupRulesetModalHandlers() {
         } else {
           customConfigContainer.style.display = 'none';
         }
+
+        // Apply preset defaults to advanced checkboxes
+        applyPresetToAdvanced(radio.value);
       };
     });
   }
@@ -275,10 +306,15 @@ function setupRulesetModalHandlers() {
       e.stopPropagation();
 
       const selectedRuleset = rulesetForm.querySelector('input[name="ruleset"]:checked').value;
+      const selectedCategories = getSelectedCategories();
 
       // Capture per-run archive override if visible
       try {
         const cfg = window.TemplateDoctorConfig || {};
+        // Persist the AI deprecation toggle preference (default true)
+        if (aiToggle) {
+          cfg.aiDeprecationCheckEnabled = !!aiToggle.checked;
+        }
         // Only set override when globally disabled and checkbox is present
         if (archiveOverrideContainer && archiveOverrideContainer.style.display !== 'none') {
           const shouldArchiveThisRun = !!(
@@ -327,7 +363,7 @@ function setupRulesetModalHandlers() {
 
       // Call the analyze function
       if (repoUrl && window.analyzeRepo) {
-        window.analyzeRepo(repoUrl, selectedRuleset);
+        window.analyzeRepo(repoUrl, selectedRuleset, selectedCategories);
       }
     };
   }
@@ -352,6 +388,19 @@ function setupRulesetModalHandlers() {
       if (archiveOverrideHint)
         archiveOverrideHint.textContent =
           'Global archive is OFF. Check this to archive this single run.';
+    }
+  } catch (_) {}
+
+  // Initialize AZD global switch and AI toggle default
+  try {
+    const cfg = window.TemplateDoctorConfig || {};
+    const globalChecksContainer = modal.querySelector('#global-checks');
+    const azdEnabled = cfg.azureDeveloperCliEnabled !== false;
+    if (globalChecksContainer) {
+      globalChecksContainer.style.display = azdEnabled ? 'block' : 'none';
+    }
+    if (aiToggle) {
+      aiToggle.checked = cfg.aiDeprecationCheckEnabled !== false;
     }
   } catch (_) {}
 }
@@ -385,8 +434,136 @@ function showRulesetModal(repoUrl) {
 
     // Show the modal
     modal.style.display = 'block';
+
+    // Initialize advanced checkboxes based on the currently selected preset
+    try {
+      const selectedRuleset = modal.querySelector('input[name="ruleset"]:checked')?.value || 'dod';
+      applyPresetToAdvanced(selectedRuleset);
+    } catch (_) {}
+
+    // Attempt to detect if repo is AI-powered and update toggle state accordingly (only when AZD switch is on)
+    try {
+      const cfg = window.TemplateDoctorConfig || {};
+      if (cfg.azureDeveloperCliEnabled !== false) {
+        updateAICheckToggle(repoUrl).catch(() => {});
+      }
+    } catch (_) {}
   }
 }
 
 // Expose the function globally
 window.showRulesetModal = showRulesetModal;
+
+// Helpers within module scope
+function applyPresetToAdvanced(preset) {
+  const modal = document.getElementById('ruleset-modal');
+  if (!modal) return;
+  const form = modal;
+  const set = (name, checked) => {
+    const input = form.querySelector(`input[name="adv-category"][value="${name}"]`);
+    if (input) input.checked = !!checked;
+  };
+  if (preset === 'dod') {
+    set('repositoryManagement', true);
+    set('functionalRequirements', true);
+    set('deployment', true);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'partner') {
+    set('repositoryManagement', false);
+    set('functionalRequirements', true);
+    set('deployment', true);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'docs') {
+    set('repositoryManagement', true);
+    set('functionalRequirements', true);
+    set('deployment', false);
+    set('security', true);
+    set('testing', false);
+  } else if (preset === 'custom') {
+    set('repositoryManagement', false);
+    set('functionalRequirements', false);
+    set('deployment', false);
+    set('security', false);
+    set('testing', false);
+  }
+}
+
+function getSelectedCategories() {
+  const modal = document.getElementById('ruleset-modal');
+  if (!modal) return null;
+  const selected = Array.from(modal.querySelectorAll('input[name="adv-category"]:checked')).map(
+    (i) => i.value,
+  );
+  return {
+    repositoryManagement: selected.includes('repositoryManagement'),
+    functionalRequirements: selected.includes('functionalRequirements'),
+    deployment: selected.includes('deployment'),
+    security: selected.includes('security'),
+    testing: selected.includes('testing'),
+  };
+}
+
+// Lightweight AI-powered detection to inform the toggle state
+async function updateAICheckToggle(repoUrl) {
+  try {
+    const modal = document.getElementById('ruleset-modal');
+    if (!modal || !window.GitHubClient) return;
+    const aiToggle = modal.querySelector('#ai-deprecation-toggle');
+    const aiHint = modal.querySelector('#ai-deprecation-hint');
+    if (!aiToggle) return;
+
+    const { owner, repo } = extractRepoInfo(repoUrl);
+    const defaultBranch = await window.GitHubClient.getDefaultBranch(owner, repo);
+    const files = await window.GitHubClient.listAllFiles(owner, repo, defaultBranch);
+
+    // Heuristics: look for package.json deps or requirements.txt lines indicating AI
+    let aiPowered = false;
+
+    const has = (p) => files.includes(p) || files.includes(p.toLowerCase());
+    const tryRead = async (p) => {
+      try { return await window.GitHubClient.getFileContent(owner, repo, p); } catch { return null; }
+    };
+
+    if (has('package.json')) {
+      const content = await tryRead('package.json');
+      if (content) {
+        try {
+          const pkg = JSON.parse(content);
+          const deps = { ...(pkg.dependencies||{}), ...(pkg.devDependencies||{}) };
+          const depNames = Object.keys(deps).map((d) => d.toLowerCase());
+          const needles = ['openai', '@azure/openai', '@azure/ai-inference', 'langchain', '@langchain/', 'semantic-kernel', '@microsoft/semantic-kernel'];
+          aiPowered = depNames.some((d) => needles.some((n) => d.includes(n)));
+        } catch { /* ignore */ }
+      }
+    }
+    if (!aiPowered && has('requirements.txt')) {
+      const req = await tryRead('requirements.txt');
+      if (req) {
+        const lower = req.toLowerCase();
+        const needles = ['openai', 'azure-ai-inference', 'langchain', 'semantic-kernel', 'azure-ai'];
+        aiPowered = needles.some((n) => lower.includes(n));
+      }
+    }
+
+    // Adjust toggle and hint
+    if (aiPowered) {
+      aiToggle.disabled = false;
+      aiToggle.checked = true;
+      if (aiHint) aiHint.textContent = 'AI detected; check will run by default (Az Dev CLI only).';
+    } else {
+      aiToggle.checked = false;
+      aiToggle.disabled = true;
+      if (aiHint) aiHint.textContent = 'No AI detected; check disabled. Enable by adding AI SDKs to your template.';
+    }
+  } catch (_) {
+    // On errors, do not block UI; default to enabled
+  }
+}
+
+function extractRepoInfo(url) {
+  const match = url.match(/github\.com\/([^/]+)\/([^/]+)(\.git)?/);
+  if (!match) throw new Error('Invalid GitHub URL');
+  return { owner: match[1], repo: match[2] };
+}

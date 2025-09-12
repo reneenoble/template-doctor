@@ -271,14 +271,14 @@ class TemplateAnalyzer {
    * @param {string} ruleSet - The rule set to use: "dod", "partner", "docs", or "custom"
    * @returns {Promise<Object>} - The analysis result
    */
-  async analyzeTemplate(repoUrl, ruleSet = 'dod') {
+  async analyzeTemplate(repoUrl, ruleSet = 'dod', selectedCategories = null) {
     if (!ruleSet || ruleSet === 'dod') {
       const cfg = window.TemplateDoctorConfig || {};
       if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
         ruleSet = cfg.defaultRuleSet;
       }
     }
-    // Get the appropriate configuration based on the rule set
+  // Get the appropriate configuration based on the rule set
     const config = this.getConfig(ruleSet);
     const repoInfo = this.extractRepoInfo(repoUrl);
 
@@ -313,16 +313,36 @@ class TemplateAnalyzer {
       const issues = [];
       const compliant = [];
 
+      // Determine category enablement
+  const enabled = normalizeCategorySelection(ruleSet, selectedCategories);
+  const cfgGlobal = window.TemplateDoctorConfig || {};
+  const azdGloballyEnabled = cfgGlobal.azureDeveloperCliEnabled !== false;
+
+      // Prepare categorized containers
+      const categories = {
+        repositoryManagement: { enabled: enabled.repositoryManagement, issues: [], compliant: [], summary: '', percentage: 0 },
+        functionalRequirements: { enabled: enabled.functionalRequirements, issues: [], compliant: [], summary: '', percentage: 0 },
+        deployment: { enabled: enabled.deployment, issues: [], compliant: [], summary: '', percentage: 0 },
+        security: { enabled: enabled.security, issues: [], compliant: [], summary: '', percentage: 0 },
+        testing: { enabled: enabled.testing, issues: [], compliant: [], summary: '', percentage: 0 },
+        ai: { enabled: azdGloballyEnabled, issues: [], compliant: [], summary: '', percentage: 0 },
+      };
+
       // Run repository-level configuration validations early (docs-config rules)
       // Only run docs-specific repo validations when the docs ruleset is selected
+<<<<<<< HEAD
       if (ruleSet === 'docs') {
         TemplateAnalyzerDocs.prototype.validateDocConfiguration(
+=======
+      if (ruleSet === 'docs' && enabled.repositoryManagement) {
+        TemplateAnalyzerDocs.prototype.validateRepoConfiguration(
+>>>>>>> feat/make-schema-flexible-for-granular
           config,
           repoInfo,
           defaultBranch,
           files,
-          issues,
-          compliant,
+          categories.repositoryManagement.issues,
+          categories.repositoryManagement.compliant,
         );
       }
 
@@ -330,16 +350,17 @@ class TemplateAnalyzer {
       const normalized = files.map((f) => f.toLowerCase());
 
       // Check for required files
-      for (const file of config.requiredFiles) {
+      if (enabled.repositoryManagement) {
+        for (const file of config.requiredFiles) {
         if (!normalized.includes(file.toLowerCase())) {
-          issues.push({
+          categories.repositoryManagement.issues.push({
             id: `missing-${file}`,
             severity: 'error',
             message: `Missing required file: ${file}`,
             error: `File ${file} not found in repository`,
           });
         } else {
-          compliant.push({
+          categories.repositoryManagement.compliant.push({
             id: `file-${file}`,
             category: 'requiredFile',
             message: `Required file found: ${file}`,
@@ -348,21 +369,22 @@ class TemplateAnalyzer {
             },
           });
         }
+        }
       }
 
       // Check for required workflow files using patterns
-      if (config.requiredWorkflowFiles) {
+      if (enabled.repositoryManagement && config.requiredWorkflowFiles) {
         for (const workflowFile of config.requiredWorkflowFiles) {
           const matchingFile = normalized.find((file) => workflowFile.pattern.test(file));
           if (!matchingFile) {
-            issues.push({
+            categories.repositoryManagement.issues.push({
               id: `missing-workflow-${workflowFile.pattern.source}`,
               severity: 'error',
               message: workflowFile.message,
               error: workflowFile.message,
             });
           } else {
-            compliant.push({
+            categories.repositoryManagement.compliant.push({
               id: `workflow-${matchingFile}`,
               category: 'requiredWorkflow',
               message: `Required workflow file found: ${matchingFile}`,
@@ -376,9 +398,9 @@ class TemplateAnalyzer {
       }
 
       // Check for required folders
-      for (const folder of config.requiredFolders) {
+      if (enabled.repositoryManagement) for (const folder of config.requiredFolders) {
         if (!normalized.some((f) => f.startsWith(folder.toLowerCase() + '/'))) {
-          issues.push({
+          categories.repositoryManagement.issues.push({
             id: `missing-folder-${folder}`,
             severity: 'error',
             message: `Missing required folder: ${folder}/`,
@@ -386,7 +408,7 @@ class TemplateAnalyzer {
           });
         } else {
           const folderFiles = normalized.filter((f) => f.startsWith(folder.toLowerCase() + '/'));
-          compliant.push({
+          categories.repositoryManagement.compliant.push({
             id: `folder-${folder}`,
             category: 'requiredFolder',
             message: `Required folder found: ${folder}/`,
@@ -399,16 +421,25 @@ class TemplateAnalyzer {
       }
 
       // Check README.md content for required headings and architecture diagram
-      if (config.readmeRequirements && normalized.some((f) => f === 'readme.md')) {
+      if (
+        enabled.repositoryManagement &&
+        config.readmeRequirements &&
+        normalized.some((f) => f === 'readme.md')
+      ) {
         try {
           const readmeContent = await this.githubClient.getFileContent(
             repoInfo.owner,
             repoInfo.repo,
             'README.md',
           );
-          this.checkReadmeRequirements(readmeContent, issues, compliant, config);
+          this.checkReadmeRequirements(
+            readmeContent,
+            categories.repositoryManagement.issues,
+            categories.repositoryManagement.compliant,
+            config,
+          );
         } catch (err) {
-          issues.push({
+          categories.repositoryManagement.issues.push({
             id: 'readme-read-error',
             severity: 'warning',
             message: 'Could not read README.md',
@@ -419,15 +450,15 @@ class TemplateAnalyzer {
 
       // Check Bicep files
       const bicepFiles = files.filter((f) => f.startsWith('infra/') && f.endsWith('.bicep'));
-      if (bicepFiles.length === 0) {
-        issues.push({
+      if (enabled.deployment && bicepFiles.length === 0) {
+        categories.deployment.issues.push({
           id: 'missing-bicep',
           severity: 'error',
           message: 'No Bicep files found in infra/',
           error: 'No Bicep files found in the infra/ directory',
         });
-      } else {
-        compliant.push({
+      } else if (enabled.deployment) {
+        categories.deployment.compliant.push({
           id: 'bicep-files-exist',
           category: 'bicepFiles',
           message: `Bicep files found in infra/ directory: ${bicepFiles.length} files`,
@@ -452,7 +483,7 @@ class TemplateAnalyzer {
 
             for (const resource of config.bicepChecks.requiredResources) {
               if (!content.includes(resource)) {
-                issues.push({
+                categories.deployment.issues.push({
                   id: `bicep-missing-${resource.toLowerCase()}`,
                   severity: 'error',
                   message: `Missing resource "${resource}" in ${file}`,
@@ -460,7 +491,7 @@ class TemplateAnalyzer {
                 });
                 missingResources.push(resource);
               } else {
-                compliant.push({
+                categories.deployment.compliant.push({
                   id: `bicep-resource-${resource.toLowerCase()}-${file}`,
                   category: 'bicepResource',
                   message: `Found required resource "${resource}" in ${file}`,
@@ -474,10 +505,17 @@ class TemplateAnalyzer {
             }
 
             // Check for authentication methods and recommend Managed Identity when appropriate
-            this.analyzeAuthenticationMethods(content, file, issues, compliant);
+            if (enabled.security) {
+              this.analyzeAuthenticationMethods(
+                content,
+                file,
+                categories.security.issues,
+                categories.security.compliant,
+              );
+            }
           } catch (err) {
             console.error(`Failed to read Bicep file: ${file}`);
-            issues.push({
+            categories.deployment.issues.push({
               id: `error-reading-${file}`,
               severity: 'warning',
               message: `Failed to read ${file}`,
@@ -487,10 +525,10 @@ class TemplateAnalyzer {
         }
       }
 
-      // Check for azure.yaml or azure.yml
+      // Check for azure.yaml or azure.yml (deployment category: governs infrastructure orchestration)
       const azureYamlPath = files.find((f) => f === 'azure.yaml' || f === 'azure.yml');
-      if (azureYamlPath) {
-        compliant.push({
+      if (azdGloballyEnabled && enabled.deployment && azureYamlPath) {
+        categories.deployment.compliant.push({
           id: 'azure-yaml-exists',
           category: 'azureYaml',
           message: `Found azure.yaml file: ${azureYamlPath}`,
@@ -506,17 +544,18 @@ class TemplateAnalyzer {
             azureYamlPath,
           );
           if (
+            enabled.deployment &&
             config.azureYamlRules?.mustDefineServices &&
             !/services\s*:/i.test(azureYamlContent)
           ) {
-            issues.push({
+            categories.deployment.issues.push({
               id: 'azure-yaml-missing-services',
               severity: 'error',
               message: `No "services:" defined in ${azureYamlPath}`,
               error: `File ${azureYamlPath} does not define required "services:" section`,
             });
-          } else if (config.azureYamlRules?.mustDefineServices) {
-            compliant.push({
+          } else if (enabled.deployment && config.azureYamlRules?.mustDefineServices) {
+            categories.deployment.compliant.push({
               id: 'azure-yaml-services-defined',
               category: 'azureYaml',
               message: `"services:" section found in ${azureYamlPath}`,
@@ -526,15 +565,15 @@ class TemplateAnalyzer {
             });
           }
         } catch {
-          issues.push({
+          categories.deployment.issues.push({
             id: 'azure-yaml-read-error',
             severity: 'warning',
             message: `Could not read ${azureYamlPath}`,
             error: `Failed to read file ${azureYamlPath}`,
           });
         }
-      } else {
-        issues.push({
+      } else if (azdGloballyEnabled && enabled.deployment) {
+        categories.deployment.issues.push({
           id: 'missing-azure-yaml',
           severity: 'error',
           message: 'Missing azure.yaml or azure.yml file',
@@ -542,24 +581,87 @@ class TemplateAnalyzer {
         });
       }
 
-      // Calculate summary and compliance percentages
-      const summary = issues.length === 0 ? 'No issues found 🎉' : 'Issues found';
-      const totalChecks = issues.length + compliant.length;
+      // --- Global checks (conditional) ---
+      // Only run the AI model deprecation scan if deployment method is Azure Developer CLI
+      // Heuristic: presence of azure.yaml or azure.yml in repo root
+      const globalIssues = [];
+      const globalCompliant = [];
+      const cfgForGlobal = window.TemplateDoctorConfig || {};
+      const aiToggleEnabled = cfgForGlobal.aiDeprecationCheckEnabled !== false; // default true
+      if (azdGloballyEnabled && azureYamlPath && aiToggleEnabled) {
+        try {
+          await this.runAIDeprecationCheck(
+            files,
+            repoInfo,
+            categories.ai.issues,
+            categories.ai.compliant,
+          );
+        } catch (e) {
+          categories.ai.issues.push({
+            id: 'ai-model-deprecation-check-error',
+            severity: 'warning',
+            message: 'Test AI model deprecation: check failed',
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      // Flatten legacy arrays from categories and merge global checks
+      const allIssues = [
+        ...categories.repositoryManagement.issues,
+        ...categories.functionalRequirements.issues,
+        ...categories.deployment.issues,
+        ...categories.security.issues,
+        ...categories.testing.issues,
+        ...categories.ai.issues,
+      ];
+      const allCompliant = [
+        ...categories.repositoryManagement.compliant,
+        ...categories.functionalRequirements.compliant,
+        ...categories.deployment.compliant,
+        ...categories.security.compliant,
+        ...categories.testing.compliant,
+        ...categories.ai.compliant,
+      ];
+
+      // Calculate category summaries
+      Object.keys(categories).forEach((key) => {
+        const c = categories[key];
+        const total = c.issues.length + c.compliant.length;
+        c.percentage = total > 0 ? Math.round((c.compliant.length / total) * 100) : 0;
+        c.summary = total === 0 ? 'No checks in this category' : `${c.percentage}% compliant`;
+      });
+
+      // Calculate global summary and compliance percentages
+      const summary = allIssues.length === 0 ? 'No issues found 🎉' : 'Issues found';
+      const totalChecks = allIssues.length + allCompliant.length;
       const percentageCompliant =
-        totalChecks > 0 ? Math.round((compliant.length / totalChecks) * 100) : 0;
+        totalChecks > 0 ? Math.round((allCompliant.length / totalChecks) * 100) : 0;
 
       // Add metadata to compliant array
-      compliant.push({
+      allCompliant.push({
         id: 'compliance-summary',
         category: 'meta',
         message: `Compliance: ${percentageCompliant}%`,
         details: {
-          issueCount: issues.length,
-          compliantCount: compliant.length,
+          issueCount: allIssues.length,
+          compliantCount: allCompliant.length,
           totalChecks: totalChecks,
           percentageCompliant: percentageCompliant,
         },
       });
+
+      // Map minimal global checks status (currently only AI model deprecation)
+      const globalChecks = [];
+      const aiIssue = categories.ai.issues.find((i) => i.id === 'ai-model-deprecation');
+      const aiCompliant = categories.ai.compliant.find((c) => c.id === 'ai-model-deprecation');
+      if (aiIssue || aiCompliant) {
+        globalChecks.push({
+          id: 'ai-model-deprecation',
+          status: aiIssue ? 'failed' : 'passed',
+          details: aiIssue?.details || aiCompliant?.details || null,
+        });
+      }
 
       // Return the analysis result
       const result = {
@@ -567,9 +669,13 @@ class TemplateAnalyzer {
         ruleSet,
         timestamp: new Date().toISOString(),
         compliance: {
-          issues,
-          compliant,
+          issues: allIssues,
+          compliant: allCompliant,
+          // Numeric overall compliance percentage for backward compatibility with UI/workflows
+          percentage: percentageCompliant,
           summary: `${summary} - Compliance: ${percentageCompliant}%`,
+          categories,
+          globalChecks,
         },
       };
 
@@ -584,6 +690,73 @@ class TemplateAnalyzer {
     } catch (error) {
       console.error('Error analyzing template:', error);
       throw new Error(`Failed to analyze repository: ${error.message}`);
+    }
+  }
+
+  /**
+   * Always-on: Scan repository for deprecated AI model references.
+   * Uses global TemplateDoctorConfig.deprecatedModels (array of strings) if provided,
+   * otherwise falls back to a small default set. Adds a single issue or compliant entry.
+   */
+  async runAIDeprecationCheck(files, repoInfo, issues, compliant) {
+    const cfg = window.TemplateDoctorConfig || {};
+    const deprecatedModels = Array.isArray(cfg.deprecatedModels)
+      ? cfg.deprecatedModels
+      : [
+          // Conservative defaults; replace via TemplateDoctorConfig.deprecatedModels when needed
+          'gpt-3.5-turbo',
+          'text-davinci-003',
+        ];
+
+    // If no models defined, still report a compliant meta result to indicate the check ran
+    if (!deprecatedModels || deprecatedModels.length === 0) {
+      compliant.push({
+        id: 'ai-model-deprecation',
+        category: 'meta',
+        message: 'Test AI model deprecation: No deprecated model patterns configured',
+        details: { modelsChecked: 0 },
+      });
+      return;
+    }
+
+    // Only scan a reasonable set of text files
+    const textExts = ['.md', '.js', '.ts', '.py', '.json', '.yml', '.yaml'];
+    const isTextFile = (p) => textExts.some((ext) => p.toLowerCase().endsWith(ext));
+    const candidateFiles = files.filter(isTextFile).slice(0, 200); // cap to 200 files for performance
+
+    const found = [];
+    for (const path of candidateFiles) {
+      try {
+        const content = await this.githubClient.getFileContent(
+          repoInfo.owner,
+          repoInfo.repo,
+          path,
+        );
+        const lower = content.toLowerCase();
+        for (const model of deprecatedModels) {
+          if (model && lower.includes(String(model).toLowerCase())) {
+            found.push({ file: path, model });
+          }
+        }
+      } catch (e) {
+        // Non-fatal: skip unreadable file
+      }
+    }
+
+    if (found.length > 0) {
+      issues.push({
+        id: 'ai-model-deprecation',
+        severity: 'warning',
+        message: 'Test AI model deprecation: Found deprecated model references',
+        details: { matches: found, modelsChecked: deprecatedModels },
+      });
+    } else {
+      compliant.push({
+        id: 'ai-model-deprecation',
+        category: 'aiModel',
+        message: 'Test AI model deprecation: No deprecated model references found',
+        details: { modelsChecked: deprecatedModels },
+      });
     }
   }
 
@@ -858,6 +1031,56 @@ class TemplateAnalyzer {
       });
     }
   }
+}
+
+// Helper to normalize selected categories based on preset rules
+function normalizeCategorySelection(ruleSet, selected) {
+  // If explicit selection provided, honor it
+  if (selected && typeof selected === 'object') {
+    return {
+      repositoryManagement: !!selected.repositoryManagement,
+      functionalRequirements: !!selected.functionalRequirements,
+      deployment: !!selected.deployment,
+      security: !!selected.security,
+      testing: !!selected.testing,
+    };
+  }
+  // Defaults per preset requirements
+  if (ruleSet === 'partner') {
+    return {
+      repositoryManagement: false,
+      functionalRequirements: true,
+      deployment: true,
+      security: true,
+      testing: false,
+    };
+  }
+  if (ruleSet === 'docs') {
+    return {
+      repositoryManagement: true,
+      functionalRequirements: true,
+      deployment: false,
+      security: true,
+      testing: false,
+    };
+  }
+  if (ruleSet === 'custom') {
+    return {
+      repositoryManagement: false,
+      functionalRequirements: false,
+      deployment: false,
+      security: false,
+      testing: false,
+    };
+  }
+  // Default DoD
+  return {
+    repositoryManagement: true,
+    functionalRequirements: true,
+    deployment: true,
+    security: true,
+    testing: false,
+  };
 }
 
 // Function to initialize the analyzer

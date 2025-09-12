@@ -12,6 +12,8 @@
     autoSaveResults: false,
     archiveEnabled: false,
     archiveCollection: 'aigallery',
+  // Global deployment method switch: Azure Developer CLI enablement
+  azureDeveloperCliEnabled: true,
     // Optional: explicit workflow host repo to dispatch to (owner/repo)
     dispatchTargetRepo: '',
     // Optional: enable AI enrichment on issue bodies (set via env/config)
@@ -48,9 +50,14 @@
         if (config.DISPATCH_TARGET_REPO) {
           mapped.dispatchTargetRepo = config.DISPATCH_TARGET_REPO;
         }
-        if (config.ISSUE_AI_ENABLED) {
+        // Feature flags propagated from server runtime-config
+        if (typeof config.AZURE_DEVELOPER_CLI_ENABLED !== 'undefined') {
+          const v3 = String(config.AZURE_DEVELOPER_CLI_ENABLED).trim().toLowerCase();
+          mapped.azureDeveloperCliEnabled = /^(1|true|yes|on)$/i.test(v3);
+        }
+        if (typeof config.ISSUE_AI_ENABLED !== 'undefined') {
           const v = String(config.ISSUE_AI_ENABLED).trim().toLowerCase();
-          mapped.issueAIEnabled = /^(1|true|yes|on)$/i.test(v);
+            mapped.issueAIEnabled = /^(1|true|yes|on)$/i.test(v);
         }
         // Map frontend overrides
         if (config.DEFAULT_RULE_SET) {
@@ -72,7 +79,7 @@
         return;
       }
 
-      // Fallback to direct fetch
+  // Fallback to direct fetch
       const response = await fetch('config.json', { cache: 'no-store' });
       if (response.ok) {
         const cfg = await response.json();
@@ -102,6 +109,12 @@
           }
           if (typeof cfg.dispatchTargetRepo === 'string') {
             mapped.dispatchTargetRepo = cfg.dispatchTargetRepo;
+          }
+          if (typeof cfg.azureDeveloperCliEnabled === 'boolean') {
+            mapped.azureDeveloperCliEnabled = cfg.azureDeveloperCliEnabled;
+          } else if (typeof cfg.AZURE_DEVELOPER_CLI_ENABLED === 'string') {
+            const v3 = cfg.AZURE_DEVELOPER_CLI_ENABLED.trim().toLowerCase();
+            mapped.azureDeveloperCliEnabled = /^(1|true|yes|on)$/i.test(v3);
           }
           if (typeof cfg.issueAIEnabled === 'boolean') {
             mapped.issueAIEnabled = cfg.issueAIEnabled;

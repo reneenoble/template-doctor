@@ -341,7 +341,7 @@ function initializeApp() {
 let internalAnalyzeRepo;
 
 // Export analyzeRepo to window object so it can be used by other components
-window.analyzeRepo = async function (repoUrl, ruleSet = 'dod') {
+window.analyzeRepo = async function (repoUrl, ruleSet = 'dod', selectedCategories = null) {
   // Override default with config if provided
   if (!ruleSet || ruleSet === 'dod') {
     const cfg = window.TemplateDoctorConfig || {};
@@ -351,7 +351,7 @@ window.analyzeRepo = async function (repoUrl, ruleSet = 'dod') {
   }
   // Call the internal analyzeRepo function with the same parameters
   if (typeof internalAnalyzeRepo === 'function') {
-    return internalAnalyzeRepo(repoUrl, ruleSet);
+    return internalAnalyzeRepo(repoUrl, ruleSet, selectedCategories);
   } else {
     console.error('Internal analyzeRepo function not available yet');
     return null;
@@ -2417,7 +2417,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Analysis Flow ---
   // Define the internal analyzeRepo function and store a reference to it
-  internalAnalyzeRepo = async function (repoUrl, ruleSet = 'dod') {
+  internalAnalyzeRepo = async function (repoUrl, ruleSet = 'dod', selectedCategories = null) {
     if (!ruleSet || ruleSet === 'dod') {
       const cfg = window.TemplateDoctorConfig || {};
       if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
@@ -2475,7 +2475,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         if (window.TemplateAnalyzer) {
           appAnalyzer = window.TemplateAnalyzer;
-          internalAnalyzeRepo(repoUrl, ruleSet); // Retry the analysis
+          internalAnalyzeRepo(repoUrl, ruleSet, selectedCategories); // Retry the analysis
         } else {
           if (window.NotificationSystem) {
             window.NotificationSystem.showError(
@@ -2566,7 +2566,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       debug('app', `Starting analysis of repo: ${repoUrl} with ruleset: ${ruleSet}`);
-      const result = await appAnalyzer.analyzeTemplate(repoUrl, ruleSet);
+  const result = await appAnalyzer.analyzeTemplate(repoUrl, ruleSet, selectedCategories);
 
       loadingContainer.style.display = 'none';
       resultsContainer.style.display = 'block';

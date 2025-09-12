@@ -148,7 +148,7 @@ test.describe('App.js Functionality', () => {
     await page.click('#search-button');
 
     // Check if search results are displayed
-    const searchResultsCount = await page.locator('.repo-item').count();
-    expect(searchResultsCount).toBe(1);
+    const results = page.locator('.repo-item');
+    await expect(results).toHaveCount(1, { timeout: 10000 });
   });
 });
