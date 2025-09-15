@@ -330,13 +330,29 @@ class TemplateAnalyzer {
 
       // Run repository-level configuration validations early (docs-config rules)
       // Only run docs-specific repo validations when the docs ruleset is selected
-<<<<<<< HEAD
       if (ruleSet === 'docs') {
+        // Use the docs ruleset analyzer implementation (defined in ruleset-docs/analyzer.js)
+        // Signature: validateDocConfiguration(config, repoInfo, defaultBranch, files, issues, compliant)
+        // Diagnostics: track invocations for self-testing
+        try {
+          window.__TemplateDoctorDocsValidationHits = (window.__TemplateDoctorDocsValidationHits || 0) + 1;
+          window.__TemplateDoctorLastDocsValidation = {
+            ts: Date.now(),
+            owner: repoInfo.owner,
+            repo: repoInfo.repo,
+            defaultBranch,
+          };
+          console.log('[TemplateAnalyzer][docs] Running docs repository configuration validations', window.__TemplateDoctorLastDocsValidation);
+          document.dispatchEvent(
+            new CustomEvent('template-doctor-docs-validation', {
+              detail: window.__TemplateDoctorLastDocsValidation,
+            }),
+          );
+        } catch (e) {
+          // Non-fatal
+          console.warn('[TemplateAnalyzer][docs] diagnostics tracking failed', e);
+        }
         TemplateAnalyzerDocs.prototype.validateDocConfiguration(
-=======
-      if (ruleSet === 'docs' && enabled.repositoryManagement) {
-        TemplateAnalyzerDocs.prototype.validateRepoConfiguration(
->>>>>>> feat/make-schema-flexible-for-granular
           config,
           repoInfo,
           defaultBranch,

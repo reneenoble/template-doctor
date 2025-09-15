@@ -16,24 +16,14 @@ function initGithubWorkflowValidation(containerId, templateUrl, onStatusChange) 
     return;
   }
 
-  // Get the API base URL from global config
-  const apiBase =
-    window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase
-      ? window.TemplateDoctorConfig.apiBase
-      : window.location.origin;
-
-  // Construct API endpoints based on environment
-  // For Azure Static Web Apps, the API path should be '/api/validation-template'
-  // For local development with Functions emulator, we need to use port 7071
-  const isLocalhost =
-    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Override apiBase for local development to use Functions port 7071
-  const localApiBase = isLocalhost ? 'http://localhost:7071' : apiBase;
-  const apiPathPrefix = 'api'; // Using 'api' for both to simplify
-
-  // Normalize the apiBase to ensure correct path joining
-  const apiBaseNormalized = localApiBase.endsWith('/') ? localApiBase : localApiBase + '/';
+  // Centralized API base resolution
+  const rawBase = typeof window.getTemplateDoctorApiBase === 'function'
+    ? window.getTemplateDoctorApiBase()
+    : (window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase) || window.location.origin;
+  // Define apiBase explicitly (was missing, causing ReferenceError in click handler)
+  const apiBase = rawBase;
+  const apiPathPrefix = 'api';
+  const apiBaseNormalized = apiBase.endsWith('/') ? apiBase : apiBase + '/';
 
   // Extract owner/repo from template URL
   let repoName = '';
@@ -256,26 +246,19 @@ function initGithubWorkflowValidation(containerId, templateUrl, onStatusChange) 
  * @param {string} apiBase - Base URL for API calls
  * @param {Function} onStatusChange - Optional callback for status updates
  */
-async function runGithubWorkflowValidation(templateUrl, apiBase, onStatusChange) {
-  // Construct API endpoints based on environment
-  // For Azure Static Web Apps, the API path should be '/api/validation-template'
-  // For local development with Functions emulator, we need to use port 7071
-  const isLocalhost =
-    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Override apiBase for local development to use Functions port 7071
-  const localApiBase = isLocalhost ? 'http://localhost:7071' : apiBase;
-  const apiPathPrefix = 'api'; // Using 'api' for both to simplify
-
-  // Normalize the apiBase to ensure correct path joining
-  const apiBaseNormalized = localApiBase.endsWith('/') ? localApiBase : localApiBase + '/';
+async function runGithubWorkflowValidation(templateUrl, incomingApiBase, onStatusChange) {
+  // Centralized API base resolution (re-resolve in case config updated after init)
+  const resolvedApiBase = typeof window.getTemplateDoctorApiBase === 'function'
+    ? window.getTemplateDoctorApiBase()
+    : incomingApiBase;
+  const apiPathPrefix = 'api';
+  const apiBaseNormalized = resolvedApiBase.endsWith('/') ? resolvedApiBase : resolvedApiBase + '/';
 
   // Generate a unique call ID for this request to help with troubleshooting
   const callId = `req-${Math.random().toString(36).substring(2, 10)}`;
 
   // Debug log the URL construction
-  console.log(`[${callId}] API Base:`, apiBase);
-  console.log(`[${callId}] Local API Base:`, localApiBase);
+  console.log(`[${callId}] API Base:`, resolvedApiBase);
   console.log(`[${callId}] API Base Normalized:`, apiBaseNormalized);
   console.log(`[${callId}] API Path Prefix:`, apiPathPrefix);
   console.log(
@@ -323,7 +306,25 @@ async function runGithubWorkflowValidation(templateUrl, apiBase, onStatusChange)
     logsElem.scrollTop = logsElem.scrollHeight;
 
     // Create a properly formatted URL for the API
-    const apiUrl = new URL(`${apiPathPrefix}/validation-template`, apiBaseNormalized);
+    let apiUrl = new URL(`${apiPathPrefix}/validation-template`, apiBaseNormalized);
+    // Local dev fallback: If we appear to still be hitting a static server (same-origin) and not functions
+    // and hostname is localhost, ensure port 7071 is used for POST if original base was same-origin pointing to a static server.
+    try {
+      const host = window.location.hostname;
+      if ((host === 'localhost' || host === '127.0.0.1') && !/7071/.test(apiUrl.origin)) {
+        // Heuristic: switch to 7071 if fetch to same-origin /api likely routes to static (501 observed)
+        const alt = new URL(apiUrl.toString());
+        alt.port = '7071';
+        alt.hostname = host; // ensure host consistency
+        // Use alternate if user didn't explicitly set a non-localhost apiBase
+        if (/localhost|127\.0\.0\.1/.test(resolvedApiBase)) {
+          apiUrl = alt;
+          console.log(`[${callId}] Adjusted API URL for local Functions dev:`, apiUrl.toString());
+        }
+      }
+    } catch (e) {
+      console.warn(`[${callId}] Local dev fallback evaluation failed`, e);
+    }
     console.log(`[${callId}] Final API URL: ${apiUrl.toString()}`);
     logsElem.innerHTML += `[${new Date().toISOString()}] Sending request to: ${apiUrl.toString()}\n`;
 

@@ -283,6 +283,23 @@
     <script src="js/notifications-init.js"></script>
     <!-- Configuration loader - Loads and merges configuration from multiple sources -->
     <script src="js/config-loader.js"></script>
+    <!-- Early CSP guard & runtime config (moved earlier to precede dependent modules) -->
+    <script>
+      (function(){
+        // If running on GitHub Pages / github.com domain, force same-origin apiBase BEFORE other modules run
+        var host = window.location.hostname;
+        var githubHosted = /\.github\.io$/i.test(host) || /github\.com$/i.test(host);
+        if(githubHosted){
+          window.TemplateDoctorConfig = window.TemplateDoctorConfig || {};
+          window.TemplateDoctorConfig.apiBase = window.location.origin;
+          window.getTemplateDoctorApiBase = function(){ return window.location.origin; };
+          // Mark reason for diagnostics
+          window.__TD_CSP_FORCED_SAME_ORIGIN__ = true;
+        }
+      })();
+    </script>
+    <!-- Runtime configuration (moved earlier) -->
+    <script src="js/runtime-config.js"></script>
     <!-- GitHub OAuth handling -->
     <script src="js/auth.js"></script>
     <!-- GitHub API client -->
@@ -311,16 +328,16 @@
     <script src="js/github-action-hook.js"></script>
     <!-- AZD Provision functionality -->
     <script src="js/azd-provision.js"></script>
-    <!-- Template validation via GitHub workflow -->
-    <script src="js/github-workflow-validation.js?v=20250829"></script>
+  <!-- Template validation via GitHub workflow -->
+  <script src="js/github-workflow-validation.js?v=20250829"></script>
     <!-- Demo mode for presentations -->
     <script src="js/enable-demo-mode.js"></script>
-    <!-- Runtime configuration -->
-    <script src="js/runtime-config.js"></script>
     <!-- Main application logic -->
     <script src="js/app.js"></script>
     <!-- Fallback scripts to ensure action buttons are visible -->
     <script src="js/action-buttons-fallback.js"></script>
     <script src="js/action-buttons-direct.js"></script>
+    <!-- Docs ruleset validation badge (external module) -->
+    <script src="js/docs-validation-badge.js"></script>
   </body>
 </html>

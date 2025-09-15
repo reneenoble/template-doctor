@@ -2,18 +2,18 @@
 // Looks for a config.json alongside index.html and exposes window.TemplateDoctorConfig
 // Shape example: { "apiBase": "https://your-functions.azurewebsites.net" }
 
+
 (function () {
   const DEFAULTS = {
-    // Keep a working default for now; override via config.json in production
-    // Prefer same-origin by default; override via config.json in production
+    // Prefer same-origin by default; override via config.json / env / meta tag
     apiBase: `${window.location.origin}`,
     defaultRuleSet: 'dod',
     requireAuthForResults: true,
     autoSaveResults: false,
     archiveEnabled: false,
     archiveCollection: 'aigallery',
-  // Global deployment method switch: Azure Developer CLI enablement
-  azureDeveloperCliEnabled: true,
+    // Global deployment method switch: Azure Developer CLI enablement
+    azureDeveloperCliEnabled: true,
     // Optional: explicit workflow host repo to dispatch to (owner/repo)
     dispatchTargetRepo: '',
     // Optional: enable AI enrichment on issue bodies (set via env/config)
@@ -75,7 +75,7 @@
           mapped.autoSaveResults = /^(1|true|yes|on)$/i.test(v2);
         }
 
-        window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
+        sanitizeAndAssign(mapped);
         return;
       }
 
@@ -122,7 +122,7 @@
             const v = cfg.ISSUE_AI_ENABLED.trim().toLowerCase();
             mapped.issueAIEnabled = /^(1|true|yes|on)$/i.test(v);
           }
-          window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, mapped);
+          sanitizeAndAssign(mapped);
           console.log('[runtime-config] loaded config.json');
         } else {
           console.log('[runtime-config] no config.json found, using defaults');
@@ -134,8 +134,142 @@
     }
   };
 
+  /**
+   * Central API base resolver.
+   * Resolution precedence (first non-empty wins):
+   * 1. ?apiBase= query parameter
+   * 2. <meta name="template-doctor-api-base" content="...">
+   * 3. Config / env provided apiBase
+   * 4. Same-origin
+   * Additionally, if we are NOT on localhost and the resolved apiBase still points to localhost,
+   * we overwrite it with same-origin to avoid production calling back to dev endpoints.
+   */
+  function resolveApiBase(candidate) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qp = params.get('apiBase');
+      const meta = document.querySelector('meta[name="template-doctor-api-base"]');
+      const metaContent = meta && meta.getAttribute('content');
+      const fromConfig = candidate || '';
+      let resolved = qp || metaContent || fromConfig || window.location.origin;
+
+      const host = window.location.hostname;
+      const isLocal = host === 'localhost' || host === '127.0.0.1';
+
+      // GitHub-hosted CSP guard: if running on *.github.io or github.com context, block external apiBase
+      // unless user explicitly opts in via forceExternalApi=1 (or allowExternalApi=1 for backwards naming tolerance).
+      try {
+        const pageHost = host;
+        const externalOptIn = /^(1|true|yes|on)$/i.test(
+          params.get('forceExternalApi') || params.get('allowExternalApi') || '',
+        );
+        let resolvedHost = null;
+        try { resolvedHost = new URL(resolved).host; } catch {}
+        const githubHosted = /\.github\.io$/i.test(pageHost) || /github\.com$/i.test(pageHost);
+        if (
+          githubHosted &&
+          resolvedHost &&
+          resolvedHost !== pageHost &&
+          !externalOptIn &&
+          !isLocal
+        ) {
+          console.warn(
+            '[runtime-config] External apiBase blocked on GitHub-hosted page; falling back to same-origin. Append ?forceExternalApi=1 to override.',
+            { attempted: resolved, pageHost },
+          );
+          resolved = window.location.origin;
+          document.dispatchEvent(
+            new CustomEvent('templatedoctor-apibase-external-blocked', {
+              detail: { attempted: candidate, fallback: resolved },
+            }),
+          );
+        }
+      } catch (ghGuardErr) {
+        console.debug('[runtime-config] github-hosted guard evaluation skipped', ghGuardErr);
+      }
+
+      // If deployed (not local) and apiBase references localhost, sanitize
+      if (!isLocal && /localhost(:\d+)?/i.test(resolved)) {
+        resolved = window.location.origin;
+      }
+
+      // Normalize: strip trailing slash
+      if (resolved.endsWith('/')) resolved = resolved.slice(0, -1);
+      return resolved;
+    } catch (e) {
+      console.warn('[runtime-config] resolveApiBase failed, falling back to origin', e);
+      return window.location.origin;
+    }
+  }
+
+  function sanitizeAndAssign(mapped) {
+    const clone = { ...mapped };
+    clone.apiBase = resolveApiBase(clone.apiBase);
+    // Expose helper so other scripts have a single source of truth
+    window.getTemplateDoctorApiBase = function () {
+      return clone.apiBase || DEFAULTS.apiBase;
+    };
+    window.TemplateDoctorConfig = Object.assign({}, DEFAULTS, clone);
+    // After assignment, probe for CSP or network blockage and fallback if necessary
+    setTimeout(() => {
+      try {
+        const base = window.getTemplateDoctorApiBase();
+        const origin = window.location.origin;
+        if (!base || base === origin) return; // nothing to do
+        const sameHost = (() => {
+          try { return new URL(base).host === window.location.host; } catch { return false; }
+        })();
+        if (sameHost) return; // same host should already be allowed
+        const probeUrl = base.replace(/\/$/, '') + '/api/client-settings?csp_probe=' + Date.now();
+        // Use a short timeout race so we don't hang if blocked silently
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        fetch(probeUrl, { method: 'GET', cache: 'no-store', signal: controller.signal })
+          .then((res) => {
+            clearTimeout(timeout);
+            if (!res.ok) {
+              console.warn('[runtime-config] apiBase probe returned non-OK status', res.status, 'falling back to same-origin');
+              forceSameOriginFallback();
+            }
+          })
+          .catch((err) => {
+            clearTimeout(timeout);
+            // Likely CSP/network block
+            console.warn('[runtime-config] apiBase probe failed, possible CSP block; falling back to same-origin', err);
+            forceSameOriginFallback();
+          });
+      } catch (e) {
+        console.warn('[runtime-config] apiBase probe setup failed', e);
+      }
+    }, 0);
+  }
+
+  function forceSameOriginFallback() {
+    try {
+      const origin = window.location.origin;
+      window.TemplateDoctorConfig.apiBase = origin;
+      window.getTemplateDoctorApiBase = function () { return origin; };
+      console.log('[runtime-config] apiBase fallback applied ->', origin);
+      document.dispatchEvent(new CustomEvent('templatedoctor-apibase-fallback', { detail: { apiBase: origin } }));
+    } catch {}
+  }
+
   // Execute the config loading
-  loadConfig().catch(() => {
-    console.log('[runtime-config] failed to load config, using defaults');
-  });
+  loadConfig()
+    .catch(() => {
+      console.log('[runtime-config] failed to load config, using defaults');
+    })
+    .finally(() => {
+      // If assignment never happened (e.g., early failure), ensure helpers exist
+      if (typeof window.getTemplateDoctorApiBase !== 'function') {
+        window.getTemplateDoctorApiBase = function () {
+          // Last-resort sanitation
+            const base = resolveApiBase(window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase);
+            return base;
+        };
+        // Re-sanitize existing global config in case it had localhost leakage
+        const current = window.TemplateDoctorConfig || DEFAULTS;
+        sanitizeAndAssign(current);
+      }
+    });
 })();

@@ -291,12 +291,11 @@ class GitHubAuth {
     // Store the code temporarily in sessionStorage so we can retry if needed
     sessionStorage.setItem('last_auth_code', code);
 
-    // Determine the correct API URL based on the environment
-    const isLocalhost = window.location.hostname === 'localhost';
-    // Use local Functions port in pure localhost dev, otherwise use SWA-managed /api proxy
-    const apiUrl = isLocalhost
-      ? 'http://localhost:7071/api/github-oauth-token'
-      : '/api/github-oauth-token';
+    // Determine the correct API URL based on centralized base resolution
+    const base = (typeof window.getTemplateDoctorApiBase === 'function'
+      ? window.getTemplateDoctorApiBase()
+      : (window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase) || window.location.origin).replace(/\/$/, '');
+    const apiUrl = `${base}/api/github-oauth-token`;
     debug('exchangeCodeForToken', `API URL: ${apiUrl}`);
 
     // Simple fetch with minimal options to reduce CORS complexity

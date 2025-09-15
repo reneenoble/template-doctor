@@ -61,11 +61,11 @@ function runAzdProvisionTest() {
   }
   // Determine backend base URL via runtime config with safe fallback
   // Align with GitHub workflow validation behavior: use Functions port on localhost
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const configuredBase = (window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase)
-    ? String(window.TemplateDoctorConfig.apiBase || '').trim()
-    : window.location.origin;
-  const FORCED_BACKEND_BASE = isLocalhost ? 'http://localhost:7071' : configuredBase;
+  // Centralized base resolution & sanitation
+  const configuredBase = (typeof window.getTemplateDoctorApiBase === 'function'
+    ? window.getTemplateDoctorApiBase()
+    : (window.TemplateDoctorConfig && window.TemplateDoctorConfig.apiBase) || window.location.origin).trim();
+  const FORCED_BACKEND_BASE = configuredBase; // Already sanitized by runtime-config
   // Helper to fetch runtime config (cached)
   function getBasePath() {
     const pathname = window.location.pathname || '/';
