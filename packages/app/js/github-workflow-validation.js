@@ -591,42 +591,55 @@ async function runGithubWorkflowValidation(templateUrl, incomingApiBase, onStatu
       try {
         cancelValidationBtn.disabled = true;
         cancelValidationBtn.textContent = 'Cancelling...';
+        // Attempt to pre-resolve githubRunId if not yet cached to avoid initial 400 noise from backend discovery flow
+        let cachedInfo = null;
+        try {
+          const stored = localStorage.getItem(`validation_${runId}`);
+          if (stored) cachedInfo = JSON.parse(stored);
+        } catch (_) {}
+        let preGithubRunId = cachedInfo?.githubRunId || null;
+        let preGithubRunUrl = cachedInfo?.githubRunUrl || null;
+
+        if (!preGithubRunId) {
+          try {
+            const quickStatusUrl = new URL(`${apiPathPrefix}/validation-status`, apiBaseNormalized);
+            quickStatusUrl.searchParams.append('runId', runId);
+            quickStatusUrl.searchParams.append('fast', '1');
+            const quickResp = await fetch(quickStatusUrl.toString(), { headers: { 'Content-Type': 'application/json' } });
+            if (quickResp.ok) {
+              const quickData = await quickResp.json();
+              if (quickData.githubRunId) {
+                preGithubRunId = quickData.githubRunId;
+                preGithubRunUrl = quickData.runUrl || null;
+                try {
+                  localStorage.setItem(`validation_${runId}`, JSON.stringify({ githubRunId: preGithubRunId, githubRunUrl: preGithubRunUrl }));
+                } catch (_) {}
+                logsElem.innerHTML += `[${new Date().toISOString()}] Pre-resolved GitHub run id before cancel: ${preGithubRunId}\n`;
+                logsElem.scrollTop = logsElem.scrollHeight;
+              } else {
+                logsElem.innerHTML += `[${new Date().toISOString()}] GitHub run id still not available before cancel attempt. Proceeding anyway.\n`;
+                logsElem.scrollTop = logsElem.scrollHeight;
+              }
+            }
+          } catch (e) {
+            logsElem.innerHTML += `[${new Date().toISOString()}] Pre-resolution status check failed: ${e.message}\n`;
+            logsElem.scrollTop = logsElem.scrollHeight;
+          }
+        }
 
         const cancelUrl = new URL(`${apiPathPrefix}/validation-cancel`, apiBaseNormalized);
+        const cancelBody = {
+          runId,
+          githubRunId: preGithubRunId || null,
+          githubRunUrl: preGithubRunUrl || null,
+        };
         const cancelResponse = await fetch(cancelUrl.toString(), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Client-ID': callId,
-          },
-          body: JSON.stringify({
-            // Provide both local runId (for logging) and resolved GitHub correlation if available
-            runId: runId,
-            githubRunId: (function () {
-              try {
-                const stored = localStorage.getItem(`validation_${runId}`);
-                if (stored) {
-                  const parsed = JSON.parse(stored);
-                  return parsed.githubRunId || null;
-                }
-              } catch (e) {
-                /* ignore */
-              }
-              return null;
-            })(),
-            githubRunUrl: (function () {
-              try {
-                const stored = localStorage.getItem(`validation_${runId}`);
-                if (stored) {
-                  const parsed = JSON.parse(stored);
-                  return parsed.githubRunUrl || null;
-                }
-              } catch (e) {
-                /* ignore */
-              }
-              return null;
-            })(),
-          }),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-ID': callId,
+            },
+            body: JSON.stringify(cancelBody),
         });
 
         if (!cancelResponse.ok) {

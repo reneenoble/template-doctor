@@ -1165,23 +1165,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Scanned Templates Functionality ---
   function loadScannedTemplates() {
-    // First check if user is authenticated
-    if (!window.GitHubAuth || !window.GitHubAuth.isAuthenticated()) {
-      debug('app', 'User is not authenticated, not loading scanned templates');
-      scannedTemplates = [];
+    const authed = !!(window.GitHubAuth && window.GitHubAuth.isAuthenticated && window.GitHubAuth.isAuthenticated());
+    // Do not wipe existing data when unauthenticated; just skip rendering message handled in renderer
+    if (!window.templatesData) {
+      debug('app', 'No templatesData present on window');
       return false;
     }
-
-    // Check if window.templatesData exists (loaded from results/index-data.js)
-    if (window.templatesData) {
-      debug('app', 'Loading scanned templates from index-data.js', window.templatesData.length);
-      scannedTemplates = window.templatesData;
-      renderScannedTemplates();
-      return true;
-    } else {
-      debug('app', 'No scanned templates found');
-      return false;
-    }
+    scannedTemplates = window.templatesData;
+    debug('app', `Loaded scanned templates (${scannedTemplates.length}) auth=${authed}`);
+    renderScannedTemplates();
+    return true;
   }
 
   function createScannedTemplatesSection() {
