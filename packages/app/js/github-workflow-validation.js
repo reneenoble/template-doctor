@@ -832,7 +832,8 @@ async function runGithubWorkflowValidation(templateUrl, incomingApiBase, onStatu
     }
 
     // Start polling for results
-    await pollGithubWorkflowStatus(runId, templateUrl, apiBase, onStatusChange);
+    // Use the correctly scoped resolvedApiBase (previously referenced an undefined apiBase causing prod failures)
+    await pollGithubWorkflowStatus(runId, templateUrl, resolvedApiBase, onStatusChange);
   } catch (error) {
     console.error(`[${callId}] Template validation error:`, error);
 
@@ -951,7 +952,8 @@ async function runGithubWorkflowValidation(templateUrl, incomingApiBase, onStatu
 
     // Add retry button functionality
     document.getElementById('retryValidationBtn').addEventListener('click', () => {
-      runGithubWorkflowValidation(templateUrl, apiBase, onStatusChange);
+      // Retry with the last known resolvedApiBase; previously used undefined apiBase
+      runGithubWorkflowValidation(templateUrl, resolvedApiBase, onStatusChange);
     });
 
     // Show notification if available
