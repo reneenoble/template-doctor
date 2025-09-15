@@ -298,6 +298,10 @@ document.addEventListener('DOMContentLoaded', function () {
         totalPassed: compliant.length,
       };
 
+      if (result.__analysisMode) {
+        adaptedData.__analysisMode = result.__analysisMode;
+      }
+
       // Preserve new per-category breakdown if present
       if (result.compliance && result.compliance.categories) {
         adaptedData.compliance.categories = result.compliance.categories;
@@ -317,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
      * @param {HTMLElement} container - The container element to render into
      */
     this.renderOverview = function (data, container) {
-      const overviewSection = document.createElement('section');
+  const overviewSection = document.createElement('section');
       overviewSection.className = 'overview';
 
       const compliancePercentage =
@@ -341,6 +345,33 @@ document.addEventListener('DOMContentLoaded', function () {
       // Check for Gist URL in custom configuration
       const gistUrl = data.customConfig?.gistUrl;
 
+    // Determine mode badge
+      let mode = data.__analysisMode || 'upstream';
+      if (!data.__analysisMode) {
+        try {
+          const u = new URL(data.repoUrl);
+          const parts = u.pathname.split('/').filter(Boolean);
+          if (parts.length >= 2) {
+            const forkKey = `${parts[0]}/${parts[1]}`.toLowerCase();
+            const session = window.__TemplateDoctorSession;
+            if (session && session.newForks instanceof Set && session.newForks.has(forkKey)) {
+              mode = 'fork-fresh';
+            } else {
+              const currentUser = window.GitHubClient?.getCurrentUsername?.();
+              if (currentUser && parts[0].toLowerCase() === currentUser.toLowerCase()) {
+                mode = 'fork';
+              }
+            }
+          }
+        } catch(_) {}
+      }
+    const modeConfig = {
+    'fork-fresh': { label: 'Fork (New)', color: '#ff9800', title: 'New fork in this session; no historical data yet.' },
+    fork: { label: 'Fork', color: '#0078d4', title: 'Analyzing your existing fork.' },
+    upstream: { label: 'Upstream', color: '#6c757d', title: 'Analyzing upstream repository.' },
+    };
+    const mc = modeConfig[mode] || modeConfig.upstream;
+
   overviewSection.innerHTML = `
                 <h2>Compliance Overview</h2>
                 <div class="overview-header">
@@ -349,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         fix specific issues or use the AI agent to automatically fix all compliance issues in VS Code.
                     </p>
                     <div class="ruleset-info">
+            <span class="analysis-mode-badge" style="display:inline-block; background:${mc.color}; color:#fff; padding:2px 8px; border-radius:12px; font-size:0.65rem; letter-spacing:.5px; margin-right:6px; vertical-align:middle;" title="${mc.title}">${mc.label}</span>
                         <span class="ruleset-label">Configuration:</span>
                         ${
                           ruleSet === 'custom' && gistUrl
@@ -538,14 +570,46 @@ document.addEventListener('DOMContentLoaded', function () {
       const folder = this.getResultsFolderForRepo(data.repoUrl);
       if (!folder) return; // leave default "no data" text
 
+      // Allow disabling trend lookup for first-time analyses (avoids 404 noise)
+      const cfg = window.TemplateDoctorConfig || {};
+      if (cfg.deferHistoryLookupOnFirstRun) {
+        if (!data.analysisHistoryLoaded) {
+          this.debug('Skipping history.json fetch (config defer first run)');
+          return;
+        }
+      }
+      // Auto-skip if fork just created this session (no history expected)
+      try {
+        const session = window.__TemplateDoctorSession;
+        if (session && session.newForks instanceof Set) {
+          const u = new URL(data.repoUrl);
+          const parts = u.pathname.split('/').filter(Boolean);
+            if (parts.length >= 2) {
+              const key = `${parts[0]}/${parts[1]}`.toLowerCase();
+              if (session.newForks.has(key)) {
+                this.debug(`Skipping history.json fetch (new fork this session: ${key})`);
+                return;
+              }
+            }
+        }
+      } catch(_) {}
+
       // Fetch history.json
       let history = [];
       try {
         const resp = await fetch(`/results/${folder}/history.json`, { cache: 'no-store' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        if (!resp.ok) {
+          // Only warn at debug level; 404 is normal for first run
+          if (resp.status !== 404) {
+            console.warn(`history.json fetch status ${resp.status} for ${folder}`);
+          } else {
+            this.debug(`history.json absent for ${folder} (first run likely)`);
+          }
+          return;
+        }
         history = await resp.json();
       } catch (err) {
-        console.warn(`No history.json found for ${folder}:`, err.message);
+        this.debug(`history.json fetch error for ${folder}: ${err.message}`);
         return;
       }
 

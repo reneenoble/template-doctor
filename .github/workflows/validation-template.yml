@@ -53,13 +53,60 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_ENV_NAME: template-doctor-${{ github.run_id }}-${{ github.run_attempt }}
-      AZURE_LOCATION: eastus
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install Azure CLI
+        run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Determine Azure Location
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/list-ai-quotas.sh
+          # Produce machine-readable JSON quotas
+          ./scripts/list-ai-quotas.sh --json -o quotas.json || echo '[]' > quotas.json
+
+          echo "--- Raw quotas (first 400 chars) ---"
+          head -c 400 quotas.json || true
+          echo -e "\n----------------------------------"
+
+          if ! jq -e 'type=="array"' quotas.json >/dev/null 2>&1; then
+            echo "Quotas file is not a JSON array; defaulting to swedencentral" >&2
+            echo "AZURE_LOCATION=swedencentral" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          preferred_regions=("eastus2" "westus" "centralus" "swedencentral" "westeurope")
+          location=""
+          # Prefer regions from the preferred list that have remaining > 0
+          for region in "${preferred_regions[@]}"; do
+            if jq -e --arg region "$region" '.[] | select(.location==$region and .remaining > 0)' quotas.json >/dev/null; then
+              location="$region"
+              break
+            fi
+          done
+
+          # Fallback: choose any region with the highest remaining quota if none of the preferred have capacity
+          if [[ -z "$location" ]]; then
+            location=$(jq -r '[.[] | select(.remaining > 0)] | sort_by(-.remaining) | .[0].location // empty' quotas.json)
+          fi
+
+          # Final default if still empty
+          location=${location:-swedencentral}
+
+          echo "AZURE_LOCATION=$location" >> $GITHUB_ENV
+          echo "Chosen Azure location: $location"
+
+      - name: Shorten Environment Name
+        run: |
+          short_run_id=$(echo "${{ github.run_id }}" | cut -c1-3)
+          short_attempt=$(echo "${{ github.run_attempt }}" | cut -c1-3)
+          env_name="tdoc-${short_run_id}-${short_attempt}"
+          echo "AZURE_ENV_NAME=$env_name" >> $GITHUB_ENV
+          echo "Shortened AZURE_ENV_NAME: $env_name"
 
       - name: Parse repo name
         id: parse_repo_name

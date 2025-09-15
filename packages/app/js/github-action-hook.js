@@ -84,7 +84,11 @@ async function submitAnalysisToGitHub(result, username) {
       headers['x-functions-key'] = cfg.functionKey;
     }
 
-    // Make the API request to our server function
+    // If calling a local Azure Function on 7071 and no function key supplied, warn early
+    if (/^https?:\/\/localhost:7071\//i.test(serverUrl) && !cfg.functionKey) {
+      console.warn('[analysis-dispatch] No functionKey configured for local Functions call; if the function auth level is not anonymous this will 401.');
+    }
+
     console.log('Sending repository_dispatch event via server...');
     const response = await fetch(serverUrl, {
       method: 'POST',
@@ -98,27 +102,39 @@ async function submitAnalysisToGitHub(result, username) {
     console.log('Server dispatch response status:', response.status);
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Error response body:', errorData);
+      const rawText = await response.text();
+      console.error('Error response body:', rawText);
+      let parsed;
+      try { parsed = JSON.parse(rawText); } catch(_) {}
+      const details = parsed || rawText;
 
-      // Provide more helpful error messages based on status code
       if (response.status === 404) {
-        throw new Error(
-          'Endpoint not found (404): Check that the submit-analysis-dispatch function is deployed and apiBase is correct.',
-        );
+        throw new Error('Endpoint not found (404): Verify the Azure Function name/path and apiBase.');
       }
       if (response.status === 401) {
-        throw new Error(
-          'Unauthorized (401): Function key missing or invalid for the server endpoint.',
-        );
+        // Distinguish between server-to-GitHub bad token vs missing function key
+        const textLower = rawText.toLowerCase();
+        if (textLower.includes('bad credentials')) {
+          throw new Error(
+            'Server GitHub token returned Bad credentials. The workflow dispatch token (GH_WORKFLOW_TOKEN / PAT) is invalid or lacks scope.',
+          );
+        }
+        if (!cfg.functionKey && /^https?:\/\/localhost:7071\//i.test(serverUrl)) {
+          throw new Error(
+            'Unauthorized (401) calling local Function: missing function key. Provide TemplateDoctorConfig.functionKey or set authLevel to anonymous.',
+          );
+        }
+        throw new Error('Unauthorized (401): Server rejected request (check function key or server auth configuration).');
       }
       if (response.status === 403) {
         throw new Error(
-          'Permission denied (403): The server token may lack required scopes or org SSO. Contact an admin to approve GH_WORKFLOW_TOKEN for the org.',
+          'Permission denied (403): Server token lacks required scopes or SSO not authorized. Approve SSO or update token scopes.',
         );
       }
-
-      throw new Error(`Server error (${response.status}): ${errorData || 'Unknown error'}`);
+      if (response.status === 429) {
+        throw new Error('Rate limited (429): Please retry later.');
+      }
+      throw new Error(`Server error (${response.status}): ${typeof details === 'string' ? details : JSON.stringify(details)}`);
     }
 
     return {

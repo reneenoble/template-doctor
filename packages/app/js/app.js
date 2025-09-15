@@ -287,6 +287,11 @@ async function checkAndUpdateRepoUrl(repoUrl) {
         if (window.NotificationSystem) {
           window.NotificationSystem.showSuccess('Fork Created', `Fork ${available ? 'ready' : 'created'}: ${owner}/${repo} -> ${targetForkRepo}`, 5000);
         }
+        // Mark this fork as new this session to suppress history.json fetch
+        try {
+          window.__TemplateDoctorSession = window.__TemplateDoctorSession || { newForks: new Set() };
+          window.__TemplateDoctorSession.newForks.add(targetForkRepo.toLowerCase());
+        } catch(_) {}
         // Optional immediate upstream sync if config demands and fork ready
         if (available && window.TemplateDoctorConfig?.syncForksOnAnalyze) {
           try {
@@ -2750,7 +2755,34 @@ document.addEventListener('DOMContentLoaded', () => {
       loadingContainer.style.display = 'none';
       resultsContainer.style.display = 'block';
 
-      debug('app', 'Analysis complete, rendering dashboard');
+      // Ensure repoUrl is present on result (analyzer may omit)
+      if (!result.repoUrl) {
+        try { result.repoUrl = repoUrl; } catch(_) {}
+      }
+
+      // Determine analysis mode for UI badge
+      try {
+        const mode = (() => {
+          const u = new URL(result.repoUrl || repoUrl);
+          const parts = u.pathname.split('/').filter(Boolean);
+          if (parts.length >= 2) {
+            const forkKey = `${parts[0]}/${parts[1]}`.toLowerCase();
+            const session = window.__TemplateDoctorSession;
+            if (session && session.newForks instanceof Set && session.newForks.has(forkKey)) {
+              return 'fork-fresh';
+            }
+            // Heuristic: treat as fork if result.repoUrl owner == current user and parent differs (if analyzer exposes that later)
+            const currentUser = window.GitHubClient?.getCurrentUsername?.();
+            if (currentUser && parts[0].toLowerCase() === currentUser.toLowerCase()) {
+              return 'fork';
+            }
+          }
+          return 'upstream';
+        })();
+        result.__analysisMode = mode; // Attach for renderer
+      } catch(_) {}
+
+      debug('app', 'Analysis complete, rendering dashboard with mode badge');
       appDashboard.render(result, resultsContainer);
 
       // Submit analysis results to GitHub for PR creation

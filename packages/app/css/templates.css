@@ -48,6 +48,13 @@
   color: white;
 }
 
+.partner-badge,
+.dod-badge,
+.custom-badge {
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
 /* Ruleset Info in Overview */
 .overview-header {
   display: flex;
