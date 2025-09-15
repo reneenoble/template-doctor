@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const session = window.__TemplateDoctorSession;
         if (session && session.newForks instanceof Set) {
           const u = new URL(data.repoUrl);
-          const parts = u.pathname.split('/').filter(Boolean);
+            const parts = u.pathname.split('/').filter(Boolean);
             if (parts.length >= 2) {
               const key = `${parts[0]}/${parts[1]}`.toLowerCase();
               if (session.newForks.has(key)) {
