@@ -141,12 +141,85 @@ class GitHubClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error(`[GitHubClient] Error response:`, errorData);
+
+        // Detect SAML enforcement (403) and surface a user-friendly remediation.
+        if (
+          response.status === 403 &&
+          errorData &&
+          typeof errorData.message === 'string' &&
+          /saml/i.test(errorData.message)
+        ) {
+          // Attempt to infer owner from path (e.g., /repos/{owner}/{repo}/...)
+            let owner = null;
+            try {
+              const pathMatch = path.match(/\/repos\/([^/]+)\//);
+              if (pathMatch) owner = pathMatch[1];
+            } catch (_) {}
+
+          // Tag the payload for upstream handlers
+          errorData.isSaml = true;
+
+          // Dispatch a custom event so UI can respond (banner, fork suggestion)
+          try {
+            window.dispatchEvent(
+              new CustomEvent('github-saml-enforcement', {
+                detail: {
+                  owner,
+                  message: errorData.message,
+                  originalPath: path,
+                },
+              }),
+            );
+          } catch (e) {
+            console.warn('[GitHubClient] Failed dispatching saml event', e);
+          }
+
+          if (window.NotificationSystem) {
+            window.NotificationSystem.showWarning(
+              'SAML SSO Required',
+              `${errorData.message}<br/><br/>` +
+                (owner
+                  ? `You may need to authorize your session for the <strong>${owner}</strong> organization.`
+                  : 'You may need to authorize your session for this organization.') +
+                '<br/><br/>Options:<ul style="margin-top:4px;">' +
+                '<li>Open the repository in a new tab and approve SSO access when prompted.</li>' +
+                '<li>Or fork the repository to your personal namespace and analyze the fork.</li>' +
+                '</ul>',
+              15000,
+              {
+                actions: [
+                  owner
+                    ? {
+                        label: 'Open Org SSO',
+                        onClick: () => {
+                          const url = `https://github.com/orgs/${owner}/sso?authorization_request=1`;
+                          window.open(url, '_blank');
+                        },
+                        primary: true,
+                      }
+                    : null,
+                  {
+                    label: 'Docs',
+                    onClick: () => {
+                      window.open(
+                        'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on',
+                        '_blank',
+                      );
+                    },
+                  },
+                ].filter(Boolean),
+              },
+            );
+          }
+        }
+
         const error = new Error(
           errorData.message || `GitHub API error: ${response.status} ${response.statusText}`,
         );
         error.status = response.status;
         error.response = response;
         error.data = errorData;
+        if (errorData.isSaml) error.isSamlError = true;
         throw error;
       }
 

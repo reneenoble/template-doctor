@@ -4,7 +4,7 @@
 // Configuration for organizations that might require forking
 const ORGANIZATIONS_CONFIG = {
   requireConfirmationForFork: true,
-  organizationsToFork: ['Azure', 'Azure-Samples', 'Microsoft'],
+  organizationsToFork: ['Azure', 'Azure-Samples', 'Microsoft', 'AzureCosmosDB'],
   // Add more configurations here as needed
 };
 
@@ -80,7 +80,7 @@ async function checkAndUpdateRepoUrl(repoUrl) {
     return repoUrl;
   }
 
-  // Extract owner and repo from URL
+    // Extract owner and repo from URL
   try {
     const urlParts = repoUrl.split('github.com/')[1].split('/');
     const owner = urlParts[0];
@@ -89,23 +89,127 @@ async function checkAndUpdateRepoUrl(repoUrl) {
     if (!owner || !repo) {
       throw new Error('Invalid repository URL format');
     }
+    // If already in user's namespace, nothing to do
+    if (owner.toLowerCase() === currentUsername.toLowerCase()) {
+      return repoUrl;
+    }
 
-    // Check if the owner is one of the organizations that might need forking
-    const needsFork = ORGANIZATIONS_CONFIG.organizationsToFork.some(
+    // Determine if fork is desired due to org policy or explicit directive
+    const directiveFork = /[?#].*fork/i.test(repoUrl);
+    let needsFork = directiveFork || ORGANIZATIONS_CONFIG.organizationsToFork.some(
       (org) => owner.toLowerCase() === org.toLowerCase(),
     );
 
+    // Optional legacy behavior: proactive upstream probe for SAML (guarded by config flag)
+    let dueToSaml = false;
+    if (window.TemplateDoctorConfig?.proactiveUpstreamProbe) {
+      try {
+        const tokenAccessor =
+          window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
+          window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
+        const token = tokenAccessor ? tokenAccessor() : null;
+        if (token) {
+          const probeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+            headers: { Authorization: `token ${token}` },
+          });
+          if (probeResp.status === 403) {
+            let msg = '';
+            try { msg = (await probeResp.json()).message || ''; } catch (_) {}
+            if (/saml/i.test(msg)) {
+              dueToSaml = true;
+              needsFork = true;
+              debug('app', `SAML enforcement detected (proactive) for ${owner}/${repo}`);
+            }
+          }
+        }
+      } catch (probeErr) {
+        debug('app', 'Proactive probe error (ignored)', probeErr.message);
+      }
+    }
+
+    // First (new ordering): check if user already has fork WITHOUT probing upstream first
+    try {
+      debug('app', `Checking user namespace for existing fork: ${currentUsername}/${repo}`);
+      const accessTokenFn =
+        window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
+        window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
+      const authToken = accessTokenFn ? accessTokenFn() : null;
+      const forkCandidateResp = await fetch(
+        `https://api.github.com/repos/${currentUsername}/${repo}`,
+        { headers: authToken ? { Authorization: `token ${authToken}` } : {} },
+      );
+      if (forkCandidateResp.ok) {
+        const forkMeta = await forkCandidateResp.json().catch(() => null);
+        if (forkMeta?.fork && forkMeta?.parent?.full_name?.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
+          debug('app', 'Existing fork found; considering upstream sync');
+          const forkUrl = `https://github.com/${currentUsername}/${repo}`;
+          // Attempt to sync with upstream if directive or config requests it
+          const shouldSync = /[?#].*fork/i.test(repoUrl) || window.TemplateDoctorConfig?.syncForksOnAnalyze;
+          if (shouldSync) {
+            try {
+              const targetBranch = forkMeta.parent?.default_branch || forkMeta.default_branch || 'main';
+              const tokenAccessor =
+                window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
+                window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
+              const token = tokenAccessor ? tokenAccessor() : null;
+              if (token) {
+                const syncResp = await fetch(`https://api.github.com/repos/${currentUsername}/${repo}/merge-upstream`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `token ${token}`,
+                    Accept: 'application/vnd.github+json',
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ branch: targetBranch }),
+                });
+                if (syncResp.ok) {
+                  debug('app', 'Fork successfully synced with upstream');
+                  if (window.NotificationSystem) {
+                    window.NotificationSystem.showSuccess(
+                      'Fork Synced',
+                      `Updated fork from upstream (${targetBranch}) before analysis`,
+                      4000,
+                    );
+                  }
+                } else {
+                  const txt = await syncResp.text();
+                  debug('app', `Fork sync not applied (status ${syncResp.status}): ${txt.substring(0,120)}`);
+                }
+              }
+            } catch (syncErr) {
+              debug('app', `Fork sync error (ignored): ${syncErr.message}`);
+            }
+          }
+          if (window.NotificationSystem) {
+            window.NotificationSystem.showInfo(
+              'Using Existing Fork',
+              `Analyzing your fork of ${owner}/${repo}`,
+              3000,
+            );
+          }
+          return forkUrl;
+        }
+        // Repo exists but is not a fork of target; continue logic (will maybe still use upstream unless forced)
+        if (!needsFork) {
+          return repoUrl;
+        }
+      } else if (forkCandidateResp.status !== 404) {
+        debug('app', `Unexpected status checking user fork: ${forkCandidateResp.status}`);
+      }
+    } catch (checkErr) {
+      debug('app', 'Error checking user fork (non-fatal)', checkErr.message);
+    }
+
     if (!needsFork) {
-      debug('app', `Repository ${owner}/${repo} does not need forking`);
-      return repoUrl;
+      return repoUrl; // No policy or directive requiring fork
     }
 
     // Construct potential fork URL
     const potentialForkUrl = `https://github.com/${currentUsername}/${repo}`;
     debug('app', `Original repo: ${repoUrl}, potential fork: ${potentialForkUrl}`);
 
-    // Show confirmation dialog if configured
-    if (ORGANIZATIONS_CONFIG.requireConfirmationForFork) {
+    // Show confirmation dialog if configured and not due to proactive SAML detection
+    if (ORGANIZATIONS_CONFIG.requireConfirmationForFork && !dueToSaml && !directiveFork) {
       // Use notification system if available
       if (window.Notifications) {
         const result = await new Promise((resolve) => {
@@ -135,125 +239,79 @@ async function checkAndUpdateRepoUrl(repoUrl) {
         }
       }
     }
+    // Create fork (with optional confirmation above) if we got here
+    let shouldCreateFork = true; // if we reach here, either directive or policy requested it
 
-    // Check if the user already has a fork
-    try {
-      debug('app', `Checking if user ${currentUsername} has a fork of ${owner}/${repo}`);
-      const response = await fetch(`https://api.github.com/repos/${currentUsername}/${repo}`, {
-        headers: {
-          Authorization: `token ${window.GitHubClient.auth.getToken()}`,
-        },
-      });
-
-      if (response.ok) {
-        // User has a fork, use it
-        debug('app', `User has a fork of ${owner}/${repo}`);
+    if (shouldCreateFork) {
+      try {
+        debug('app', `Creating fork of ${owner}/${repo}`);
         if (window.NotificationSystem) {
-          window.NotificationSystem.showInfo(
-            'Using Your Fork',
-            `Using your fork of ${owner}/${repo} for analysis`,
-            3000,
-          );
+          window.NotificationSystem.showInfo('Creating Fork', `Forking ${owner}/${repo} into your namespace...`, 4500);
         }
-        return potentialForkUrl;
-      } else if (response.status === 404) {
-        // User doesn't have a fork, ask if they want to create one
-        let shouldCreateFork = false;
-
-        if (window.Notifications) {
-          shouldCreateFork = await new Promise((resolve) => {
-            window.Notifications.confirm(
-              'Create Fork',
-              `You don't have a fork of ${owner}/${repo}. Would you like to create one now?`,
-              {
-                confirmLabel: 'Create Fork',
-                cancelLabel: 'Use Original',
-                onConfirm: () => resolve(true),
-                onCancel: () => resolve(false),
-              },
-            );
-          });
-        } else {
-          // Fallback to native confirm if notification system is not available
-          if (window.NotificationSystem) {
-            await new Promise((resolve) => {
-              window.NotificationSystem.showConfirmation(
-                'Create Fork',
-                `You don't have a fork of ${owner}/${repo}. Would you like to create one now?`,
-                'Create Fork',
-                'Use Original',
-                (confirmed) => {
-                  shouldCreateFork = confirmed;
-                  resolve();
-                },
-              );
-            });
-          } else {
-            shouldCreateFork = confirm(
-              `You don't have a fork of ${owner}/${repo}. Would you like to create one now?`,
-            );
+        const forkTokenFn = window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) || window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
+        const forkToken = forkTokenFn ? forkTokenFn() : null;
+        const forkResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/forks`, {
+          method: 'POST',
+          headers: forkToken ? { Authorization: `token ${forkToken}` } : {},
+        });
+        if (!forkResponse.ok) {
+          let failureMsg = `${forkResponse.status} ${forkResponse.statusText}`;
+          try { const j = await forkResponse.json(); if (j?.message) failureMsg = j.message; } catch(_) {}
+          if (/saml/i.test(failureMsg) && window.NotificationSystem) {
+            window.NotificationSystem.showWarning('SAML Authorization Needed', `GitHub requires SSO authorization before forking <strong>${owner}/${repo}</strong>. Please authorize and retry.`, 8000);
           }
+          throw new Error(`Failed to create fork: ${failureMsg}`);
         }
-
-        if (shouldCreateFork) {
+        const forkData = await forkResponse.json();
+        debug('app', `Fork created (pending availability): ${forkData.html_url}`);
+        // Poll for default branch availability
+        const pollStart = Date.now();
+        const targetForkRepo = `${currentUsername}/${repo}`;
+        let available = false;
+        for (let i = 0; i < 18; i++) { // ~27s max
           try {
-            debug('app', `Creating fork of ${owner}/${repo}`);
-            if (window.NotificationSystem) {
-              window.NotificationSystem.showInfo(
-                'Creating Fork',
-                `Creating a fork of ${owner}/${repo}...`,
-                3000,
-              );
-            }
-
-            const forkResponse = await fetch(
-              `https://api.github.com/repos/${owner}/${repo}/forks`,
-              {
-                method: 'POST',
-                headers: {
-                  Authorization: `token ${window.GitHubClient.auth.getToken()}`,
-                },
-              },
-            );
-
-            if (forkResponse.ok) {
-              const forkData = await forkResponse.json();
-              debug('app', `Fork created: ${forkData.html_url}`);
-              if (window.NotificationSystem) {
-                window.NotificationSystem.showSuccess(
-                  'Fork Created',
-                  `Successfully forked ${owner}/${repo}`,
-                  3000,
-                );
+            const metaResp = await fetch(`https://api.github.com/repos/${targetForkRepo}`, {
+              headers: forkToken ? { Authorization: `token ${forkToken}` } : {},
+            });
+            if (metaResp.ok) {
+              const meta = await metaResp.json();
+              if (meta?.default_branch) {
+                available = true;
+                break;
               }
-              return forkData.html_url;
-            } else {
-              throw new Error(
-                `Failed to create fork: ${forkResponse.status} ${forkResponse.statusText}`,
-              );
             }
-          } catch (forkError) {
-            debug('app', `Error creating fork: ${forkError.message}`, forkError);
-            if (window.NotificationSystem) {
-              window.NotificationSystem.showError(
-                'Fork Error',
-                `Failed to create fork: ${forkError.message}`,
-                5000,
-              );
-            }
-            return repoUrl; // Use original URL as fallback
-          }
-        } else {
-          return repoUrl; // User declined to fork, use original URL
+          } catch(_) {}
+          await new Promise(r=>setTimeout(r,1500));
         }
-      } else {
-        // Other error occurred
-        throw new Error(`Error checking fork: ${response.status} ${response.statusText}`);
+        debug('app', `Fork availability ${(available?'confirmed':'timeout')} after ${(Date.now()-pollStart)/1000}s`);
+        if (window.NotificationSystem) {
+          window.NotificationSystem.showSuccess('Fork Created', `Fork ${available ? 'ready' : 'created'}: ${owner}/${repo} -> ${targetForkRepo}`, 5000);
+        }
+        // Optional immediate upstream sync if config demands and fork ready
+        if (available && window.TemplateDoctorConfig?.syncForksOnAnalyze) {
+          try {
+            const syncResp = await fetch(`https://api.github.com/repos/${targetForkRepo}/merge-upstream`, {
+              method: 'POST',
+              headers: forkToken ? { Authorization: `token ${forkToken}`, Accept: 'application/vnd.github+json','Content-Type':'application/json' } : {'Content-Type':'application/json'},
+              body: JSON.stringify({ branch: forkData?.default_branch || 'main' }),
+            });
+            if (syncResp.ok) {
+              debug('app', 'Post-fork upstream merge applied');
+            } else {
+              debug('app', `Upstream merge skipped status=${syncResp.status}`);
+            }
+          } catch(syncErr) { debug('app', `Upstream merge error ignored: ${syncErr.message}`);}        
+        }
+        return forkData.html_url;
+      } catch (forkErr) {
+        debug('app', `Fork creation failed: ${forkErr.message}`, forkErr);
+        if (window.NotificationSystem) {
+          window.NotificationSystem.showError('Fork Error', `Failed to create fork: ${forkErr.message}`, 6000);
+        }
+        return repoUrl; // fallback to upstream
       }
-    } catch (error) {
-      debug('app', `Error checking/creating fork: ${error.message}`, error);
-      return repoUrl; // Use original URL as fallback
     }
+    return repoUrl; // fallback if creation not pursued
   } catch (parseError) {
     debug('app', `Error parsing repository URL: ${parseError.message}`, parseError);
     return repoUrl; // Use original URL as fallback
@@ -407,6 +465,16 @@ window.analyzeRepo = async function (repoUrl, ruleSet = 'dod', selectedCategorie
   }
 };
 
+// Explicit helper to force fork + analyze without needing org policy
+window.forkAndAnalyzeRepo = function(repoUrl, ruleSet = 'dod', selectedCategories = null) {
+  try {
+    if (!/[?#].*fork/i.test(repoUrl)) {
+      repoUrl += (repoUrl.includes('?') ? '&' : '?') + 'fork=1';
+    }
+  } catch (_) {}
+  return window.analyzeRepo(repoUrl, ruleSet, selectedCategories);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize IndexedDB for batch scan progress
   try {
@@ -449,6 +517,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize app with currently available dependencies
   initializeApp();
+
+  // Deferred templates banner: if results were gated at load time, show a gentle prompt.
+  try {
+    if (window.__TEMPLATE_RESULTS_DEFERRED) {
+      const existing = document.getElementById('deferred-templates-banner');
+      if (!existing) {
+        const banner = document.createElement('div');
+        banner.id = 'deferred-templates-banner';
+        banner.style.cssText = 'margin:12px 0;padding:10px 14px;background:#fff4ce;color:#433519;border:1px solid #f2c94c;border-radius:6px;font-size:14px;display:flex;align-items:center;gap:12px;';
+        banner.innerHTML = `
+          <span style="flex:1;">Sign in to restore previously scanned templates.</span>
+          <button id="deferred-login-btn" style="background:#005fb8;color:#fff;border:none;border-radius:4px;padding:6px 12px;cursor:pointer;">Sign In</button>
+        `;
+        const container = document.getElementById('search-section') || document.querySelector('main.container');
+        if (container && container.parentNode) {
+          container.parentNode.insertBefore(banner, container.nextSibling);
+        }
+        const btn = document.getElementById('deferred-login-btn');
+        if (btn) {
+          btn.addEventListener('click', () => {
+            if (window.GitHubAuth && typeof window.GitHubAuth.login === 'function') {
+              window.GitHubAuth.login();
+            } else {
+              window.location.href = '/callback.html';
+            }
+          });
+        }
+        // Listen for auth becoming available to auto-remove banner & load templates
+        const authInterval = setInterval(() => {
+          if (window.GitHubAuth && window.GitHubAuth.isAuthenticated && window.GitHubAuth.isAuthenticated()) {
+            clearInterval(authInterval);
+            banner.remove();
+            // Attempt to load scanned templates now that auth is ready
+            try { loadScannedTemplates(); } catch (_) {}
+          }
+        }, 600);
+        setTimeout(() => clearInterval(authInterval), 20000); // stop polling after 20s
+      }
+    }
+  } catch (e) {
+    debug('app', 'Deferred banner setup error', e);
+  }
 
   // UI elements
   const searchInput = document.getElementById('repo-search');
@@ -2460,6 +2570,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Analysis Flow ---
   // Define the internal analyzeRepo function and store a reference to it
   internalAnalyzeRepo = async function (repoUrl, ruleSet = 'dod', selectedCategories = null) {
+    // Preflight: if repo belongs to SAML-enforced org and user only wants fork-based operations,
+    // attempt fork-first flow (idempotent). We detect by prior tagging OR by explicit param marker.
+    try {
+      // Quick heuristic: if user appended ?fork or #fork directive, force fork path.
+      const forkDirective = /[?#].*fork/i.test(repoUrl);
+      if (forkDirective && window.GitHubClient?.auth?.isAuthenticated()) {
+        const parts = repoUrl.split('github.com/')[1]?.split('/') || [];
+        if (parts.length >= 2) {
+          const owner = parts[0];
+            const repo = parts[1];
+            // Only fork if not already under current user namespace
+            const currentUser = window.GitHubClient.getCurrentUsername();
+            if (currentUser && owner !== currentUser) {
+              try {
+                const hasFork = await window.GitHubClient.checkUserHasFork(owner, repo);
+                if (hasFork) {
+                  repoUrl = `https://github.com/${currentUser}/${repo}`;
+                } else {
+                  const forkInfo = await window.GitHubClient.forkRepository(owner, repo);
+                  if (forkInfo?.html_url) {
+                    repoUrl = forkInfo.html_url;
+                  }
+                }
+              } catch (forkPrefErr) {
+                console.warn('[App] Fork directive preflight failed:', forkPrefErr?.message || forkPrefErr);
+              }
+            }
+        }
+      }
+    } catch (_) {}
     if (!ruleSet || ruleSet === 'dod') {
       const cfg = window.TemplateDoctorConfig || {};
       if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
