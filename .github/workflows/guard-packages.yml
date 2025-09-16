@@ -1,0 +1,19 @@
+name: Guard Packages
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'packages/**'
+      - 'scripts/verify-packages.sh'
+      - '.github/workflows/guard-packages.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run package directory guard
+        run: |
+          bash scripts/verify-packages.sh
