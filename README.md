@@ -3,14 +3,22 @@
 
 <img src="./assets/images/templatedoctor.svg" alt="template-doctor" align="center" height="128" />
 
-[![Template Framework Documentation](https://img.shields.io/badge/TemplateFramework-004000?style=flat-square)](https://github.com/Azure-Samples/azd-template-artifacts/)
+# Template Doctor
+
+[![Template Framework Documentation](https://img.shields.io/badge/TemplateFramework-008080?style=flat-square)](https://github.com/Azure-Samples/azd-template-artifacts/)
 [![Template Framework MCP](https://img.shields.io/badge/TemplateFrameworkMCP-0090FF?style=flat-square)](https://github.com/Template-Doctor/template-doctor)
 [![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)](LICENSE)
 
-[Overview](#overview) | [Features](#features) | [Install](#install) | [Usage](#usage)
+[Overview](#overview) | [Features](#features) | [Install](#installation-and-setup) | [Usage](#usage)
 
 
 </div>
+
+
+> [!IMPORTANT]
+> This app has been built with vanilla JavaScript for fast prototyping and will be migrated to TypeScript for robustness.
+
+Template Doctor analyzes and validates samples and templates, including but not limited to Azure Developer CLI (azd) templates. It provides a web UI to view analysis results and take action, including opening GitHub issues and assigning them to GitHub copilot in one go. It also automates PR updates with scan results.
 
 # Overview
 
