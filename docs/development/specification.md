@@ -1,7 +1,195 @@
 # Template Doctor — Product Specification
 
+# Template Doctor — Product Specification
+
 ## Summary
-Template Doctor analyzes [Azure Developer CLI](https://github.com/Azure/azure-dev) templates against organizational standards as documented in our [Template Framework](https://github.com/Azure-Samples/azd-template-artifacts), producing actionable reports and dashboards. Because it is fully configurable, it accepts the default [Definition of Done](https://github.com/Azure-Samples/azd-template-artifacts/blob/main/docs/development-guidelines/definition-of-done.md) as well as custom configuration referrenced from a GitHub Gist. It ships as a static web frontend, an Azure Functions API, and optional GitHub integrations (Action and App) for automation. Core capabilities include single-template analysis, batch scanning with resume/cancel, rich in-app notifications (no native alerts), and publishing results to GitHub Pages.
+Template Doctor analyzes and validates samples and templates against organizational standards, including Azure Developer CLI (azd) templates, producing actionable reports and dashboards. It accepts the default [Definition of Done](https://github.com/Azure-Samples/azd-template-artifacts/blob/main/docs/development-guidelines/definition-of-done.md) as well as custom configurations referenced from a GitHub Gist. It ships as a static web frontend (SWA), an Azure Functions API, and GitHub integrations for automation. Core capabilities include single-template analysis, batch scanning with resume/cancel, rich in-app notifications (no native alerts), GitHub issue creation, and publishing results to GitHub Pages.
+
+## Goals
+- Provide fast, reliable analysis of templates with clear guidance and actionable reports
+- Support batch scanning workflows with resumability and failure handling
+- Keep the frontend deployable as a static site with backend via Azure Functions
+- Enable GitHub-centric usage (Actions/Workflows) and publish reports to GitHub Pages
+- Maintain strong test coverage and contribution guardrails
+- Provide security analysis for infrastructure-as-code files
+
+## Non-Goals
+- General-purpose CI pipeline management
+- Managing private secrets in the frontend
+- Re-implementing GitHub features not essential to template analysis
+
+## Components
+
+### Frontend (Static Web App)
+- Location: `packages/app/`
+- Responsibilities:
+  - User interaction and batch scanning controls
+  - Results viewing and dashboard rendering
+  - Notifications UI
+  - GitHub issue creation
+- Deployed to GitHub Pages via nightly workflow
+
+### Azure Functions API
+- Location: `packages/api/`
+- Key Functions:
+  - `validate-template`: Initiates GitHub workflow to validate templates
+  - `validation-status`: Checks the status of running validations
+  - `validation-callback`: Receives callbacks from workflow completions
+  - `github-oauth-token`: Handles GitHub authentication
+  - `archive-collection`: Archives metadata to central repository
+
+### GitHub Workflows
+- Location: `.github/workflows/`
+- Key Workflows:
+  - `validation-template.yml`: Executes template validation
+  - `submit-analysis.yml`: Processes results and creates PRs
+  - `nightly-swa-deploy.yml`: Deploys frontend to GitHub Pages
+
+### Results Repository
+- Location: `packages/app/results/`
+- Components:
+  - `index-data.js`: Master list of scanned templates
+  - Per-scan dashboards and data files
+
+## Functional Scope
+
+### 1. Single Template Analysis
+- User enters/selects a template target (e.g., repository GitHub URL)
+- App initializes analyzer, displays progress notifications
+- On success, results render in the UI; on error, the user sees an actionable message with retry
+
+### 2. Batch Scanning
+- Toggle "Batch Mode" to paste multiple targets (one per line)
+- UI shows per-item status: Pending, In Progress, Succeeded, Failed, Canceled
+- Progress: counters for total, completed, failed; overall completion when all items finish
+- Retry failed items individually or re-run remaining failures
+- Persist progress to localStorage to allow resume after reload
+
+### 3. Notifications UX
+- In-app notification system (no native `alert/confirm/prompt`)
+- Types: info, success, warning, error; supports loading states and confirmation prompts
+- Global API: `window.Notifications` with legacy alias `window.NotificationSystem`
+
+### 4. Results Viewing
+- Load and display historical scans from `results/` directory
+- View summary dashboards with compliance metrics and issue details
+- Filter and sort results by repository, rule set, and compliance level
+
+### 5. GitHub Issue Creation
+- Create issues for template findings with one click
+- Auto-assign to GitHub Copilot for automated fixes
+- Apply standardized labels and categories
+- Include detailed context in issue bodies
+
+### 6. Authentication & GitHub Integration
+- OAuth/token handling via `api/github-oauth-token`
+- PR creation for scan results via `submit-analysis.yml` workflow
+- GitHub Action integration for automated scanning
+
+### 7. Security Analysis
+- Analyze Bicep files for security best practices
+- Detect insecure authentication methods
+- Identify resources without Managed Identity
+- Check for anonymous access vulnerabilities
+
+## User Stories & Acceptance Criteria
+
+### US1: Analyze a single template
+- As a user, I can analyze one template and see a clear success or error outcome
+- Acceptance:
+  - When "Analyze" is clicked, a loading notification appears
+  - On success, a success notification appears and results render
+  - On error, an error notification appears with a retry path
+
+### US2: Run a batch scan across many templates
+- As a user, I can paste multiple targets and run a batch scan with status per item
+- Acceptance:
+  - Batch mode toggle reveals the multi-target input
+  - Each item displays one of: Pending, In Progress, Succeeded, Failed, Canceled
+  - Progress counters update as items complete
+
+### US3: Resume a partially completed batch after reload
+- As a user, I can resume a batch after reloading the page
+- Acceptance:
+  - On load, if there's persisted state, a resume confirmation appears
+  - If confirmed, only incomplete items are processed; completed items are skipped
+
+### US4: Cancel a running batch
+- As a user, I can cancel an in-progress batch
+- Acceptance:
+  - Clicking Cancel stops processing promptly
+  - The current item resolves to Canceled if applicable; no new items start
+  - A notification confirms cancellation
+
+### US5: Create GitHub issues for findings
+- As a user, I can create issues for all findings with one click
+- Acceptance:
+  - Issues are created with standardized titles and labels
+  - Each issue includes detailed context and links to the report
+  - Issues are assigned to GitHub Copilot for automated fixes
+
+### US6: View security analysis for infrastructure
+- As a user, I can see security best practice violations in Bicep files
+- Acceptance:
+  - Dashboard shows security findings categorized by type
+  - Managed Identity usage is evaluated
+  - Insecure authentication methods are flagged
+
+### US7: Save results to GitHub
+- As a user, I can save scan results to be published on GitHub Pages
+- Acceptance:
+  - "Save Results" action creates a PR with dashboard and data files
+  - PR is automatically created with proper metadata
+  - When merged, results appear in the historical scans section
+
+## System Architecture
+
+### Frontend (Static Web App)
+- Modules:
+  - Web UI: Main user interface components
+  - Results Viewer: Dashboard and report rendering
+  - Batch Manager: Multi-template scanning coordination
+  - Notification System: In-app alerts and prompts
+
+### Azure Functions
+- Endpoints:
+  - validate-template: Initiates validation workflows
+  - validation-status: Polls for workflow status
+  - validation-callback: Receives completion callbacks
+  - github-oauth-token: Handles authentication
+  - archive-collection: Optional metadata archiving
+
+### GitHub Workflows
+- validation-template.yml: Executes the template validation
+- submit-analysis.yml: Processes results and creates PRs
+
+### Storage
+- localStorage: Client-side persistence for batch state
+- GitHub Pages Results: Published dashboards and data
+
+## Non-Functional Requirements
+- Performance: Reasonable responsiveness for lists of dozens to hundreds of targets
+- Reliability: Batch progress is persisted; resume flow survives reloads/crashes
+- Security: No secrets in the frontend; tokens exchanged via API; CORS restricted
+- Compatibility: Modern evergreen browsers; graceful degradation for storage
+- Testability: Playwright E2E tests verify core flows, including guards against native dialogs
+
+## Configuration
+- Frontend base URLs and API endpoints configurable via config.json
+- CORS on the Function App includes the GitHub Pages origin
+- Environment variables for GitHub tokens and workflow details
+
+## Deployment
+- Frontend: GitHub Pages via nightly workflow
+- API: Azure Functions (Linux Consumption, Node.js)
+- Results: Published via PR to the repository
+- Optional centralized archive for metadata
+
+## Edge Cases
+- Network timeouts or intermittent failures: retries surface at item level
+- Duplicate targets: deduplicated during processing
+- User leaves page mid-scan: persistence enables resume
+- API rate limits: backoff strategies for GitHub API calls
 
 ## Goals
 - Provide fast, reliable analysis of templates with clear guidance.

@@ -1,4 +1,32 @@
-# Azure Developer CLI (AZD) and AI Model Deprecation Checks
+# Azure Developer## Overview
+
+Template Doctor supports an optional, globally-configurable Azure Developer CLI (AZD) analysis mode and an AI model deprecation check. These work together to provide targeted validations when the deployment method is Azure Developer CLI.
+
+- Global switch: `azureDeveloperCliEnabled` (default: true)
+- Functional checks under AZD:
+  - Verify `azure.yaml` or `azure.yml` exists (Functional category)
+  - Verify `services:` are defined inside `azure.yaml`/`azure.yml` (Functional category)
+  - Deployment with Azure Developer CLI (azd) is enabled and tested as part of the validation workflow
+- AI checks under AZD:
+  - "Test AI model deprecation" populates the new `AI` compliance category
+  - Visible in the modal under "Global checks" when AZD is enabled
+  - Toggle default ON; can be disabled by the user
+  - Auto-disabled if the template doesn't appear AI-powered (heuristic)AI Model Deprecation Checks
+
+## Overview
+
+Template Doctor supports an optional, globally-configurable Azure Developer CLI (AZD) analysis mode and an AI model deprecation check. These work together to provide targeted validations when the deployment method is Azure Developer CLI.
+
+- Global switch: `azureDeveloperCliEnabled` (default: true)
+- Functional checks under AZD:
+  - Verify `azure.yaml` or `azure.yml` exists (Functional category)
+  - Verify `services:` are defined inside `azure.yaml`/`azure.yml` (Functional category)
+  - Deployment with Azure Developer CLI (azd) is enabled and tested as part of the validation workflow
+- AI checks under AZD:
+  - "Test AI model deprecation" populates the new `AI` compliance category
+  - Visible in the modal under "Global checks" when AZD is enabled
+  - Toggle default ON; can be disabled by the user
+  - Auto-disabled if the template doesn't appear AI-powered (heuristic)
 
 This document describes how Template Doctor handles Azure Developer CLI-specific checks and the AI model deprecation check, including global configuration and UI behavior.
 
@@ -64,6 +92,7 @@ When `azureDeveloperCliEnabled` is false:
 - Functional category (only when `azureDeveloperCliEnabled` is true):
   - `azure.yaml`/`azure.yml` presence: compliant/issue
   - `services:` defined in `azure.yaml`/`azure.yml`: compliant/issue
+  - Deployment test: runs `azd up` as part of the validation-template workflow when templates use Bicep (not Terraform)
 - AI category (only when `azureDeveloperCliEnabled` is true AND AI toggle is ON AND `azure.yaml`/`azure.yml` exists):
   - Runs the AI model deprecation scan and records results in `compliance.categories.ai`
   - A status summary is also exposed in `compliance.globalChecks` as `ai-model-deprecation` with `status: "passed"|"failed"`

@@ -15,7 +15,7 @@ redirectUri: window.location.origin + getBasePath() + '/callback.html'
 ```
 
 This means:
-- In local development: `http://localhost:8080/callback.html`
+- In local development: `http://localhost:4000/callback.html`
 - In production (GitHub Pages): `https://your-username.github.io/template-doctor/callback.html`
 - In production (Azure): `https://your-staticwebapp.azurestaticapps.net/callback.html`
 
@@ -48,7 +48,7 @@ You can override this behavior in two ways:
 When registering your GitHub OAuth App:
 
 1. For local development:
-   - Set the callback URL to: `http://localhost:8080/callback.html`
+   - Set the callback URL to: `http://localhost:4000/callback.html`
 
 2. For production:
    - Set the callback URL to match your production environment:
