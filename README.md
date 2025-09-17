@@ -1,15 +1,7 @@
 <!-- prettier-ignore -->
 <div align="center">
 
-<img src="./assets/images/templatedoctor.svg" alt="template-doctor" align="center" height="128" /  - See details: [docs/usage/DEPLOYMENT.md](docs/usage/DEPLOYMENT.md)
-
-- **Submit Template Analysis** (repository_dispatch):
-  - Saves scan results and opens a PR using `peter-evans/create-pull-request`
-  - See setup guide (including bot token fallback): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
-
-### Publishing Results
-
-- After "Save Results" creates a PR and the PR is merged, results appear on the site after the nightly deploy. Admins can run the deploy workflow manually to publish immediately. The UI shows a notification to inform users of this timing.late Doctor
+<img src="./assets/images/templatedoctor.svg" alt="template-doctor" align="center" height="128" />
 
 [![Template Framework Documentation](https://img.shields.io/badge/TemplateFramework-004000?style=flat-square)](https://github.com/Azure-Samples/azd-template-artifacts/)
 [![Template Framework MCP](https://img.shields.io/badge/TemplateFrameworkMCP-0090FF?style=flat-square)](https://github.com/Template-Doctor/template-doctor)
