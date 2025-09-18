@@ -175,6 +175,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const adaptedData = this.adaptResultData(result);
         window.reportData = adaptedData; // Store for GitHub issue creation
 
+        // Client-side enrichment: perform agents.md check (frontend-only) if not already provided by backend
+        // This keeps main clean when backend analyzer does not yet implement agents category.
+        try {
+          this.runAgentsEnrichment(adaptedData).catch(err => {
+            console.warn('[AgentsEnrichment] failed:', err);
+          });
+        } catch (e) {
+          console.warn('[AgentsEnrichment] scheduling error:', e);
+        }
+
         // Create overview section
         this.renderOverview(adaptedData, container);
 
@@ -316,6 +326,249 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     /**
+     * Perform a lightweight client-side validation of agents.md independent of server analyzer.
+     * Rules (basic):
+     *  - File must exist (fetched separately if not present in original result payload)
+     *  - Must contain a top-level H1
+     *  - Must contain a "## Agents" (case-insensitive) section
+     *  - Must contain a markdown table with name & description columns
+     * Adds issues / compliant entries directly to window.reportData.compliance.* if not already present.
+     * @param {Object} adaptedData - already adapted report data (mutated in-place)
+     */
+    this.runAgentsEnrichment = async function (adaptedData) {
+      if (!adaptedData || !adaptedData.compliance) return;
+      const existingItems = adaptedData.compliance.issues.concat(adaptedData.compliance.compliant).filter(i => i.category === 'agents');
+      if (existingItems.length) {
+        this.debug('Agents enrichment skipped (already present from backend)');
+        // Still surface badge + potential tile UI based on existing info
+        this.updateAgentsBadgeFromData(adaptedData);
+        return;
+      }
+      // Derive raw repo URL to attempt fetch; only proceed for public GitHub URLs
+      const repoUrl = adaptedData.repoUrl || '';
+      if (!/https?:\/\/github\.com\//i.test(repoUrl)) {
+        this.debug('Agents enrichment skipped (non-GitHub repoUrl)');
+        return;
+      }
+      // Try to fetch raw agents.md (default branch assumed: main or README branch not known -> attempt main then fallback to HEAD via raw URL heuristic)
+      // Strategy: first HEAD / raw fetch via jsdelivr (fast + cached) then fallback to raw.githubusercontent.
+      const ownerRepoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)(?:\.git)?/i);
+      if (!ownerRepoMatch) return;
+      const owner = ownerRepoMatch[1];
+      const repo = ownerRepoMatch[2];
+      const cacheKey = `__TD_agents_cache_${owner}_${repo}`;
+      try {
+        if (sessionStorage && sessionStorage.getItem(cacheKey)) {
+          const cached = JSON.parse(sessionStorage.getItem(cacheKey));
+          if (cached && typeof cached === 'object') {
+            this.debug('Agents enrichment using session cache');
+            this.applyAgentsCachedResult(adaptedData, cached);
+            this.updateAgentsBadgeFromData(adaptedData);
+            return;
+          }
+        }
+      } catch(_) {}
+      const candidateBranches = ['main', 'master'];
+      let content = null;
+      for (const branch of candidateBranches) {
+        try {
+          // jsDelivr attempt
+          const cdnResp = await fetch(`https://cdn.jsdelivr.net/gh/${owner}/${repo}@${branch}/agents.md`, { cache: 'no-store' });
+          if (cdnResp.ok) {
+            content = await cdnResp.text();
+            break;
+          } else {
+            const rawResp = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/agents.md`, { cache: 'no-store' });
+            if (rawResp.ok) {
+              content = await rawResp.text();
+              break;
+            }
+          }
+        } catch (e) {
+          // continue to next branch
+        }
+      }
+      if (content == null) {
+        const issue = {
+          id: 'agents-missing-file',
+          category: 'agents',
+          severity: 'error', // promoted severity per requirement B
+          message: 'agents.md file is missing (client check)',
+          recommendation: 'Add an agents.md describing available agents following https://agents.md/ specification.'
+        };
+        adaptedData.compliance.issues.push(issue);
+        // Ensure categories object exists so tile can later reflect state
+        if (!adaptedData.compliance.categories) adaptedData.compliance.categories = {};
+        if (!adaptedData.compliance.categories.agents) {
+          adaptedData.compliance.categories.agents = { enabled: true, issues: [issue], compliant: [], percentage: 0 };
+        }
+        this.storeAgentsCache(cacheKey, { status: 'missing', problems: ['file not found'] });
+        this.updateAgentsBadge(issue, null);
+        this.updateAgentsTileStatus('missing');
+        return;
+      }
+      // Parse content
+      const lines = content.split(/\r?\n/);
+      const firstHeader = lines.find(l => /^#\s+/.test(l.trim())) || '';
+      const hasTopHeader = /^#\s+/.test(firstHeader);
+      const hasAgentsSection = /##\s+agents?/i.test(content);
+      // Find table header (first line containing | and 'name' and 'description')
+      const tableHeaderLine = lines.find(l => /\|/.test(l) && /name/i.test(l) && /description/i.test(l));
+      let headerCols = [];
+      if (tableHeaderLine) {
+        headerCols = tableHeaderLine.split('|').map(c => c.trim().toLowerCase()).filter(Boolean);
+      }
+      // These columns are required in the agents table as per the agents.md specification.
+      const requiredCols = ['name', 'description', 'inputs', 'outputs', 'permissions'];
+      const missingCols = requiredCols.filter(c => !headerCols.some(h => h === c));
+      const hasTable = headerCols.length > 0;
+      const problems = [];
+      if (!hasTopHeader) problems.push('missing top-level heading');
+      if (!hasAgentsSection) problems.push('missing Agents section (## Agents)');
+      if (!hasTable) problems.push('missing agent definition table');
+      if (hasTable && missingCols.length) problems.push('missing required columns: ' + missingCols.join(', '));
+
+      // Count agents rows only if table present
+      let agentCount = 0;
+      if (hasTable) {
+        const tableIndex = lines.indexOf(tableHeaderLine);
+        for (let i = tableIndex + 1; i < lines.length; i++) {
+          const ln = lines[i];
+          if (/^\s*\|\s*[-:]+(\s*\|\s*[-:]+)*\s*\|?\s*$/.test(ln)) continue; // separator row
+          if (!/\|/.test(ln)) {
+            if (ln.trim() === '') break; // end table on blank
+            continue;
+          }
+          const cellParts = ln.split('|').map(c => c.trim());
+          if (cellParts.filter(Boolean).length >= 2) {
+            agentCount++;
+          }
+        }
+      }
+
+      if (problems.length) {
+        const issue = {
+          id: 'agents-format-invalid',
+          category: 'agents',
+          severity: 'warning',
+          message: 'agents.md present but formatting issues detected (client check)',
+          details: problems,
+          recommendation: 'Ensure agents.md contains required heading, section and columns: ' + requiredCols.join(', ')
+        };
+        adaptedData.compliance.issues.push(issue);
+        this.storeAgentsCache(cacheKey, { status: 'invalid', problems, agentCount });
+        this.updateAgentsBadge(issue, null);
+        this.updateAgentsTileStatus('invalid');
+      } else {
+        const compliantItem = {
+          id: 'agents-doc-valid',
+          category: 'agents',
+          message: `agents.md present and basic structure validated (${agentCount} agent${agentCount === 1 ? '' : 's'})`,
+          details: { agentCount, columns: headerCols }
+        };
+        adaptedData.compliance.compliant.push(compliantItem);
+        this.storeAgentsCache(cacheKey, { status: 'valid', agentCount });
+        this.updateAgentsBadge(null, compliantItem);
+        this.updateAgentsTileStatus('valid');
+      }
+    };
+
+    // Store minimal cache (session only)
+    this.storeAgentsCache = function(key, value) {
+      try { if (sessionStorage) sessionStorage.setItem(key, JSON.stringify({ ...value, cachedAt: Date.now() })); } catch(_) {}
+    };
+    // Apply cached result to adaptedData
+    this.applyAgentsCachedResult = function(adaptedData, cached) {
+      if (!cached || !adaptedData) return;
+      if (cached.status === 'missing') {
+        adaptedData.compliance.issues.push({ id: 'agents-missing-file', category: 'agents', severity: 'error', message: 'agents.md file is missing (client check, cached)' });
+      } else if (cached.status === 'invalid') {
+        adaptedData.compliance.issues.push({ id: 'agents-format-invalid', category: 'agents', severity: 'warning', message: 'agents.md formatting issues (cached)', details: cached.problems });
+      } else if (cached.status === 'valid') {
+        const agentLabel = (cached.agentCount === 1) ? 'agent' : 'agents';
+        adaptedData.compliance.compliant.push({
+          id: 'agents-doc-valid',
+          category: 'agents',
+          message: `agents.md valid (${cached.agentCount || 0} ${agentLabel})`
+        });
+      }
+    };
+    // Badge creation from existing backend-provided or enrichment data
+    this.updateAgentsBadgeFromData = function(adaptedData) {
+      const issues = adaptedData.compliance.issues.filter(i => i.category === 'agents');
+      const passes = adaptedData.compliance.compliant.filter(i => i.category === 'agents');
+      this.updateAgentsBadge(issues[0] || null, passes[0] || null);
+    };
+    this.updateAgentsBadge = function(issue, compliant) {
+      try {
+        const actionHeader = document.getElementById('action-section');
+        if (!actionHeader) return;
+        let badge = document.getElementById('agents-status-badge');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.id = 'agents-status-badge';
+          badge.style.cssText = 'margin-left:8px; padding:2px 6px; border-radius:10px; font-size:0.65rem; letter-spacing:.5px; font-weight:600; vertical-align:middle;';
+          // Insert next to header title (first h3)
+          const h3 = actionHeader.querySelector('h3');
+          if (h3) h3.appendChild(badge); else actionHeader.prepend(badge);
+        }
+        if (issue && issue.id === 'agents-missing-file') {
+          badge.textContent = 'Agents: Missing';
+          badge.style.background = '#d9534f';
+          badge.style.color = '#fff';
+          badge.title = 'agents.md not found in repository';
+          this.updateAgentsTileStatus('missing');
+        } else if (issue) {
+          badge.textContent = 'Agents: Invalid';
+          badge.style.background = '#ff9800';
+          badge.style.color = '#fff';
+          badge.title = 'agents.md formatting problems';
+          this.updateAgentsTileStatus('invalid');
+        } else if (compliant) {
+          badge.textContent = 'Agents: OK';
+          badge.style.background = '#28a745';
+          badge.style.color = '#fff';
+          badge.title = 'agents.md validated';
+          this.updateAgentsTileStatus('valid');
+        }
+      } catch(_) {}
+    };
+
+    // Tint Agents tile based on status (missing -> red)
+    this.updateAgentsTileStatus = function(status) {
+      try {
+        const tile = document.querySelector('.category-breakdown .tile[data-category="agents"]');
+        if (!tile) return; // not rendered yet
+        tile.style.transition = 'background 0.3s, border-color 0.3s';
+        if (status === 'missing') {
+          tile.style.background = '#ffe5e5';
+          tile.style.border = '1px solid #d9534f';
+          
+          // Inject action button if not present
+          if (!tile.querySelector('.agents-action')) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-small agents-action';
+            btn.style.cssText = 'margin-top:8px; background:#d9534f; color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.7rem; font-weight:600; width:100%;';
+            btn.textContent = 'Create agents.md Issue';
+            btn.title = 'Open a GitHub issue asking Copilot to generate agents.md';
+            btn.onclick = (e) => { e.preventDefault(); window.createAgentsMdIssue && window.createAgentsMdIssue(); };
+            tile.appendChild(btn);
+          }
+        } else if (status === 'invalid') {
+          tile.style.background = '#fff3e0';
+          tile.style.border = '1px solid #ff9800';
+          const existing = tile.querySelector('.agents-action');
+          if (existing) existing.remove();
+        } else if (status === 'valid') {
+          tile.style.background = '#e6f7ed';
+          tile.style.border = '1px solid #28a745';
+          const existing = tile.querySelector('.agents-action');
+          if (existing) existing.remove();
+        }
+      } catch(_) {}
+    };
+
+    /**
      * Renders the overview section with compliance scores
      * @param {Object} data - The adapted result data
      * @param {HTMLElement} container - The container element to render into
@@ -452,6 +705,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('Failed to initialize compliance trend rendering:', e);
       }
 
+      // Attempt to restore pending agents issue confirmation (if any) once tiles are likely present
+      try { this.restoreAgentsIssueConfirmation(); } catch(_) {}
+
       // Add event listener for change ruleset button
       setTimeout(() => {
         const changeRulesetBtn = document.getElementById('change-ruleset-btn');
@@ -483,6 +739,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { key: 'deployment', label: 'Deployment', icon: 'fa-cloud-upload-alt' },
         { key: 'security', label: 'Security', icon: 'fa-shield-alt' },
         { key: 'testing', label: 'Testing', icon: 'fa-vial' },
+        { key: 'agents', label: 'Agents', icon: 'fa-robot' },
       ];
 
       const section = document.createElement('div');
@@ -499,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function () {
             : '<span class="badge" style="background:#6c757d; color:#fff; padding:2px 6px; border-radius:10px; font-size: 0.75rem;">Disabled</span>';
 
           return `
-            <div class="tile" style="min-width: 200px;">
+            <div class="tile" data-category="${key}" style="min-width: 200px;">
               <div class="tile-header" style="display:flex; align-items:center; gap:8px; justify-content: space-between;">
                 <div style="display:flex; align-items:center; gap:8px;">
                   <i class="fas ${icon}"></i>
@@ -778,9 +1035,40 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!issues || issues.length === 0) {
         return '<li class="item"><div class="item-message">No issues found. Great job!</div></li>';
       }
-
-      return issues
+      
+      // Define issue priorities (lower number = higher priority)
+      const issuePriorities = {
+        'agents-missing-file': 1, // Highest priority
+        // Add more issue types with priorities as needed
+        'default': 100 // Default priority for issues not specifically listed
+      };
+      
+      // Sort issues based on priority
+      const sorted = [...issues].sort((a, b) => {
+        const priorityA = issuePriorities[a.id] || issuePriorities['default'];
+        const priorityB = issuePriorities[b.id] || issuePriorities['default'];
+        return priorityA - priorityB;
+      });
+      
+      return sorted
         .map((issue) => {
+          // Special rendering for agents missing file
+          if (issue.id === 'agents-missing-file') {
+            return `
+              <li class="item issue-item agents-missing" style="border-left:4px solid #d9534f;">
+                <div class="item-header">
+                  <div class="item-title" style="color:#d9534f; font-weight:600;">Agents.md missing</div>
+                  <div class="item-category">Agents</div>
+                </div>
+                <div class="item-message">A standard agents.md file is not present in the repository.</div>
+                <div class="item-details"><strong>How to fix:</strong> Generate a baseline agents.md then customize it to document each agent, inputs, outputs, and required permissions.</div>
+                <div class="item-actions">
+                  <a href="#" class="item-link" style="color:#d9534f; font-weight:600;" onclick="return createAgentsMdIssue(event)">
+                    <i class="fas fa-magic"></i> Create agents.md Issue
+                  </a>
+                </div>
+              </li>`;
+          }
           // Determine the category display name
           let category;
           if (issue.id.includes('missing-file')) {
@@ -971,12 +1259,234 @@ document.addEventListener('DOMContentLoaded', function () {
           prompt += `• ${issue.message}\n`;
         }
       });
-
       // Add reference to standards
       prompt += `\nPlease fix these issues following Azure template best practices.`;
-
       return prompt;
     };
+
+    // Ensure label exists (create if missing)
+    this.ensureAgentsLabelExists = async function(owner, repo, gh, notify) {
+      try {
+        await gh(`/repos/${owner}/${repo}/labels/template-doctor-agents-compliance`); // exists
+        return true;
+      } catch(e) {
+        if (!/404/.test(e.message)) {
+          console.warn('Label existence check failed (non-404):', e.message);
+          return false;
+        }
+        try {
+          notify && notify('info','Creating label template-doctor-agents-compliance...');
+          await gh(`/repos/${owner}/${repo}/labels`, 'POST', {
+            name: 'template-doctor-agents-compliance',
+            color: '0e8a16',
+            description: 'Template Doctor agents.md compliance tracking'
+          });
+          notify && notify('success','Label created.');
+          return true;
+        } catch(e2) {
+          console.warn('Failed to create label:', e2.message);
+          return false;
+        }
+      }
+    };
+
+    // Show inline confirmation UI inside Agents tile
+    this.showAgentsIssueConfirmation = function(context) {
+      try {
+        const tile = document.querySelector('.category-breakdown .tile[data-category="agents"]');
+        if (!tile) return false;
+        if (tile.querySelector('.agents-issue-confirm')) return true; // already visible
+        const box = document.createElement('div');
+        box.className = 'agents-issue-confirm';
+        box.style.cssText = 'margin-top:6px; background:#fff; border:1px solid #d9534f; padding:6px 8px; border-radius:4px; font-size:0.7rem; line-height:1.3;';
+        box.innerHTML = `
+          <div style="font-weight:600; margin-bottom:4px; color:#d9534f;">Create GitHub issue to add agents.md?</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" data-role="confirm" class="btn btn-small" style="background:#d9534f; color:#fff; border:none; padding:4px 8px; border-radius:3px; cursor:pointer;">Confirm</button>
+            <button type="button" data-role="cancel" class="btn btn-small" style="background:#6c757d; color:#fff; border:none; padding:4px 8px; border-radius:3px; cursor:pointer;">Cancel</button>
+          </div>`;
+        tile.appendChild(box);
+        window.__TD_agentsIssueConfirmVisible = true;
+        sessionStorage.setItem('__TD_agentsIssuePending', JSON.stringify({ ts: Date.now(), owner: context.owner, repo: context.repo }));
+        const notify = context.notify;
+        const confirmBtn = box.querySelector('[data-role="confirm"]');
+        const cancelBtn = box.querySelector('[data-role="cancel"]');
+        confirmBtn.onclick = () => {
+          this.createAgentsMdIssue(null, true); // proceed
+        };
+        cancelBtn.onclick = () => {
+          box.remove();
+          window.__TD_agentsIssueConfirmVisible = false;
+          sessionStorage.removeItem('__TD_agentsIssuePending');
+          notify && notify('info','Cancelled agents.md issue creation');
+        };
+        return true;
+      } catch(e) {
+        console.warn('showAgentsIssueConfirmation failed:', e);
+        return false;
+      }
+    };
+
+    // Restore pending confirmation if it was active before navigation
+    this.restoreAgentsIssueConfirmation = function() {
+      try {
+        const raw = sessionStorage.getItem('__TD_agentsIssuePending');
+        if (!raw) return;
+        const obj = JSON.parse(raw);
+        const MAX_AGE = 2 * 60 * 1000; // 2 minutes
+        if (Date.now() - obj.ts > MAX_AGE) {
+          sessionStorage.removeItem('__TD_agentsIssuePending');
+          return;
+        }
+        // We only restore UI; context will be validated again at confirm click
+        const context = { owner: obj.owner, repo: obj.repo, notify: (t,m)=>{ if (window.NotificationSystem) { if (t==='info') window.NotificationSystem.showInfo('agents.md', m, 4000); else if (t==='error') window.NotificationSystem.showError('agents.md', m, 6000); else window.NotificationSystem.showSuccess('agents.md', m, 6000);} } };
+        // Delay to ensure tiles rendered
+        setTimeout(() => this.showAgentsIssueConfirmation(context), 400);
+      } catch(_) {}
+    };
+
+    // Core issue creation (after confirmation)
+    this._actuallyCreateAgentsMdIssue = async function(owner, repo, token, notify) {
+      notify('info','Checking for existing issue...');
+      const apiBase = 'https://api.github.com';
+      async function gh(path, method='GET', body) {
+        const resp = await fetch(apiBase + path, { method, headers: { 'Accept':'application/vnd.github+json', 'Authorization': `Bearer ${token}`,'Content-Type':'application/json' }, body: body?JSON.stringify(body):undefined });
+        if (!resp.ok) {
+          const t = await resp.text();
+          throw new Error(`${method} ${path} failed: ${resp.status} ${t}`);
+        }
+        return resp.json();
+      }
+      // Search for existing issue (build full query then encode once)
+      let existingIssue = null;
+      try {
+        const query = encodeURIComponent(`repo:${owner}/${repo} in:title "[TD-BOT] Missing file: agents.md" state:open`);
+        const search = await gh(`/search/issues?q=${query}`);
+        if (search && search.items) existingIssue = search.items.find(i => i.title === '[TD-BOT] Missing file: agents.md');
+      } catch(e) { console.warn('Issue search failed:', e.message); }
+      if (existingIssue) {
+        notify('info', `Issue already exists (#${existingIssue.number}).`);
+        window.open(existingIssue.html_url, '_blank');
+        return false;
+      }
+
+      // Ensure label exists (non-blocking if fails)
+      await this.ensureAgentsLabelExists(owner, repo, gh, notify);
+
+      notify('info','Creating issue (attempting Copilot assignment)...');
+      const title = '[TD-BOT] Missing file: agents.md';
+      const body = [
+        'Please scan the repository and README and generate a suitable `agents.md` respecting the format at https://agents.md/.',
+        '',
+        '### Checklist',
+        '- [ ] Create `agents.md` at repo root with a top-level `# Agents` heading',
+        '- [ ] Include a `## Agents` section',
+        '- [ ] Add a markdown table with columns: Name | Description | Inputs | Outputs | Permissions',
+        '- [ ] Populate rows for each identified agent (existing automation, workflows, scripts, tools)',
+        '- [ ] Ensure Inputs/Outputs are explicit and actionable',
+        '- [ ] Use least-privilege scopes in the Permissions column',
+        '- [ ] Validate table formatting against https://agents.md/ guidance',
+        '- [ ] Link any related workflows / scripts for traceability',
+        '',
+        '### Notes',
+        '- Prefer concise descriptions (1–2 sentences) per agent',
+        '- Group future agents logically (e.g., provisioning, validation, analysis)',
+        '- Flag any permissions that may need security review',
+        '',
+        'Generated by Template Doctor request.'
+      ].join('\n');
+
+      let created;
+      const ghClient = window.GitHubClient;
+      if (ghClient && typeof ghClient.createIssueGraphQL === 'function') {
+        try {
+          // Ensure label exists before invoking GraphQL (GraphQL path won't auto-create)
+          if (typeof ghClient.ensureLabelsExist === 'function') {
+            try { await ghClient.ensureLabelsExist(owner, repo, ['template-doctor-agents-compliance']); } catch(_) {}
+          }
+          const gqlIssue = await ghClient.createIssueGraphQL(owner, repo, title, body, ['template-doctor-agents-compliance']);
+          created = { number: gqlIssue.number, html_url: gqlIssue.url, title: gqlIssue.title };
+          notify('success', `Issue created & assignment attempted: #${created.number}`);
+        } catch(gqlErr) {
+          console.warn('GraphQL issue creation failed, falling back to REST:', gqlErr.message);
+        }
+      }
+      if (!created) {
+        try {
+          created = await gh(`/repos/${owner}/${repo}/issues`, 'POST', { title, body, assignees: ['copilot-agent-swe'], labels: ['template-doctor-agents-compliance'] });
+        } catch(assignErr) {
+          console.warn('REST issue creation with bot assignee failed, retrying simplified:', assignErr.message);
+          try {
+            created = await gh(`/repos/${owner}/${repo}/issues`, 'POST', { title, body, labels: ['template-doctor-agents-compliance'] });
+          } catch(labelErr) {
+            console.warn('Retry without label:', labelErr.message);
+            created = await gh(`/repos/${owner}/${repo}/issues`, 'POST', { title, body });
+          }
+        }
+        notify('success', `Issue created (REST fallback): #${created.number}`);
+      }
+      // Cleanup confirmation state
+      window.__TD_agentsIssueConfirmVisible = false;
+      sessionStorage.removeItem('__TD_agentsIssuePending');
+      const box = document.querySelector('.agents-issue-confirm');
+      if (box) box.remove();
+      const issueEl = document.querySelector('li.issue-item.agents-missing');
+      if (issueEl) {
+        const actions = issueEl.querySelector('.item-actions');
+        if (actions) actions.innerHTML = `<a href="${created.html_url}" target="_blank" class="item-link"><i class='fab fa-github'></i> View Issue #${created.number}</a>`;
+        const titleEl = issueEl.querySelector('.item-title');
+        if (titleEl) titleEl.textContent = 'agents.md issue created';
+        issueEl.style.borderLeftColor = '#ff9800';
+      }
+      const tileBtn = document.querySelector('.category-breakdown .tile[data-category="agents"] .agents-action');
+      if (tileBtn) {
+        tileBtn.textContent = 'Merge it and rescan';
+        tileBtn.onclick = () => {
+          window.open(created.html_url, '_blank');
+          try { if (typeof window.analyzeRepo === 'function') { setTimeout(() => window.analyzeRepo(window.reportData.repoUrl), 300); } } catch(_) {}
+        };
+        tileBtn.style.background = '#ff9800';
+        tileBtn.style.border = '1px solid #ff9800';
+      }
+      return false;
+    };
+
+    // Public entry for creating agents.md issue (confirm flow)
+    this.createAgentsMdIssue = async function(evt, confirmed) {
+      try { if (evt) evt.preventDefault(); } catch(_) {}
+      try {
+        if (!window.GitHubClient || !window.GitHubClient.auth?.isAuthenticated()) {
+          if (window.NotificationSystem) window.NotificationSystem.showError('agents.md','Sign in with GitHub first.',6000); else console.error('Sign in with GitHub first.');
+          return false;
+        }
+        const repoUrl = window.reportData?.repoUrl || '';
+        const m = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)(?:\.git)?/i);
+        if (!m) { if (window.NotificationSystem) window.NotificationSystem.showError('agents.md','Cannot parse repository URL.',6000); else console.error('Cannot parse repository URL.'); return false; }
+        const owner = m[1];
+        const repo = m[2];
+        const token = (window.GitHubClient.auth.getToken && window.GitHubClient.auth.getToken()) || window.GitHubClient.auth.token;
+        if (!token) { if (window.NotificationSystem) window.NotificationSystem.showError('agents.md','Missing auth token.',6000); else console.error('Missing auth token.'); return false; }
+        const notify = (type,msg) => { if (window.NotificationSystem) { if (type==='info') window.NotificationSystem.showInfo('agents.md', msg, 5000); else if (type==='error') window.NotificationSystem.showError('agents.md', msg, 8000); else window.NotificationSystem.showSuccess('agents.md', msg, 8000);} else { console.log(`[agents.md ${type}]`, msg); } };
+
+        if (!confirmed) {
+          // Show confirmation UI if not already visible
+            if (!window.__TD_agentsIssueConfirmVisible) {
+              this.showAgentsIssueConfirmation({ owner, repo, notify });
+              notify('info','Review and confirm to create the agents.md issue.');
+            } else {
+              // Already visible; ignore extra clicks on base button
+            }
+          return false;
+        }
+        // Proceed with actual creation
+        return this._actuallyCreateAgentsMdIssue(owner, repo, token, notify);
+      } catch(e) {
+        console.error('createAgentsMdIssue flow error', e);
+        if (window.NotificationSystem) window.NotificationSystem.showError('agents.md','Failed: ' + e.message, 8000);
+        return false;
+      }
+    };
+    window.createAgentsMdIssue = (e, confirmed) => { return window.DashboardRenderer.createAgentsMdIssue(e, confirmed); };
 
     /**
      * Setup event listeners for action buttons

@@ -1,4 +1,6 @@
-# Azure Developer## Overview
+# Azure Developer
+
+## Overview
 
 Template Doctor supports an optional, globally-configurable Azure Developer CLI (AZD) analysis mode and an AI model deprecation check. These work together to provide targeted validations when the deployment method is Azure Developer CLI.
 
