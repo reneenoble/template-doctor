@@ -11,5 +11,18 @@
   "requireAuthForResults": true,
   "autoSaveResults": false,
   "archiveEnabled": false,
-  "archiveCollection": "aigallery"
+  "archiveCollection": "aigallery",
+  "deprecatedModels": [
+    "N/A",
+    "Cohere Command R 08-2024",
+    "Cohere Command R+ 08-2024",
+    "Cohere-rerank-v3.5",
+    "DeepSeek-V3-0324",
+    "Meta-Llama-3.1-8B-Instruct",
+    "Llama-3.3-70B-Instruct",
+    "Phi-4",
+    "Phi-4-mini-instruct",
+    "Mistral-small-2503",
+    "Mistral-medium-2505"
+  ]
 }

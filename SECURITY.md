@@ -6,6 +6,7 @@ Microsoft takes the security of our software products and services seriously, wh
 
 If you believe you have found a security vulnerability in any Microsoft-owned repository that meets [Microsoft's definition of a security vulnerability](https://aka.ms/securityvuln), please report it to us as described below.
 
+
 ## Reporting Security Issues
 
 **Please do not report security vulnerabilities through public GitHub issues.**
@@ -38,4 +39,6 @@ We prefer all communications to be in English.
 
 Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://www.microsoft.com/msrc/cvd).
 
+
 <!-- END MICROSOFT SECURITY.MD BLOCK -->
+
