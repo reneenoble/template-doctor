@@ -1,0 +1,74 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2025-09-14T23:16:33.277595926Z",
+  "ArtifactName": "https://github.com/Azure-Samples/pizza-mcp-agents",
+  "ArtifactType": "repository",
+  "Metadata": {
+    "RepoURL": "https://github.com/Azure-Samples/pizza-mcp-agents",
+    "Branch": "main",
+    "Commit": "ed10c605ecc8ebd29a734621ebd7f2abe30e0e52",
+    "CommitMsg": "chore: fix output hints",
+    "Author": "sinedied \u003cnoda@free.fr\u003e",
+    "Committer": "sinedied \u003cnoda@free.fr\u003e"
+  },
+  "Results": [
+    {
+      "Target": "src/pizza-api/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm"
+    },
+    {
+      "Target": "src/pizza-mcp/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm"
+    },
+    {
+      "Target": "src/pizza-webapp/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm"
+    },
+    {
+      "Target": "src/registration-api/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm"
+    },
+    {
+      "Target": "src/registration-webapp/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm"
+    },
+    {
+      "Target": "src/pizza-mcp/Dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 26,
+        "Failures": 1
+      },
+      "Misconfigurations": [
+        {
+          "Type": "Dockerfile Security Check",
+          "ID": "DS026",
+          "AVDID": "AVD-DS-0026",
+          "Title": "No HEALTHCHECK defined",
+          "Description": "You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.",
+          "Message": "Add HEALTHCHECK instruction in your Dockerfile",
+          "Namespace": "builtin.dockerfile.DS026",
+          "Query": "data.builtin.dockerfile.DS026.deny",
+          "Resolution": "Add HEALTHCHECK instruction in Dockerfile",
+          "Severity": "LOW",
+          "PrimaryURL": "https://avd.aquasec.com/misconfig/ds026",
+          "References": [
+            "https://blog.aquasec.com/docker-security-best-practices",
+            "https://avd.aquasec.com/misconfig/ds026"
+          ],
+          "Status": "FAIL",
+          "CauseMetadata": {
+            "Provider": "Dockerfile",
+            "Service": "general"
+          }
+        }
+      ]
+    }
+  ]
+}

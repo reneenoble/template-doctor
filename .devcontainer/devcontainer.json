@@ -24,7 +24,8 @@
 				"ms-azuretools.vscode-azurefunctions",
 				"ms-azuretools.vscode-azurecontainerapps",
 				"ms-azuretools.vscode-bicep",
-				"ms-azuretools.azure-dev"
+				"ms-azuretools.azure-dev",
+				"humao.rest-client"
 			]
 		}
 	}

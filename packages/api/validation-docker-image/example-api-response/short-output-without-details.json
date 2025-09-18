@@ -1,0 +1,177 @@
+{
+  "templateUrl": "azure-samples/azure-search-static-web-app",
+  "runId": "69462a97-f9f6-4499-bfa9-3ee5a2745c0b",
+  "workflowRunUrl": "https://github.com/diberry/template-doctor/actions/runs/17837945410",
+  "complianceResults": {
+    "repositoryScan": {
+      "totalMisconfigurations": 0,
+      "criticalMisconfigurations": 0,
+      "highMisconfigurations": 0,
+      "mediumMisconfigurations": 0,
+      "lowMisconfigurations": 0,
+      "misconfigurationDetails": [],
+      "totalVulnerabilities": 4,
+      "criticalVulns": 1,
+      "highVulns": 3,
+      "mediumVulns": 0,
+      "lowVulns": 0,
+      "vulnerabilityDetails": [],
+      "secretsFound": 0,
+      "licenseIssues": 0,
+      "secretDetails": [],
+      "licenseDetails": [],
+      "artifacts": {
+        "trivy-repo-scan.json": {
+          "filename": "trivy-repo-scan.json",
+          "artifactName": "https://github.com/azure-samples/azure-search-static-web-app",
+          "artifactType": "repository",
+          "imageId": "",
+          "repository": "",
+          "tag": "",
+          "digest": "",
+          "metadata": {},
+          "os": {
+            "family": "",
+            "name": "",
+            "version": ""
+          },
+          "vulnerabilities": {
+            "total": 4,
+            "critical": 1,
+            "high": 3,
+            "medium": 0,
+            "low": 0,
+            "details": []
+          },
+          "misconfigurations": {
+            "total": 0,
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+            "details": []
+          },
+          "secrets": {
+            "count": 0,
+            "details": []
+          },
+          "licenses": {
+            "count": 0,
+            "details": []
+          }
+        }
+      },
+      "artifactCount": 1,
+      "artifactName": "https://github.com/azure-samples/azure-search-static-web-app",
+      "artifactType": "repository",
+      "imageId": "",
+      "repository": "",
+      "tag": "",
+      "digest": "",
+      "os": {
+        "family": "",
+        "name": "",
+        "version": ""
+      }
+    },
+    "imageScans": [
+      {
+        "totalMisconfigurations": 13,
+        "criticalMisconfigurations": 2,
+        "highMisconfigurations": 4,
+        "mediumMisconfigurations": 2,
+        "lowMisconfigurations": 5,
+        "misconfigurationDetails": [],
+        "totalVulnerabilities": 1370,
+        "criticalVulns": 4,
+        "highVulns": 178,
+        "mediumVulns": 633,
+        "lowVulns": 552,
+        "vulnerabilityDetails": [],
+        "secretsFound": 0,
+        "licenseIssues": 1481,
+        "secretDetails": [],
+        "licenseDetails": [],
+        "artifacts": {
+          "mcr.microsoft.com_devcontainers_dotnet_1-9.0-bookworm.json": {
+            "filename": "mcr.microsoft.com_devcontainers_dotnet_1-9.0-bookworm.json",
+            "artifactName": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
+            "artifactType": "container_image",
+            "imageId": "",
+            "repository": "",
+            "tag": "",
+            "digest": "",
+            "metadata": {},
+            "os": {
+              "family": "",
+              "name": "",
+              "version": ""
+            },
+            "vulnerabilities": {
+              "total": 1370,
+              "critical": 4,
+              "high": 178,
+              "medium": 633,
+              "low": 552,
+              "details": []
+            },
+            "misconfigurations": {
+              "total": 13,
+              "critical": 2,
+              "high": 4,
+              "medium": 2,
+              "low": 5,
+              "details": []
+            },
+            "secrets": {
+              "count": 0,
+              "details": []
+            },
+            "licenses": {
+              "count": 1481,
+              "details": []
+            }
+          }
+        },
+        "artifactCount": 1,
+        "artifactName": "mcr.microsoft.com/devcontainers/dotnet:1-9.0-bookworm",
+        "artifactType": "container_image",
+        "imageId": "",
+        "repository": "",
+        "tag": "",
+        "digest": "",
+        "os": {
+          "family": "",
+          "name": "",
+          "version": ""
+        }
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "scan-started-69462a97-f9f6-4499-bfa9-3ee5a2745c0b",
+      "id": 4048861500,
+      "url": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048861500",
+      "download": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048861500/zip"
+    },
+    {
+      "name": "find-images-azure-samples-azure-search-static-web-app-69462a97-f9f6-4499-bfa9-3ee5a2745c0b",
+      "id": 4048862311,
+      "url": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048862311",
+      "download": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048862311/zip"
+    },
+    {
+      "name": "scan-repo-azure-samples-azure-search-static-web-app-69462a97-f9f6-4499-bfa9-3ee5a2745c0b",
+      "id": 4048862961,
+      "url": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048862961",
+      "download": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048862961/zip"
+    },
+    {
+      "name": "scan-image-mcr.microsoft.com_devcontainers_dotnet_1-9.0-bookworm",
+      "id": 4048873550,
+      "url": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048873550",
+      "download": "https://api.github.com/repos/diberry/template-doctor/actions/artifacts/4048873550/zip"
+    }
+  ]
+}

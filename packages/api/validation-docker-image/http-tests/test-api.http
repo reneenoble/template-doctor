@@ -1,0 +1,7 @@
+POST http://localhost:7071/api/validation-docker-image HTTP/1.1
+content-type: application/json
+
+{
+    "templateUrl": "azure-samples/azure-search-static-web-app",
+    "maxScore": 0
+}

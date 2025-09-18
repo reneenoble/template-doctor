@@ -1,0 +1,17 @@
+@token = {{$dotenv %GITHUB_TOKEN }}
+@workflow_id = validate-docker-images.yml
+
+GET https://api.github.com/repos/diberry/template-doctor/actions/workflows/{{workflow_id}}/runs?per_page=100&branch=main
+Authorization: Bearer {{token}}
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+## Filter by
+## repository.full_name
+
+## Return
+## status
+## conclusion
+## artifacts_url
+## logs_url
