@@ -543,7 +543,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (status === 'missing') {
           tile.style.background = '#ffe5e5';
           tile.style.border = '1px solid #d9534f';
-          
           // Inject action button if not present
           if (!tile.querySelector('.agents-action')) {
             const btn = document.createElement('button');
@@ -1133,6 +1132,8 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .join('');
     };
+
+    // (Removed old PR generation path in favor of issue-based workflow)
 
     /**
      * Renders HTML for passed items

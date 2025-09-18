@@ -14,7 +14,8 @@
         "setup:uami": "bash ./scripts/setup.sh",
         "test": "npm run -w packages/app test --",
         "test:ui": "npm run -w packages/app test:ui --",
-        "test:debug": "npm run -w packages/app test:debug --"
+        "test:debug": "npm run -w packages/app test:debug --",
+        "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js"
     },
     "keywords": [
         "azd",
