@@ -44,16 +44,15 @@
   }
 
   // Hard fallback: if nothing loaded dynamically, embed a static snapshot so the UI isn't empty.
-  if ((window.__TD_DYNAMIC_RESULTS == null || window.__TD_DYNAMIC_RESULTS.length === 0) && window.templatesData.length === 0) {
+  // Check for disable fallback flag - Default to disabled in test/development environments
+  const disableFallback = typeof cfg.disableFallbackTemplates === 'boolean' ? 
+    cfg.disableFallbackTemplates : 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
+  if (!disableFallback && (window.__TD_DYNAMIC_RESULTS == null || window.__TD_DYNAMIC_RESULTS.length === 0) && window.templatesData.length === 0) {
     console.warn('[index-data] Dynamic meta files appear to have NOT loaded (dynamicCount=0). Using embedded fallback meta.');
-    const fallbackMeta = [
-      {"timestamp":"2025-09-01T12:54:12.843Z","repoUrl":"https://github.com/anfibiacreativa/rag-postgres-openai-python","ruleSet":"dod","dashboardPath":"1756731277912-dashboard.html","dataPath":"1756731277912-data.js","compliance":{"percentage":19,"issues":0,"passed":0},"relativePath":"anfibiacreativa-rag-postgres-openai-python/1756731277912-dashboard.html"},
-      {"timestamp":"2025-07-25T10:14:02.435Z","repoUrl":"https://github.com/anfibiacreativa/get-started-with-ai-agents","ruleSet":"partner","dashboardPath":"1753438442443-dashboard.html","dataPath":"1753438442443-data.js","compliance":{"percentage":56,"issues":19,"passed":24},"relativePath":"anfibiacreativa-get-started-with-ai-agents/1753438442443-dashboard.html"},
-      {"timestamp":"2025-07-25T08:38:45.913Z","repoUrl":"https://github.com/anfibiacreativa/openai-langchainjs","ruleSet":"partner","dashboardPath":"1753432725919-dashboard.html","dataPath":"1753432725919-data.js","compliance":{"percentage":60,"issues":6,"passed":9},"relativePath":"anfibiacreativa-openai-langchainjs/1753432725919-dashboard.html"},
-      {"timestamp":"2025-07-24T19:00:06.379Z","repoUrl":"https://github.com/anfibiacreativa/todo-csharp-sql-swa-func","ruleSet":"dod","dashboardPath":"1753383606390-dashboard.html","dataPath":"1753383606390-data.js","compliance":{"percentage":51,"issues":40,"passed":41},"relativePath":"anfibiacreativa-todo-csharp-sql-swa-func/1753383606390-dashboard.html"},
-      {"timestamp":"2025-07-24T16:34:48.932Z","repoUrl":"https://github.com/anfibiacreativa/todo-nodejs-mongo-coreconf","ruleSet":"dod","dashboardPath":"1753374888936-dashboard.html","dataPath":"1753374888936-data.js","compliance":{"percentage":52,"issues":12,"passed":13},"relativePath":"anfibiacreativa-todo-nodejs-mongo-coreconf/1753374888936-dashboard.html"},
-      {"timestamp":"2025-07-25T06:06:06.910Z","repoUrl":"https://github.com/anfibiacreativa/todo-nodejs-mongo-swa","ruleSet":"dod","dashboardPath":"1753423566922-dashboard.html","dataPath":"1753423566922-data.js","compliance":{"percentage":52,"issues":16,"passed":17},"relativePath":"anfibiacreativa-todo-nodejs-mongo-swa/1753423566922-dashboard.html"}
-    ];
+    // Empty fallback meta - removed sample data
+    const fallbackMeta = [];
     window.templatesData.push(...fallbackMeta);
     window.__TD_FALLBACK_EMBEDDED = true;
     

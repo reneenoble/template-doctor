@@ -12,5 +12,6 @@
   "autoSaveResults": false,
   "archiveEnabled": false,
   "archiveCollection": "aigallery",
-  "dispatchTargetRepo": "Template-Doctor/template-doctor"
+  "dispatchTargetRepo": "Template-Doctor/template-doctor",
+  "disableFallbackTemplates": true
 }

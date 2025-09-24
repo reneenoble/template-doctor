@@ -299,15 +299,51 @@ class TemplateAnalyzer {
     console.log(`Analyzing repository ${repoInfo.fullName} with rule set: ${ruleSet}`);
 
     try {
-      // Get default branch
-      const defaultBranch = await this.githubClient.getDefaultBranch(repoInfo.owner, repoInfo.repo);
+      // Determine if we should force fork flow: presence of fork=1 flag OR owner mismatch.
+      const urlHasForkFlag = /[?&]fork=1\b/.test(repoUrl);
+      const currentUsername = this.githubClient.getCurrentUsername
+        ? this.githubClient.getCurrentUsername()
+        : this.githubClient.auth?.getUsername();
+      const ownerMismatch = currentUsername && repoInfo.owner && repoInfo.owner.toLowerCase() !== currentUsername.toLowerCase();
 
-      // List all files in the repository
-      const files = await this.githubClient.listAllFiles(
+      // Acquire accessible repo meta without triggering upstream GET for org repos.
+      const { repo: accessibleRepoMeta } = await this.githubClient.ensureAccessibleRepo(
         repoInfo.owner,
         repoInfo.repo,
-        defaultBranch,
+        { forceFork: urlHasForkFlag || ownerMismatch }
       );
+
+      // Use accessible (fork or self) namespace for all further content operations.
+      const analysisOwner = accessibleRepoMeta.owner?.login || repoInfo.owner;
+      const analysisRepo = accessibleRepoMeta.name || repoInfo.repo;
+
+      // Always prefer scanning 'main' branch to standardize results. If missing, fallback to repo default.
+      let defaultBranch = 'main';
+      let files;
+      const listAllWithRetry = async (ref) => {
+        try {
+          return await this.githubClient.listAllFiles(analysisOwner, analysisRepo, ref);
+        } catch (err) {
+          // One retry after short delay (fork may still be indexing)
+          await new Promise((r) => setTimeout(r, 1200));
+            return await this.githubClient.listAllFiles(analysisOwner, analysisRepo, ref);
+        }
+      };
+      try {
+        files = await listAllWithRetry('main');
+      } catch (e) {
+        // Fallback to fork/self default branch metadata if 'main' not present.
+        defaultBranch = this.githubClient.getDefaultBranchFromMeta(accessibleRepoMeta);
+        if (defaultBranch !== 'main') {
+          try {
+            files = await listAllWithRetry(defaultBranch);
+          } catch (inner) {
+            throw inner; // propagate actual failure
+          }
+        } else {
+          throw e; // 'main' expected but retrieval failed; rethrow
+        }
+      }
 
       // Start analyzing
       const issues = [];
@@ -327,6 +363,69 @@ class TemplateAnalyzer {
         testing: { enabled: enabled.testing, issues: [], compliant: [], summary: '', percentage: 0 },
         ai: { enabled: azdGloballyEnabled, issues: [], compliant: [], summary: '', percentage: 0 },
       };
+      
+      // Check repository metadata (description and topics)
+      if (enabled.repositoryManagement) {
+        try {
+          // Reuse already-fetched accessible repo metadata; do not re-fetch upstream org.
+          const repoMetadata = accessibleRepoMeta;
+          
+          // Check for repository description
+          if (!repoMetadata.description || repoMetadata.description.trim() === '') {
+            categories.repositoryManagement.issues.push({
+              id: 'missing-repo-description',
+              severity: 'error',
+              message: 'Repository description is missing',
+              error: 'The repository should have a clear description explaining the purpose and technologies used'
+            });
+          } else {
+            categories.repositoryManagement.compliant.push({
+              id: 'repo-description',
+              category: 'repositoryMetadata',
+              message: 'Repository has a description',
+              details: {
+                description: repoMetadata.description
+              }
+            });
+          }
+          
+          // Check for required topics
+          if (config.repositoryTopics && Array.isArray(config.repositoryTopics)) {
+            const repoTopics = repoMetadata.topics || [];
+            
+            const missingTopics = config.repositoryTopics.filter(topic => 
+              !repoTopics.some(repoTopic => repoTopic.toLowerCase() === topic.toLowerCase())
+            );
+            
+            if (missingTopics.length > 0) {
+              categories.repositoryManagement.issues.push({
+                id: 'missing-repo-topics',
+                severity: 'error',
+                message: `Missing required topics: ${missingTopics.join(', ')}`,
+                error: `Repository should include the following topics: ${config.repositoryTopics.join(', ')}`
+              });
+            } else {
+              categories.repositoryManagement.compliant.push({
+                id: 'repo-topics',
+                category: 'repositoryMetadata',
+                message: 'Repository has all required topics',
+                details: {
+                  requiredTopics: config.repositoryTopics,
+                  allTopics: repoTopics
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check repository metadata:', err);
+          categories.repositoryManagement.issues.push({
+            id: 'repo-metadata-error',
+            severity: 'warning',
+            message: 'Could not verify repository metadata (description and topics)',
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+      }
 
       // Run repository-level configuration validations early (docs-config rules)
       // Only run docs-specific repo validations when the docs ruleset is selected
@@ -436,6 +535,112 @@ class TemplateAnalyzer {
         }
       }
 
+      // Check for issue templates
+      if (enabled.repositoryManagement) {
+        // Check various patterns for issue templates
+        const hasIssueTemplate = normalized.some(f => 
+          f.includes('.github/issue_template/') || // directory with templates
+          f === '.github/issue_template.md' || // single template file
+          f === '.github/issue_template.yml' || // single YAML template file
+          f === '.github/issue_template.yaml' || // single YAML template file
+          f.includes('.github/ISSUE_TEMPLATE/') || // case variations
+          f === '.github/ISSUE_TEMPLATE.md' ||
+          f === '.github/ISSUE_TEMPLATE.yml' ||
+          f === '.github/ISSUE_TEMPLATE.yaml'
+        );
+        
+        if (!hasIssueTemplate) {
+          categories.repositoryManagement.issues.push({
+            id: 'missing-issue-template',
+            severity: 'warning',
+            message: 'Missing GitHub issue templates',
+            error: 'Repository should include issue templates to standardize bug reports and feature requests'
+          });
+        } else {
+          categories.repositoryManagement.compliant.push({
+            id: 'issue-template',
+            category: 'repositoryManagement',
+            message: 'Repository has GitHub issue templates',
+            details: {
+              found: true
+            }
+          });
+        }
+      }
+
+      // Check for Dev Container configuration
+      if (enabled.repositoryManagement) {
+        // Check for .devcontainer folder or devcontainer.json file
+        const hasDevContainer = normalized.some(f => 
+          f.startsWith('.devcontainer/') || 
+          f === '.devcontainer.json'
+        );
+        
+        if (!hasDevContainer) {
+          categories.repositoryManagement.issues.push({
+            id: 'missing-devcontainer',
+            severity: 'warning',
+            message: 'Missing Dev Container configuration',
+            error: 'Repository should include a .devcontainer folder with configuration for consistent development environments'
+          });
+        } else {
+          // Check if devcontainer installs or includes azd
+          try {
+            // Get devcontainer.json content
+            const devContainerFile = files.find(f => 
+              f.toLowerCase() === '.devcontainer/devcontainer.json' || 
+              f.toLowerCase() === '.devcontainer.json'
+            );
+            
+            if (devContainerFile) {
+              const devContainerContent = await this.githubClient.getFileContent(
+                repoInfo.owner,
+                repoInfo.repo,
+                devContainerFile
+              );
+              
+              const hasAzdInstall = devContainerContent.includes('azd') || 
+                                    devContainerContent.includes('Azure Developer CLI');
+              
+              if (hasAzdInstall) {
+                categories.repositoryManagement.compliant.push({
+                  id: 'devcontainer-azd',
+                  category: 'repositoryManagement',
+                  message: 'Dev Container includes Azure Developer CLI (azd)',
+                  details: {
+                    file: devContainerFile
+                  }
+                });
+              } else {
+                categories.repositoryManagement.issues.push({
+                  id: 'devcontainer-missing-azd',
+                  severity: 'warning',
+                  message: 'Dev Container configuration might not include azd',
+                  error: 'The .devcontainer configuration should include the Azure Developer CLI (azd) for a consistent development experience'
+                });
+              }
+            } else {
+              categories.repositoryManagement.compliant.push({
+                id: 'devcontainer-exists',
+                category: 'repositoryManagement',
+                message: 'Dev Container configuration exists',
+                details: {
+                  found: true
+                }
+              });
+            }
+          } catch (err) {
+            console.error('Failed to check devcontainer content:', err);
+            categories.repositoryManagement.issues.push({
+              id: 'devcontainer-check-error',
+              severity: 'warning',
+              message: 'Could not verify if Dev Container includes azd',
+              error: err instanceof Error ? err.message : String(err)
+            });
+          }
+        }
+      }
+
       // Check README.md content for required headings and architecture diagram
       if (
         enabled.repositoryManagement &&
@@ -497,26 +702,31 @@ class TemplateAnalyzer {
             const foundResources = [];
             const missingResources = [];
 
-            for (const resource of config.bicepChecks.requiredResources) {
-              if (!content.includes(resource)) {
-                categories.deployment.issues.push({
-                  id: `bicep-missing-${resource.toLowerCase()}`,
-                  severity: 'error',
-                  message: `Missing resource "${resource}" in ${file}`,
-                  error: `File ${file} does not contain required resource ${resource}`,
-                });
-                missingResources.push(resource);
-              } else {
-                categories.deployment.compliant.push({
-                  id: `bicep-resource-${resource.toLowerCase()}-${file}`,
-                  category: 'bicepResource',
-                  message: `Found required resource "${resource}" in ${file}`,
-                  details: {
-                    resource: resource,
-                    file: file,
-                  },
-                });
-                foundResources.push(resource);
+            // Only check for required resources if the array is not empty
+            // This prevents requiring specific resources in all Bicep files
+            if (config.bicepChecks.requiredResources && config.bicepChecks.requiredResources.length > 0) {
+              for (const resource of config.bicepChecks.requiredResources) {
+                if (!content.includes(resource)) {
+                  categories.deployment.issues.push({
+                    id: `bicep-missing-${resource.toLowerCase()}`,
+                    severity: 'error',
+                    message: `Missing required resource "${resource}" in ${file}`,
+                    error: `File ${file} does not contain the required resource "${resource}" as specified in the configuration`,
+                    recommendation: `Add the resource "${resource}" to this Bicep file or update the configuration if this resource is not required in all Bicep files.`
+                  });
+                  missingResources.push(resource);
+                } else {
+                  categories.deployment.compliant.push({
+                    id: `bicep-resource-${resource.toLowerCase()}-${file}`,
+                    category: 'bicepResource',
+                    message: `Found required resource "${resource}" in ${file}`,
+                    details: {
+                      resource: resource,
+                      file: file,
+                    },
+                  });
+                  foundResources.push(resource);
+                }
               }
             }
 
@@ -639,6 +849,9 @@ class TemplateAnalyzer {
         ...categories.testing.compliant,
         ...categories.ai.compliant,
       ];
+      
+      // Enhance security recommendations with clearer guidance
+      this.enhanceSecurityRecommendations(allIssues);
 
       // Calculate category summaries
       Object.keys(categories).forEach((key) => {
@@ -819,6 +1032,7 @@ class TemplateAnalyzer {
     // Skip if security checks are not enabled in config
     const config = this.getConfig();
     const securityChecks = config.bicepChecks?.securityBestPractices;
+    
     if (!securityChecks) {
       return;
     }
@@ -838,6 +1052,7 @@ class TemplateAnalyzer {
     const hasSensitiveAuth = authMethods.length > 0;
     const hasSecuritySensitiveResource = hasKeyVault || hasContainerRegistry;
     
+    // If the file uses Managed Identity, that's a compliant pattern - always acknowledge good practices
     if (hasManagedIdentity) {
       compliant.push({
         id: `bicep-uses-managed-identity-${file}`,
@@ -850,41 +1065,205 @@ class TemplateAnalyzer {
       });
     }
 
-    // Only suggest Managed Identity if this specific file contains sensitive auth patterns
+    // Only flag insecure auth methods if they're actually detected
     if (securityChecks.detectInsecureAuth && hasSensitiveAuth) {
       const authMethodsList = authMethods.join(', ');
+      const errorCode = 'SEC-AUTH-001';
 
       issues.push({
         id: `bicep-alternative-auth-${file}`,
+        code: errorCode, 
         severity: 'warning',
-        message: `Recommendation: Replace ${authMethodsList} with Managed Identity in ${file}`,
-        error: `File ${file} uses ${authMethodsList} for authentication instead of Managed Identity`,
-        recommendation: `Consider replacing ${authMethodsList} with Managed Identity in this specific module for better security.`,
-        securityIssue: true,  // Mark as security issue explicitly
+        message: `${errorCode}: Detected ${authMethodsList} in ${file}`,
+        error: `File ${file} uses ${authMethodsList} for authentication which may expose secrets`,
+        recommendation: `Replace ${authMethodsList} with Managed Identity or Key Vault references for improved security.`,
+        impact: 'Using explicit credentials increases risk of credential leakage, credential rotation complexity, and violates security best practices for Azure resources.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview',
+        remediationSteps: [
+          "1. Refactor authentication to use Managed Identity where supported",
+          "2. For services that don't support Managed Identity, store secrets in Key Vault",
+          "3. Use Key Vault references to access secrets securely at runtime",
+          "4. Document any security limitations in SECURITY.md"
+        ],
+        detailedRemediation: `## Using Managed Identity Instead of Keys/Secrets
+
+### Example Conversion
+\`\`\`bicep
+// BEFORE - Using connection string or keys
+resource webApp 'Microsoft.Web/sites@2021-03-01' = {
+  name: 'myApp'
+  properties: {
+    siteConfig: {
+      appSettings: [
+        {
+          name: 'StorageConnectionString'
+          value: 'DefaultEndpointsProtocol=https;AccountName=mystorageacct;AccountKey=\${listKeys(storageAccount.id, \'2021-09-01\').keys[0].value}'
+        }
+      ]
+    }
+  }
+}
+
+// Attach to window if in browser environment (mirrors github-client-new behavior)
+try {
+  if (typeof window !== 'undefined' && !window.TemplateAnalyzer) {
+    window.TemplateAnalyzer = TemplateAnalyzer; // expose constructor for tests
+  }
+} catch(_) {}
+
+// AFTER - Using Managed Identity
+resource webApp 'Microsoft.Web/sites@2021-03-01' = {
+  name: 'myApp'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    siteConfig: {
+      appSettings: [
+        {
+          name: 'StorageAccountName'
+          value: storageAccount.name
+        }
+      ]
+    }
+  }
+}
+
+// Add role assignment for the identity
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(webApp.id, storageAccount.id, 'storage-blob-data-contributor')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
+    principalId: webApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+\`\`\``,
+        securityIssue: true,
       });
     }
 
-    // Suggest adding auth if this specific module has KeyVault but no Managed Identity
-    if (securityChecks.checkAnonymousAccess && !hasManagedIdentity && hasKeyVault) {
+    // Only flag KeyVault without auth if it's actually present AND there's no Managed Identity
+    if (securityChecks.checkAnonymousAccess && hasKeyVault && !hasManagedIdentity) {
+      const errorCode = 'SEC-KV-001';
+      
       issues.push({
         id: `bicep-missing-auth-keyVault-${file}`,
+        code: errorCode,
         severity: 'warning',
-        message: `Recommendation: Add Managed Identity for Key Vault in ${file}`,
-        error: `File ${file} contains Key Vault resource without Managed Identity authentication`,
-        recommendation: `Configure Managed Identity for secure access to Key Vault in this specific module.`,
-        securityIssue: true,  // Mark as security issue explicitly
+        message: `${errorCode}: Key Vault found without Managed Identity in ${file}`,
+        error: `Key Vault resource in ${file} doesn't appear to use Managed Identity for access`,
+        recommendation: `Add Managed Identity configuration for secure Key Vault access.`,
+        impact: 'Without Managed Identity, applications may use less secure authentication methods to access Key Vault secrets, increasing the risk of credential exposure.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/key-vault/general/authentication',
+        remediationSteps: [
+          "1. Add identity block to resources accessing Key Vault",
+          "2. Configure appropriate Key Vault access policies",
+          "3. Use the identity for Key Vault operations instead of keys/secrets",
+          "4. Document the security model in SECURITY.md"
+        ],
+        detailedRemediation: `## Configuring Key Vault Access with Managed Identity
+
+### Example Code
+\`\`\`bicep
+// Define the application with a Managed Identity
+resource webApp 'Microsoft.Web/sites@2021-03-01' = {
+  name: 'myApp'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  // other properties...
+}
+
+// Create Key Vault with access policy for the application
+resource keyVault 'Microsoft.KeyVault/vaults@2021-11-01-preview' = {
+  name: 'myKeyVault'
+  location: location
+  properties: {
+    tenantId: tenant().tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    accessPolicies: [
+      {
+        tenantId: tenant().tenantId
+        objectId: webApp.identity.principalId
+        permissions: {
+          secrets: [
+            'get'
+            'list'
+          ]
+        }
+      }
+    ]
+  }
+}
+\`\`\``,
+        securityIssue: true,
       });
     }
     
-    // Suggest adding auth if this specific module has Container Registry but no Managed Identity
-    if (securityChecks.checkAnonymousAccess && !hasManagedIdentity && hasContainerRegistry) {
+    // Only flag Container Registry without auth if it's actually present AND there's no Managed Identity
+    if (securityChecks.checkAnonymousAccess && hasContainerRegistry && !hasManagedIdentity) {
+      const errorCode = 'SEC-ACR-001';
+      
       issues.push({
         id: `bicep-missing-auth-containerRegistry-${file}`,
+        code: errorCode,
         severity: 'warning',
-        message: `Recommendation: Add Managed Identity for Container Registry in ${file}`,
-        error: `File ${file} contains Container Registry resource without Managed Identity authentication`,
-        recommendation: `Configure Managed Identity for secure access to Container Registry in this specific module.`,
-        securityIssue: true,  // Mark as security issue explicitly
+        message: `${errorCode}: Container Registry found without Managed Identity in ${file}`,
+        error: `Container Registry in ${file} doesn't appear to use Managed Identity for access`,
+        recommendation: `Add Managed Identity configuration for secure Container Registry access.`,
+        impact: 'Using admin credentials for Container Registry increases the attack surface and creates a shared credential risk. Managed Identity provides per-resource authentication.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication-managed-identity',
+        remediationSteps: [
+          "1. Add identity block to resources accessing Container Registry",
+          "2. Configure RBAC for Container Registry access",
+          "3. Use the identity for image pulls instead of admin credentials",
+          "4. Document the security model in SECURITY.md"
+        ],
+        detailedRemediation: `## Using Managed Identity with Container Registry
+
+### Example Code
+\`\`\`bicep
+// Define Container Registry with admin disabled
+resource acr 'Microsoft.ContainerRegistry/registries@2021-09-01' = {
+  name: 'myContainerRegistry'
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: false // Disable admin user in favor of RBAC
+  }
+}
+
+// Define container app or other service with identity
+resource containerApp 'Microsoft.App/containerApps@2022-03-01' = {
+  name: 'myContainerApp'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    // configuration
+  }
+}
+
+// Grant AcrPull role to the identity
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerApp.id, acr.id, 'acrpull')
+  scope: acr
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
+    principalId: containerApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+\`\`\``,
+        securityIssue: true,
       });
     }
   }
@@ -935,36 +1314,71 @@ class TemplateAnalyzer {
       return patterns.some(pattern => pattern.test(text));
     };
 
+    // Helper to check if the code is in a commented section - reduce false positives
+    const isInComment = (text, matchIndex) => {
+      // Check if the match is inside a line comment or multi-line comment
+      const lines = text.substring(0, matchIndex).split('\n');
+      const lastLine = lines[lines.length - 1];
+      
+      // Check if it's in a line comment
+      if (lastLine.trim().startsWith('//')) {
+        return true;
+      }
+      
+      // Check for multi-line comments
+      const textBeforeMatch = text.substring(0, matchIndex);
+      const lastCommentStart = textBeforeMatch.lastIndexOf('/*');
+      const lastCommentEnd = textBeforeMatch.lastIndexOf('*/');
+      
+      if (lastCommentStart > lastCommentEnd) {
+        return true;
+      }
+      
+      return false;
+    };
+
     // Define named patterns for connection strings with credentials
     const connectionStringPatterns = [
-      // Pattern 1: Regular property syntax with credentials
-      /connectionString.*=.*['"][^'"]*?(AccountKey=|Password=|UserName=|AccountEndpoint=)/i,
+      // Pattern 1: Regular property syntax with credentials - explicitly look for sensitive parts
+      /connectionString.*=.*['"][^'"]*?(AccountKey=|Password=|pwd=|UserName=|uid=|AccountEndpoint=)[^'"]*?['"]/i,
       // Pattern 2: JSON property syntax with credentials
-      /['"]ConnectionString['"].*=.*['"][^'"]*?(AccountKey=|Password=|UserName=|AccountEndpoint=)/i
+      /['"]ConnectionString['"].*:.*['"][^'"]*?(AccountKey=|Password=|pwd=|UserName=|uid=|AccountEndpoint=)[^'"]*?['"]/i
     ];
     
-    const connectionStringWithCreds = matchesAnyPattern(connectionStringPatterns, content);
-    
-    if (connectionStringWithCreds) {
-      authMethods.push('Connection String with credentials');
+    // Check connection strings with more context
+    for (const pattern of connectionStringPatterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        // Skip if in comment
+        if (!isInComment(content, match.index)) {
+          authMethods.push('Connection String with credentials');
+          break; // Only report once per type
+        }
+      }
     }
 
     // Define named patterns for access keys
     const accessKeyPatterns = [
       // Regular property syntax patterns
-      /accessKey\s*:\s*[^;{}]*listKeys/i,
-      /primaryKey\s*:\s*[^;{}]*listKeys/i,
-      /secondaryKey\s*:\s*[^;{}]*listKeys/i,
+      /accessKey\s*:\s*[^;{}]*listKeys\([^)]*\)/i,
+      /primaryKey\s*:\s*[^;{}]*listKeys\([^)]*\)/i,
+      /secondaryKey\s*:\s*[^;{}]*listKeys\([^)]*\)/i,
       // JSON property syntax patterns
-      /['"]accessKey['"].*:.*listKeys/i,
-      /['"]primaryKey['"].*:.*listKeys/i,
-      /['"]secondaryKey['"].*:.*listKeys/i
+      /['"]accessKey['"].*:.*listKeys\([^)]*\)/i,
+      /['"]primaryKey['"].*:.*listKeys\([^)]*\)/i,
+      /['"]secondaryKey['"].*:.*listKeys\([^)]*\)/i
     ];
     
-    const hasAccessKeys = matchesAnyPattern(accessKeyPatterns, content);
-    
-    if (hasAccessKeys) {
-      authMethods.push('Access Key');
+    // Check access keys with more context
+    for (const pattern of accessKeyPatterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        // Skip if in comment
+        if (!isInComment(content, match.index)) {
+          authMethods.push('Access Key');
+          break; // Only report once per type
+        }
+      }
     }
 
     // Check for KeyVault secrets referenced without Managed Identity
@@ -1007,10 +1421,16 @@ class TemplateAnalyzer {
       /SharedAccessKey\s*:/i
     ];
     
-    const hasSasTokens = matchesAnyPattern(sasTokenPatterns, content);
-    
-    if (hasSasTokens) {
-      authMethods.push('SAS Token');
+    // Check SAS tokens with more context
+    for (const pattern of sasTokenPatterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        // Skip if in comment
+        if (!isInComment(content, match.index)) {
+          authMethods.push('SAS Token');
+          break; // Only report once per type
+        }
+      }
     }
 
     // Define patterns for Storage Account Keys
@@ -1020,10 +1440,16 @@ class TemplateAnalyzer {
       /listKeys\s*\([^)]*['"]Microsoft\.Storage\/storageAccounts/i
     ];
     
-    const hasStorageKeys = matchesAnyPattern(storageKeyPatterns, content);
-    
-    if (hasStorageKeys) {
-      authMethods.push('Storage Account Key');
+    // Check storage keys with more context
+    for (const pattern of storageKeyPatterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        // Skip if in comment
+        if (!isInComment(content, match.index)) {
+          authMethods.push('Storage Account Key');
+          break; // Only report once per type
+        }
+      }
     }
 
     return authMethods;
@@ -1086,6 +1512,196 @@ class TemplateAnalyzer {
         message: 'Repository configuration validation failed',
         error: err instanceof Error ? err.message : String(err),
       });
+    }
+  }
+  
+  /**
+   * Enhance security recommendations with clearer guidance
+   * @param {Array} issues - Array of security issues
+   */
+  enhanceSecurityRecommendations(issues) {
+    if (!issues || !Array.isArray(issues)) return;
+    
+    // Dictionary of error codes and detailed explanations
+    const errorCodeDictionary = {
+      'SEC-AUTH-001': {
+        title: 'Insecure Authentication Method Detected',
+        description: 'The template uses authentication methods that may expose secrets or credentials.',
+        impact: 'High - Exposed credentials could lead to unauthorized access to Azure resources.',
+        bestPractice: 'Use Managed Identity for authentication whenever possible. For services that don\'t support Managed Identity, use Key Vault to store and retrieve secrets securely.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview',
+        remediation: `
+## Remediation Steps:
+1. **Identify the authentication method**: Review where connection strings, access keys, or SAS tokens are used
+2. **Refactor to use Managed Identity**: 
+   \`\`\`bicep
+   resource webapp 'Microsoft.Web/sites@2021-03-01' = {
+     name: webAppName
+     // Add identity block
+     identity: {
+       type: 'SystemAssigned'
+     }
+     properties: {
+       // Other properties...
+     }
+   }
+   \`\`\`
+3. **Use Key Vault references for secrets that can't use Managed Identity**:
+   \`\`\`bicep
+   resource appSettings 'Microsoft.Web/sites/config@2021-03-01' = {
+     name: '\${webapp.name}/appsettings'
+     properties: {
+       'Secret': '@Microsoft.KeyVault(SecretUri=\${keyVault.properties.vaultUri}secrets/mySecret/)'
+     }
+   }
+   \`\`\`
+4. **Document your security approach in SECURITY.md**
+`
+      },
+      'SEC-KV-001': {
+        title: 'Key Vault Without Managed Identity',
+        description: 'A Key Vault resource is present but the template doesn\'t configure Managed Identity for accessing it.',
+        impact: 'High - Without Managed Identity, applications may use less secure methods to access secrets.',
+        bestPractice: 'Configure Managed Identity for any service accessing Key Vault and use RBAC or Access Policies to control permissions.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/key-vault/general/authentication',
+        remediation: `
+## Remediation Steps:
+1. **Add Managed Identity to resource accessing Key Vault**:
+   \`\`\`bicep
+   resource function 'Microsoft.Web/sites@2021-03-01' = {
+     name: functionName
+     kind: 'functionapp'
+     identity: {
+       type: 'SystemAssigned'
+     }
+     // Other properties...
+   }
+   \`\`\`
+
+2. **Configure Key Vault access**:
+   \`\`\`bicep
+   resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2021-06-01-preview' = {
+     name: '\${keyVault.name}/add'
+     properties: {
+       accessPolicies: [
+         {
+           tenantId: subscription().tenantId
+           objectId: myFunction.identity.principalId
+           permissions: {
+             secrets: [
+               'get'
+               'list'
+             ]
+           }
+         }
+       ]
+     }
+   }
+   \`\`\`
+
+3. **Or use RBAC (recommended for newer Key Vaults)**:
+   \`\`\`bicep
+   resource keyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+     name: guid(keyVault.id, myFunction.id, 'Key Vault Secrets User')
+     scope: keyVault
+     properties: {
+       roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+       principalId: myFunction.identity.principalId
+       principalType: 'ServicePrincipal'
+     }
+   }
+   \`\`\`
+`
+      },
+      'SEC-ACR-001': {
+        title: 'Container Registry Without Managed Identity',
+        description: 'A Container Registry is present but the template doesn\'t configure Managed Identity for accessing it.',
+        impact: 'Medium - Without Managed Identity, applications may use admin credentials to access container images.',
+        bestPractice: 'Configure Managed Identity for any service pulling images from Container Registry and use RBAC to control permissions.',
+        documentation: 'https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication-managed-identity',
+        remediation: `
+## Remediation Steps:
+1. **Add Managed Identity to resource accessing Container Registry**:
+   \`\`\`bicep
+   resource aksCluster 'Microsoft.ContainerService/managedClusters@2021-08-01' = {
+     name: clusterName
+     location: location
+     identity: {
+       type: 'SystemAssigned'
+     }
+     // Other properties...
+   }
+   \`\`\`
+
+2. **Configure ACR access with RBAC**:
+   \`\`\`bicep
+   resource acrPullRole 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+     name: guid(containerRegistry.id, aksCluster.id, 'AcrPull')
+     scope: containerRegistry
+     properties: {
+       roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull role
+       principalId: aksCluster.identity.principalId
+       principalType: 'ServicePrincipal'
+     }
+   }
+   \`\`\`
+`
+      }
+    };
+    
+    // Loop through all issues and enhance any security-related ones
+    for (const issue of issues) {
+      if (!issue.securityIssue) continue;
+      
+      // Use error code dictionary if available
+      if (issue.code && errorCodeDictionary[issue.code]) {
+        const errorDetails = errorCodeDictionary[issue.code];
+        issue.title = errorDetails.title;
+        issue.description = errorDetails.description;
+        issue.impact = errorDetails.impact;
+        issue.bestPractice = errorDetails.bestPractice;
+        issue.documentation = errorDetails.documentation;
+        issue.detailedRemediation = errorDetails.remediation;
+        
+        // Keep the existing recommendation if available, but enhance it
+        if (!issue.recommendation) {
+          issue.recommendation = errorDetails.bestPractice;
+        }
+        
+        continue;
+      }
+      
+      // Fall back to type-based enhancements for issues without codes
+      // Detect the type of security issue
+      const isKeyVaultIssue = issue.message?.includes('Key Vault') || issue.error?.includes('Key Vault');
+      const isContainerRegistryIssue = issue.message?.includes('Container Registry') || issue.error?.includes('Container Registry');
+      const hasConnectionString = issue.message?.includes('Connection String') || issue.error?.includes('Connection String');
+      const hasAccessKey = issue.message?.includes('Access Key') || issue.message?.includes('SAS token') || 
+                          issue.error?.includes('Access Key') || issue.error?.includes('SAS token');
+      
+      // Add detailed recommendations based on the issue type
+      if (isKeyVaultIssue) {
+        issue.recommendation = `
+When using Key Vault in production environments:
+1. Use Managed Identity for authentication to Key Vault
+2. Document access policies and RBAC assignments in the README.md
+3. Include Key Vault configuration guidelines in the "Important Security Notice" section
+4. Ensure the SECURITY.md file explains the security controls implemented`;
+      } else if (isContainerRegistryIssue) {
+        issue.recommendation = `
+When using Container Registry in production environments:
+1. Use Managed Identity for authentication to Container Registry
+2. Implement proper RBAC for container image access
+3. Document the container security model in the SECURITY.md file
+4. Ensure the "Important Security Notice" section covers container security considerations`;
+      } else if (hasConnectionString || hasAccessKey) {
+        issue.recommendation = `
+Best practices for secure authentication:
+1. Replace connection strings and access keys with Managed Identity where possible
+2. For services that don't support Managed Identity, store secrets in Key Vault
+3. Document any security limitations in the SECURITY.md file
+4. Add clear security guidance in the "Important Security Notice" section of README.md`;
+      }
     }
   }
 }

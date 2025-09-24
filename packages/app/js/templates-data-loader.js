@@ -24,7 +24,8 @@
 
       // Create a script element to load the index-data.js file
       const script = document.createElement('script');
-      script.src = 'results/index-data.js'; // Relative path to the index-data.js file
+      const cacheBuster = '?_cb=' + new Date().getTime(); // Add cache buster
+      script.src = 'results/index-data.js' + cacheBuster; // Relative path to the index-data.js file
       script.async = true;
       script.onload = function () {
         console.log('[templates-data-loader] Successfully loaded template data');

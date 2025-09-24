@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
           category: 'agents',
           severity: 'error', // promoted severity per requirement B
           message: 'agents.md file is missing (client check)',
-          recommendation: 'Add an agents.md describing available agents following https://agents.md/ specification.'
+          recommendation: 'Add an agents.md describing available agents following the [agents.md specification](https://agents.md) for documenting AI Agents.'
         };
         adaptedData.compliance.issues.push(issue);
         // Ensure categories object exists so tile can later reflect state
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
           severity: 'warning',
           message: 'agents.md present but formatting issues detected (client check)',
           details: problems,
-          recommendation: 'Ensure agents.md contains required heading, section and columns: ' + requiredCols.join(', ')
+          recommendation: 'Ensure agents.md contains required heading, section and columns as per the [agents.md specification](https://agents.md): ' + requiredCols.join(', ')
         };
         adaptedData.compliance.issues.push(issue);
         this.storeAgentsCache(cacheKey, { status: 'invalid', problems, agentCount });
@@ -963,18 +963,31 @@ document.addEventListener('DOMContentLoaded', function () {
       // Always include the external CSS file to ensure latest styling
       const head = document.head || document.getElementsByTagName('head')[0];
       
-      // Check if we've already loaded the external stylesheet
-      let externalStyleLoaded = false;
+      // Check if we've already loaded the external stylesheets
+      let securityStyleLoaded = false;
+      let errorCodesStyleLoaded = false;
       const links = document.getElementsByTagName('link');
-      externalStyleLoaded = Array.from(links).some(link => link.href && link.href.includes('security-pill.css'));
       
-      if (!externalStyleLoaded) {
+      securityStyleLoaded = Array.from(links).some(link => link.href && link.href.includes('security-pill.css'));
+      errorCodesStyleLoaded = Array.from(links).some(link => link.href && link.href.includes('error-codes.css'));
+      
+      if (!securityStyleLoaded) {
         console.log('Adding external security-pill.css stylesheet');
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.type = 'text/css';
         link.href = 'css/security-pill.css';
         link.id = 'security-pill-external-css';
+        head.appendChild(link);
+      }
+      
+      if (!errorCodesStyleLoaded) {
+        console.log('Adding external error-codes.css stylesheet');
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'css/error-codes.css';
+        link.id = 'error-codes-external-css';
         head.appendChild(link);
       }
       
@@ -999,6 +1012,23 @@ document.addEventListener('DOMContentLoaded', function () {
             100% {
               box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
             }
+          }
+          
+          /* Fallback for error codes styles */
+          .error-code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            margin-right: 6px;
+            border: 1px solid #dee2e6;
+            color: #6c757d;
+            font-weight: 600;
+          }
+          
+          .item-detailed-remediation.show {
+            display: block !important;
           }
         `;
         head.appendChild(style);
@@ -1180,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function () {
           } else if (issue.id.includes('readme')) {
             fixHint = 'Update your README.md with the required headings and content.';
           } else if (issue.id.includes('bicep')) {
-            fixHint = 'Add the missing resources to your Bicep files.';
+            fixHint = issue.remediationSteps?.length ? issue.remediationSteps.join('<br>') : 'Review your Bicep files and implement secure authentication methods.';
           } else if (issue.id.includes('azure-yaml')) {
             fixHint = 'Update your azure.yaml file to include required sections.';
           } else if (issue.id.includes('ossf') || issue.id.includes('trivy-repo') || issue.id.includes('docs-repository') || issue.category.includes('docker')) {
@@ -1188,11 +1218,17 @@ document.addEventListener('DOMContentLoaded', function () {
           } else {
             fixHint = 'Review the issue details and make appropriate changes.';
           }
+          
+          // Determine if we should show the detailed remediation with code examples
+          const hasDetailedRemediation = issue.detailedRemediation && issue.detailedRemediation.length > 0;
+          
+          // Format the error code if available
+          const errorCodeDisplay = issue.code ? `<span class="error-code">${issue.code}</span>` : '';
 
           return `
                     <li class="item issue-item ${isSecurityIssue ? 'security-issue' : ''}">
                         <div class="item-header">
-                            <div class="item-title">${issue.message}</div>
+                            <div class="item-title">${errorCodeDisplay}${issue.message}</div>
                             <div class="item-category">${category} ${isSecurityIssue ? '<span class="security-pill">Security</span>' : ''}</div>
                         </div>
                         ${isSecurityIssue ? `<div class="security-alert-banner">⚠️ Security Alert</div>` : ''}
@@ -1200,7 +1236,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="item-details">
                             <strong>How to fix:</strong> ${fixHint}
                             ${issue.recommendation ? `<div style="margin-top: 8px;"><strong>Recommendation:</strong> ${issue.recommendation}</div>` : ''}
+                            ${issue.impact ? `<div style="margin-top: 8px;"><strong>Impact:</strong> ${issue.impact}</div>` : ''}
+                            ${issue.documentation ? `<div style="margin-top: 8px;"><strong>Documentation:</strong> <a href="${issue.documentation}" target="_blank">${issue.documentation}</a></div>` : ''}
                         </div>
+                        ${hasDetailedRemediation ? `
+                        <div class="item-remediation-toggle" style="margin-top: 8px; cursor: pointer; color: #0078d4; font-weight: 500;" onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('i').classList.toggle('fa-angle-down'); this.querySelector('i').classList.toggle('fa-angle-up')">
+                          <i class="fas fa-angle-down"></i> Show detailed remediation steps
+                        </div>
+                        <div class="item-detailed-remediation" style="display: none; margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                          ${window.marked ? marked.parse(issue.detailedRemediation) : issue.detailedRemediation}
+                        </div>` : ''}
                         <div class="item-actions">
                             <a href="#" 
                                class="item-link"
@@ -1464,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', function () {
       notify('info','Creating issue (attempting Copilot assignment)...');
       const title = '[TD-BOT] Missing file: agents.md';
       const body = [
-        'Please scan the repository and README and generate a suitable `agents.md` respecting the format at https://agents.md/.',
+        'Please scan the repository and README and generate a suitable `agents.md` respecting the format at [https://agents.md](https://agents.md) - the specification for documenting AI Agents.',
         '',
         '### Checklist',
         '- [ ] Create `agents.md` at repo root with a top-level `# Agents` heading',
@@ -1473,13 +1518,15 @@ document.addEventListener('DOMContentLoaded', function () {
         '- [ ] Populate rows for each identified agent (existing automation, workflows, scripts, tools)',
         '- [ ] Ensure Inputs/Outputs are explicit and actionable',
         '- [ ] Use least-privilege scopes in the Permissions column',
-        '- [ ] Validate table formatting against https://agents.md/ guidance',
+        '- [ ] Validate table formatting against [agents.md specification](https://agents.md) guidance',
         '- [ ] Link any related workflows / scripts for traceability',
         '',
         '### Notes',
+        '- The [agents.md specification](https://agents.md) standardizes how AI Agents are documented',
         '- Prefer concise descriptions (1–2 sentences) per agent',
         '- Group future agents logically (e.g., provisioning, validation, analysis)',
         '- Flag any permissions that may need security review',
+        '- Visit https://agents.md for format details, examples, and best practices',
         '',
         'Generated by Template Doctor request.'
       ].join('\n');

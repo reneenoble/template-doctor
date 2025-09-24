@@ -9,319 +9,6 @@ const ORGANIZATIONS_CONFIG = {
 };
 
 // Debug logging utility - consistent with auth.js
-function debug(module, message, data) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}][${module}] ${message}`, data !== undefined ? data : '');
-}
-
-// Enhanced debug function for report loading
-function debugReport(stage, data) {
-  console.group(`REPORT DEBUG - ${stage}`);
-  console.log('Data:', data);
-  if (data && typeof data === 'object') {
-    console.log('Keys:', Object.keys(data));
-    console.log('Is empty:', Object.keys(data).length === 0);
-    if (data.repoUrl) console.log('RepoUrl:', data.repoUrl);
-    if (data.compliance) console.log('Compliance:', data.compliance);
-    if (data.timestamp) console.log('Timestamp:', data.timestamp);
-    if (data.issues) console.log('Issues count:', data.issues.length);
-    if (data.passedRules) console.log('Passed rules count:', data.passedRules.length);
-  } else {
-    console.log('Invalid data type:', typeof data);
-  }
-  console.groupEnd();
-}
-
-// Simple function to help with debugging
-function debugReportData(label, data) {
-  console.group(`REPORT DEBUG - ${label}`);
-  console.log('Data:', data ? 'present' : 'null/undefined');
-  if (data && typeof data === 'object') {
-    console.log('Keys:', Object.keys(data));
-    console.log('Compliance:', data.compliance ? 'present' : 'missing');
-    if (data.compliance) {
-      console.log(
-        'Issues:',
-        Array.isArray(data.compliance.issues) ? data.compliance.issues.length : 'not an array',
-      );
-      console.log(
-        'Compliant:',
-        Array.isArray(data.compliance.compliant)
-          ? data.compliance.compliant.length
-          : 'not an array',
-      );
-    }
-  }
-  console.groupEnd();
-}
-
-/**
- * Checks if a repository belongs to any of the specified organizations
- * and offers to replace with the current user's fork
- * @param {string} repoUrl - Original repository URL
- * @returns {Promise<string>} - New repository URL (might be the same or a user fork)
- */
-async function checkAndUpdateRepoUrl(repoUrl) {
-  // If no URL or not a GitHub URL, return as is
-  if (!repoUrl || !repoUrl.includes('github.com/')) {
-    return repoUrl;
-  }
-
-  // Check if user is logged in
-  if (!window.GitHubClient || !window.GitHubClient.auth.isAuthenticated()) {
-    debug('app', 'User not logged in, cannot fork repositories');
-    return repoUrl;
-  }
-
-  // Get current username
-  const currentUsername = window.GitHubClient.auth.getUsername();
-  if (!currentUsername) {
-    debug('app', 'Cannot get current username');
-    return repoUrl;
-  }
-
-    // Extract owner and repo from URL
-  try {
-    const urlParts = repoUrl.split('github.com/')[1].split('/');
-    const owner = urlParts[0];
-    const repo = urlParts[1];
-
-    if (!owner || !repo) {
-      throw new Error('Invalid repository URL format');
-    }
-    // If already in user's namespace, nothing to do
-    if (owner.toLowerCase() === currentUsername.toLowerCase()) {
-      return repoUrl;
-    }
-
-    // Determine if fork is desired due to org policy or explicit directive
-    const directiveFork = /[?#].*fork/i.test(repoUrl);
-    let needsFork = directiveFork || ORGANIZATIONS_CONFIG.organizationsToFork.some(
-      (org) => owner.toLowerCase() === org.toLowerCase(),
-    );
-
-    // Optional legacy behavior: proactive upstream probe for SAML (guarded by config flag)
-    let dueToSaml = false;
-    if (window.TemplateDoctorConfig?.proactiveUpstreamProbe) {
-      try {
-        const tokenAccessor =
-          window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
-          window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
-        const token = tokenAccessor ? tokenAccessor() : null;
-        if (token) {
-          const probeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-            headers: { Authorization: `token ${token}` },
-          });
-          if (probeResp.status === 403) {
-            let msg = '';
-            try { msg = (await probeResp.json()).message || ''; } catch (_) {}
-            if (/saml/i.test(msg)) {
-              dueToSaml = true;
-              needsFork = true;
-              debug('app', `SAML enforcement detected (proactive) for ${owner}/${repo}`);
-            }
-          }
-        }
-      } catch (probeErr) {
-        debug('app', 'Proactive probe error (ignored)', probeErr.message);
-      }
-    }
-
-    // First (new ordering): check if user already has fork WITHOUT probing upstream first
-    try {
-      debug('app', `Checking user namespace for existing fork: ${currentUsername}/${repo}`);
-      const accessTokenFn =
-        window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
-        window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
-      const authToken = accessTokenFn ? accessTokenFn() : null;
-      const forkCandidateResp = await fetch(
-        `https://api.github.com/repos/${currentUsername}/${repo}`,
-        { headers: authToken ? { Authorization: `token ${authToken}` } : {} },
-      );
-      if (forkCandidateResp.ok) {
-        const forkMeta = await forkCandidateResp.json().catch(() => null);
-        if (forkMeta?.fork && forkMeta?.parent?.full_name?.toLowerCase() === `${owner}/${repo}`.toLowerCase()) {
-          debug('app', 'Existing fork found; considering upstream sync');
-          const forkUrl = `https://github.com/${currentUsername}/${repo}`;
-          // Attempt to sync with upstream if directive or config requests it
-          const shouldSync = /[?#].*fork/i.test(repoUrl) || window.TemplateDoctorConfig?.syncForksOnAnalyze;
-          if (shouldSync) {
-            try {
-              const targetBranch = forkMeta.parent?.default_branch || forkMeta.default_branch || 'main';
-              const tokenAccessor =
-                window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) ||
-                window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
-              const token = tokenAccessor ? tokenAccessor() : null;
-              if (token) {
-                const syncResp = await fetch(`https://api.github.com/repos/${currentUsername}/${repo}/merge-upstream`, {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `token ${token}`,
-                    Accept: 'application/vnd.github+json',
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ branch: targetBranch }),
-                });
-                if (syncResp.ok) {
-                  debug('app', 'Fork successfully synced with upstream');
-                  if (window.NotificationSystem) {
-                    window.NotificationSystem.showSuccess(
-                      'Fork Synced',
-                      `Updated fork from upstream (${targetBranch}) before analysis`,
-                      4000,
-                    );
-                  }
-                } else {
-                  const txt = await syncResp.text();
-                  debug('app', `Fork sync not applied (status ${syncResp.status}): ${txt.substring(0,120)}`);
-                }
-              }
-            } catch (syncErr) {
-              debug('app', `Fork sync error (ignored): ${syncErr.message}`);
-            }
-          }
-          if (window.NotificationSystem) {
-            window.NotificationSystem.showInfo(
-              'Using Existing Fork',
-              `Analyzing your fork of ${owner}/${repo}`,
-              3000,
-            );
-          }
-          return forkUrl;
-        }
-        // Repo exists but is not a fork of target; continue logic (will maybe still use upstream unless forced)
-        if (!needsFork) {
-          return repoUrl;
-        }
-      } else if (forkCandidateResp.status !== 404) {
-        debug('app', `Unexpected status checking user fork: ${forkCandidateResp.status}`);
-      }
-    } catch (checkErr) {
-      debug('app', 'Error checking user fork (non-fatal)', checkErr.message);
-    }
-
-    if (!needsFork) {
-      return repoUrl; // No policy or directive requiring fork
-    }
-
-    // Construct potential fork URL
-    const potentialForkUrl = `https://github.com/${currentUsername}/${repo}`;
-    debug('app', `Original repo: ${repoUrl}, potential fork: ${potentialForkUrl}`);
-
-    // Show confirmation dialog if configured and not due to proactive SAML detection
-    if (ORGANIZATIONS_CONFIG.requireConfirmationForFork && !dueToSaml && !directiveFork) {
-      // Use notification system if available
-      if (window.Notifications) {
-        const result = await new Promise((resolve) => {
-          window.Notifications.confirm(
-            'Repository Fork',
-            `This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`,
-            {
-              confirmLabel: 'Check For Fork',
-              cancelLabel: 'Use Original',
-              onConfirm: () => resolve(true),
-              onCancel: () => resolve(false),
-            },
-          );
-        });
-
-        if (!result) {
-          return repoUrl; // User declined, use original URL
-        }
-      } else {
-        // Fallback to native confirm
-        if (
-          !confirm(
-            `This repository belongs to ${owner}. Would you like to check if you have a fork of this repository and use that instead?`,
-          )
-        ) {
-          return repoUrl; // User declined, use original URL
-        }
-      }
-    }
-    // Create fork (with optional confirmation above) if we got here
-    let shouldCreateFork = true; // if we reach here, either directive or policy requested it
-
-    if (shouldCreateFork) {
-      try {
-        debug('app', `Creating fork of ${owner}/${repo}`);
-        if (window.NotificationSystem) {
-          window.NotificationSystem.showInfo('Creating Fork', `Forking ${owner}/${repo} into your namespace...`, 4500);
-        }
-        const forkTokenFn = window.GitHubClient?.auth?.getAccessToken?.bind(window.GitHubClient.auth) || window.GitHubClient?.auth?.getToken?.bind(window.GitHubClient.auth);
-        const forkToken = forkTokenFn ? forkTokenFn() : null;
-        const forkResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/forks`, {
-          method: 'POST',
-          headers: forkToken ? { Authorization: `token ${forkToken}` } : {},
-        });
-        if (!forkResponse.ok) {
-          let failureMsg = `${forkResponse.status} ${forkResponse.statusText}`;
-          try { const j = await forkResponse.json(); if (j?.message) failureMsg = j.message; } catch(_) {}
-          if (/saml/i.test(failureMsg) && window.NotificationSystem) {
-            window.NotificationSystem.showWarning('SAML Authorization Needed', `GitHub requires SSO authorization before forking <strong>${owner}/${repo}</strong>. Please authorize and retry.`, 8000);
-          }
-          throw new Error(`Failed to create fork: ${failureMsg}`);
-        }
-        const forkData = await forkResponse.json();
-        debug('app', `Fork created (pending availability): ${forkData.html_url}`);
-        // Poll for default branch availability
-        const pollStart = Date.now();
-        const targetForkRepo = `${currentUsername}/${repo}`;
-        let available = false;
-        for (let i = 0; i < 18; i++) { // ~27s max
-          try {
-            const metaResp = await fetch(`https://api.github.com/repos/${targetForkRepo}`, {
-              headers: forkToken ? { Authorization: `token ${forkToken}` } : {},
-            });
-            if (metaResp.ok) {
-              const meta = await metaResp.json();
-              if (meta?.default_branch) {
-                available = true;
-                break;
-              }
-            }
-          } catch(_) {}
-          await new Promise(r=>setTimeout(r,1500));
-        }
-        debug('app', `Fork availability ${(available?'confirmed':'timeout')} after ${(Date.now()-pollStart)/1000}s`);
-        if (window.NotificationSystem) {
-          window.NotificationSystem.showSuccess('Fork Created', `Fork ${available ? 'ready' : 'created'}: ${owner}/${repo} -> ${targetForkRepo}`, 5000);
-        }
-        // Mark this fork as new this session to suppress history.json fetch
-        try {
-          window.__TemplateDoctorSession = window.__TemplateDoctorSession || { newForks: new Set() };
-          window.__TemplateDoctorSession.newForks.add(targetForkRepo.toLowerCase());
-        } catch(_) {}
-        // Optional immediate upstream sync if config demands and fork ready
-        if (available && window.TemplateDoctorConfig?.syncForksOnAnalyze) {
-          try {
-            const syncResp = await fetch(`https://api.github.com/repos/${targetForkRepo}/merge-upstream`, {
-              method: 'POST',
-              headers: forkToken ? { Authorization: `token ${forkToken}`, Accept: 'application/vnd.github+json','Content-Type':'application/json' } : {'Content-Type':'application/json'},
-              body: JSON.stringify({ branch: forkData?.default_branch || 'main' }),
-            });
-            if (syncResp.ok) {
-              debug('app', 'Post-fork upstream merge applied');
-            } else {
-              debug('app', `Upstream merge skipped status=${syncResp.status}`);
-            }
-          } catch(syncErr) { debug('app', `Upstream merge error ignored: ${syncErr.message}`);}        
-        }
-        return forkData.html_url;
-      } catch (forkErr) {
-        debug('app', `Fork creation failed: ${forkErr.message}`, forkErr);
-        if (window.NotificationSystem) {
-          window.NotificationSystem.showError('Fork Error', `Failed to create fork: ${forkErr.message}`, 6000);
-        }
-        return repoUrl; // fallback to upstream
-      }
-    }
-    return repoUrl; // fallback if creation not pursued
-  } catch (parseError) {
-    debug('app', `Error parsing repository URL: ${parseError.message}`, parseError);
-    return repoUrl; // Use original URL as fallback
-  }
-}
 
 // Direct data loading function - uses direct loading with a script tag
 function directLoadDataFile(folderName, dataFileName, successCallback, errorCallback) {
@@ -767,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ruleSet: result.ruleSet,
             timestamp: result.timestamp,
             compliance: result.compliance,
+            reused: !!result.reused,
           };
         }
 
@@ -1111,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = 0; i < urls.length; i++) {
         // Check if the batch was cancelled
         if (batchCancelled) {
-          debug('app', 'Batch scan cancelled, stopping further processing');
+          debug('app', 'Batch scan cancelled, stopping further processing loop before item', i+1);
           break;
         }
 
@@ -1130,32 +818,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update UI to show processing
         itemElement.className = 'batch-item processing';
         itemElement.querySelector('.batch-item-status').textContent = 'Processing';
-        itemElement.querySelector('.batch-item-message').textContent =
-          'Checking repository status...';
+        itemElement.querySelector('.batch-item-message').textContent = 'Analyzing repository...';
+        // If a previous attempt failed this session (IndexedDB error state), surface a hint
+        try {
+          const prior = existingProgress && existingProgress.find(p=>p.url===url && p.status==='error');
+          if (prior) {
+            itemElement.querySelector('.batch-item-message').textContent = 'Retrying after earlier error (fork may now exist)...';
+          }
+        } catch(_) {}
 
         try {
           debug('app', `Processing batch item ${i + 1}/${urls.length}: ${url}`);
 
-          // First check if the repository needs to be forked
-          let processedUrl = url;
-          try {
-            processedUrl = await checkAndUpdateRepoUrl(url);
-
-            if (processedUrl !== url) {
-              itemElement.querySelector('.batch-item-message').textContent =
-                'Using fork of the repository...';
-            } else {
-              itemElement.querySelector('.batch-item-message').textContent =
-                'Analyzing repository...';
-            }
-          } catch (forkError) {
-            debug('app', `Error during fork check: ${forkError.message}`, forkError);
-            itemElement.querySelector('.batch-item-message').textContent =
-              'Proceeding with original repository...';
+          const result = await appAnalyzer.analyzeTemplate(url, 'dod');
+          if (batchCancelled) {
+            debug('app', 'Batch cancelled after analysis completion for item', i+1);
           }
-
-          // Process with the obtained URL (original or forked)
-          const result = await appAnalyzer.analyzeTemplate(processedUrl, 'dod');
 
           // Update item UI to show success
           itemElement.className = 'batch-item success';
@@ -1243,15 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
             retryBtn.disabled = true;
 
             try {
-              // Retry the forking check and analysis
-              let processedUrl = url;
-              try {
-                processedUrl = await checkAndUpdateRepoUrl(url);
-              } catch (forkError) {
-                debug('app', `Error during retry fork check: ${forkError.message}`, forkError);
-              }
-
-              const retryResult = await appAnalyzer.analyzeTemplate(processedUrl, 'dod');
+              const retryResult = await appAnalyzer.analyzeTemplate(url, 'dod');
 
               // Update item UI to show success
               itemElement.className = 'batch-item success';
@@ -1860,15 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       card.querySelector('.rescan-btn').addEventListener('click', async () => {
-        // Check if the repository needs to be forked before scanning
-        try {
-          const updatedRepoUrl = await checkAndUpdateRepoUrl(template.repoUrl);
-          internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
-        } catch (error) {
-          debug('app', `Error checking fork status: ${error.message}`, error);
-          // Continue with original URL on error
-          internalAnalyzeRepo(template.repoUrl, 'show-modal');
-        }
+        internalAnalyzeRepo(template.repoUrl, 'force-rescan');
       });
 
       // Add event listener for validate button
@@ -2230,15 +1892,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       div.querySelector('.rescan-btn').addEventListener('click', async () => {
-        // Check if the repository needs to be forked before scanning
-        try {
-          const updatedRepoUrl = await checkAndUpdateRepoUrl(matchedTemplate.repoUrl);
-          internalAnalyzeRepo(updatedRepoUrl);
-        } catch (error) {
-          debug('app', `Error checking fork status: ${error.message}`, error);
-          // Continue with original URL on error
-          internalAnalyzeRepo(matchedTemplate.repoUrl);
-        }
+        internalAnalyzeRepo(matchedTemplate.repoUrl, 'force-rescan');
       });
 
       // Add event listener for validation button
@@ -2330,15 +1984,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
           searchResults.querySelector('.analyze-btn').addEventListener('click', async () => {
-            // Check if the repository needs to be forked before scanning
-            try {
-              const updatedRepoUrl = await checkAndUpdateRepoUrl(repoUrl);
-              internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
-            } catch (error) {
-              debug('app', `Error checking fork status: ${error.message}`, error);
-              // Continue with original URL on error
-              internalAnalyzeRepo(repoUrl, 'show-modal');
-            }
+            internalAnalyzeRepo(repoUrl, 'show-modal');
           });
 
           // Add event listener for validate button
@@ -2432,47 +2078,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
         div.querySelector('.analyze-btn').addEventListener('click', async () => {
-          if (isUserRepo || isPreviouslyScanned) {
-            // Even for previously scanned repos, check if it needs to be forked
-            try {
-              const updatedRepoUrl = await checkAndUpdateRepoUrl(repo.html_url);
-              internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
-            } catch (error) {
-              debug('app', `Error checking fork status: ${error.message}`, error);
-              // Continue with original URL on error
-              internalAnalyzeRepo(repo.html_url, 'show-modal');
-            }
-          } else {
-            // Would need to implement fork functionality
-            try {
-              const updatedRepoUrl = await checkAndUpdateRepoUrl(repo.html_url);
-              internalAnalyzeRepo(updatedRepoUrl, 'show-modal');
-            } catch (error) {
-              debug('app', `Error checking fork status: ${error.message}`, error);
-              // Use the original approach as fallback
-              if (window.Notifications) {
-                window.Notifications.confirm(
-                  'Fork Repository',
-                  `This will fork ${repo.full_name} to your account before scanning. Continue?`,
-                  {
-                    confirmLabel: 'Fork and Scan',
-                    cancelLabel: 'Cancel',
-                    onConfirm: () => {
-                      internalAnalyzeRepo(repo.html_url, 'show-modal');
-                    },
-                  },
-                );
-              } else {
-                if (
-                  confirm(
-                    `This will fork ${repo.full_name} to your account before scanning. Continue?`,
-                  )
-                ) {
-                  internalAnalyzeRepo(repo.html_url, 'show-modal');
-                }
-              }
-            }
-          }
+          internalAnalyzeRepo(repo.html_url, 'show-modal');
         });
 
         if (isPreviouslyScanned) {
@@ -2680,6 +2286,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Analysis Flow ---
   // Define the internal analyzeRepo function and store a reference to it
   internalAnalyzeRepo = async function (repoUrl, ruleSet = 'dod', selectedCategories = null) {
+    // Interpret sentinel for explicit rescans
+    let forceRescan = false;
+    if (ruleSet === 'force-rescan') {
+      forceRescan = true;
+      const cfg = window.TemplateDoctorConfig || {};
+      ruleSet = (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') ? cfg.defaultRuleSet : 'dod';
+    }
     // Preflight: if repo belongs to SAML-enforced org and user only wants fork-based operations,
     // attempt fork-first flow (idempotent). We detect by prior tagging OR by explicit param marker.
     try {
@@ -2733,20 +2346,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Check if the repository belongs to one of the configured organizations
-    // and offer to use the user's fork instead
-    try {
-      debug('app', `Checking if repository ${repoUrl} needs forking`);
-      const updatedRepoUrl = await checkAndUpdateRepoUrl(repoUrl);
-
-      if (updatedRepoUrl !== repoUrl) {
-        debug('app', `Repository URL updated from ${repoUrl} to ${updatedRepoUrl}`);
-        repoUrl = updatedRepoUrl;
-      }
-    } catch (forkCheckError) {
-      debug('app', `Error checking fork status: ${forkCheckError.message}`, forkCheckError);
-      // Continue with original URL on error
-    }
+    // Fork decision handled internally in analyzer/github-client (ensureAccessibleRepo)
 
     // Double-check analyzer
     if (!appAnalyzer) {
@@ -2818,6 +2418,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Fall back to DoD ruleset
         ruleSet = 'dod';
+      }
+    }
+
+    // Existing scan check (local/session) before altering UI states.
+    let priorScanMeta = null;
+    try {
+      // 1. Check in-memory scannedTemplates (already loaded results grid)
+      if (Array.isArray(scannedTemplates) && scannedTemplates.length) {
+        priorScanMeta = scannedTemplates.find(t => t.repoUrl === repoUrl || (repoUrl.includes('github.com/') && t.repoUrl.split('github.com/')[1] === repoUrl.split('github.com/')[1]));
+      }
+      // 2. Check IndexedDB batchProgress for success items (if batch previously processed)
+      if (!priorScanMeta && batchScanDB) {
+        try {
+          const tx = batchScanDB.transaction(['batchProgress'], 'readonly');
+          const store = tx.objectStore('batchProgress');
+          const all = await new Promise((resolve, reject) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = (e) => reject(e.target.error);
+          });
+          const match = all.find(r => r.url === repoUrl && r.status === 'success' && r.result);
+          if (match) {
+            priorScanMeta = {
+              repoUrl: repoUrl,
+              timestamp: match.result.timestamp,
+              compliance: match.result.compliance,
+              _source: 'batchProgress'
+            };
+          }
+        } catch (e) { /* non-fatal */ }
+      }
+    } catch (e) {
+      debug('app', 'Existing scan check failed (ignored)', e.message);
+    }
+
+    // If prior scan and user did not explicitly request rescan (rescan button sets ruleSet === 'show-modal' or user triggers again), display quick reuse option.
+    if (priorScanMeta && !forceRescan && priorScanMeta.compliance && (!priorScanMeta.ruleSet || priorScanMeta.ruleSet === ruleSet)) {
+      try {
+        if (window.NotificationSystem) {
+          window.NotificationSystem.showSuccess(
+            'Reused Analysis',
+            `Using cached results (ruleSet: ${priorScanMeta.ruleSet || ruleSet}). Click Rescan to run a fresh analysis.`,
+            5500,
+          );
+        }
+        // Render existing result if we can load from results store (only if compliance present)
+        if (priorScanMeta.compliance) {
+          document.getElementById('search-section').style.display = 'none';
+          analysisSection.style.display = 'block';
+          loadingContainer.style.display = 'none';
+          resultsContainer.style.display = 'block';
+          errorSection.style.display = 'none';
+          document.getElementById('repo-name').textContent = priorScanMeta.repoUrl.split('github.com/')[1] || priorScanMeta.repoUrl;
+          document.getElementById('repo-url').textContent = priorScanMeta.repoUrl;
+          appDashboard.render({
+            repoUrl: priorScanMeta.repoUrl,
+            timestamp: priorScanMeta.timestamp,
+            compliance: priorScanMeta.compliance,
+            ruleSet: priorScanMeta.ruleSet || ruleSet,
+            reused: true,
+          }, resultsContainer);
+          return; // Skip new analysis
+        }
+      } catch (reuseErr) {
+        debug('app', 'Failed to reuse prior scan (falling back to fresh analysis)', reuseErr.message);
       }
     }
 
@@ -2903,6 +2568,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch(_) {}
 
       debug('app', 'Analysis complete, rendering dashboard with mode badge');
+      if (!result.ruleSet) {
+        try { result.ruleSet = ruleSet; } catch(_) {}
+      }
       appDashboard.render(result, resultsContainer);
 
       // Submit analysis results to GitHub for PR creation
@@ -2921,7 +2589,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (window.NotificationSystem) {
                 window.NotificationSystem.showSuccess(
                   'Analysis Submitted',
-                  'Your analysis has been submitted for integration into the repository',
+                  `Results saved for ${repoName}${result.__analysisMode ? ' (' + result.__analysisMode + ')' : ''}.`,
                   5000,
                 );
               }

@@ -1,6 +1,7 @@
 {
-  "requiredFiles": ["README.md", "azure.yaml"],
+  "requiredFiles": ["README.md", "azure.yaml", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
   "requiredFolders": ["infra", ".github"],
+  "repositoryTopics": ["azd-template"],
   "requiredWorkflowFiles": [
     {
       "pattern": ".github/workflows/azure-dev.yml",
@@ -8,18 +9,18 @@
     }
   ],
   "readmeRequirements": {
-    "requiredHeadings": ["Prerequisites", "Getting Started"],
+    "requiredHeadings": [ "Features", "Getting Started", "Resources", "Guidance"],
     "architectureDiagram": {
       "heading": "Architecture",
       "requiresImage": true
     }
   },
   "bicepChecks": {
-    "requiredResources": ["Microsoft.Resources/resourceGroups", "Microsoft.KeyVault/vaults"],
+    "requiredResources": [],
     "securityBestPractices": {
-      "preferManagedIdentity": true,
-      "detectInsecureAuth": true,
-      "checkAnonymousAccess": true
+      "preferManagedIdentity": false,
+      "detectInsecureAuth": false,
+      "checkAnonymousAccess": false
     }
   },
   "azureYamlRules": {

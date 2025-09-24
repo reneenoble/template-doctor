@@ -140,7 +140,13 @@ class GitHubClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error(`[GitHubClient] Error response:`, errorData);
+        const isNotFound = response.status === 404;
+        const suppress404 = options && options.suppressNotFoundLog;
+        if (isNotFound && suppress404) {
+          console.debug('[GitHubClient] 404 (expected/missing) for', path);
+        } else {
+          console.error(`[GitHubClient] Error response:`, errorData);
+        }
 
         // Detect SAML enforcement (403) and surface a user-friendly remediation.
         if (
@@ -220,6 +226,10 @@ class GitHubClient {
         error.response = response;
         error.data = errorData;
         if (errorData.isSaml) error.isSamlError = true;
+        if (isNotFound && suppress404) {
+          // Return a sentinel null instead of throwing so callers can treat absence as normal
+          return null;
+        }
         throw error;
       }
 
@@ -230,7 +240,14 @@ class GitHubClient {
       });
       return data;
     } catch (err) {
-      console.error(`[GitHubClient] Request failed:`, err);
+      if (!(err && err.status === 404 && options && options.suppressNotFoundLog)) {
+        console.error(`[GitHubClient] Request failed:`, err);
+      } else {
+        console.debug('[GitHubClient] Suppressed 404 failure for', path);
+      }
+      if (options && options.suppressNotFoundLog && err && err.status === 404) {
+        return null; // treat as missing
+      }
       throw err;
     }
   }
@@ -436,40 +453,83 @@ class GitHubClient {
    * @param {number} perPage - Results per page
    * @returns {Promise} - Search results
    */
-  async searchRepositories(query, page = 1, perPage = 10) {
-    if (!query) return { items: [] };
-
-    // Check if query looks like a full GitHub URL or owner/repo reference
-    if (query.includes('github.com/') || query.includes('/')) {
-      // Extract owner and repo from the query
+  async searchRepositories(query, page = 1, perPage = 30) {
+    console.log(`[GitHubClient] Searching repositories: "${query}"`);
+    
+    // Check if the query looks like a repository URL or owner/repo format
+    if (query) {
       let owner, repo;
-
-      if (query.includes('github.com/')) {
-        const parts = query.split('github.com/')[1].split('/');
-        owner = parts[0];
-        repo = parts[1]?.split('#')[0]?.split('?')[0]; // Remove any hash or query parameters
+      
+      // Extract owner/repo from a GitHub URL
+      if (query.includes('github.com')) {
+        const url = new URL(query.startsWith('http') ? query : `https://${query}`);
+        const parts = url.pathname.split('/').filter(Boolean);
+        if (parts.length >= 2) {
+          owner = parts[0];
+          repo = parts[1]?.split('#')[0]?.split('?')[0]; // Remove any hash or query parameters
+        }
       } else if (query.includes('/')) {
         const parts = query.split('/');
         owner = parts[0];
         repo = parts[1]?.split('#')[0]?.split('?')[0]; // Remove any hash or query parameters
       }
 
-      // If we have both owner and repo, try to fetch the specific repository first
+      // If we have both owner and repo, treat it as a direct repository lookup
       if (owner && repo) {
         try {
-          console.log(`[GitHubClient] Trying to fetch specific repository: ${owner}/${repo}`);
-          const repoData = await this.getRepository(owner, repo);
-
-          // Return it as a single-item search result
-          return {
-            total_count: 1,
-            items: [repoData],
-          };
+          // Get the current username
+          const currentUsername = this.getCurrentUsername ? this.getCurrentUsername() : this.auth?.getUsername();
+          
+          // Only directly access repositories owned by the current user
+          // For all other repositories, always use the fork flow to avoid SAML/SSO issues
+          if (currentUsername && owner.toLowerCase() === currentUsername.toLowerCase()) {
+            // If we're accessing our own repos, proceed normally
+            console.log(`[GitHubClient] Trying to fetch user's own repository: ${owner}/${repo}`);
+            const repoData = await this.getRepository(owner, repo);
+            
+            // Return it as a single-item search result
+            return {
+              total_count: 1,
+              items: [repoData],
+            };
+          } else {
+            // For any non-user owned repos, always mark as requiring fork
+            console.log(`[GitHubClient] Non-user repository, marking as fork required: ${owner}/${repo}`);
+            
+            // Return a special response indicating this repo needs to be forked first
+            return {
+              total_count: 1,
+              items: [{
+                id: `${owner}/${repo}`,
+                name: repo,
+                full_name: `${owner}/${repo}`,
+                owner: { login: owner },
+                html_url: `https://github.com/${owner}/${repo}`,
+                description: 'This repository will be forked before analysis.',
+                fork: false,
+                requires_fork: true
+              }],
+            };
+          }
         } catch (error) {
           console.log(
-            `[GitHubClient] Specific repository not found, falling back to search: ${error.message}`,
+            `[GitHubClient] Error during repository lookup, treating as fork required: ${error.message}`,
           );
-          // Fall back to regular search if the specific repo isn't found
+          
+          // For any errors, treat as requiring fork to be safe
+          return {
+            total_count: 1,
+            items: [{
+              id: `${owner}/${repo}`,
+              name: repo,
+              full_name: `${owner}/${repo}`,
+              owner: { login: owner },
+              html_url: `https://github.com/${owner}/${repo}`,
+              description: 'This repository will be forked before analysis.',
+              fork: false,
+              requires_fork: true
+            }],
+          };
         }
       }
     }
@@ -486,6 +546,113 @@ class GitHubClient {
    */
   async getRepository(owner, repo) {
     return this.request(`/repos/${owner}/${repo}`);
+  }
+
+  /**
+   * Ensure we have an accessible repository reference without triggering SAML-protected upstream GETs.
+   * Logic:
+   * 1. Determine current authenticated username.
+   * 2. If owner === currentUser -> direct GET /repos/{user}/{repo} (normal path).
+   * 3. Else (org or different owner):
+   *    a. Try GET /repos/{currentUser}/{repo} (existing fork?)
+   *    b. If 404 -> POST /repos/{owner}/{repo}/forks (initiate fork)
+   *    c. Poll /repos/{currentUser}/{repo} until available or timeout.
+   *    d. Never GET /repos/{owner}/{repo} to avoid 403 SAML enforcement.
+   * @param {string} owner Original owner (possibly org)
+   * @param {string} repo Repository name
+   * @param {Object} opts Options
+   * @param {boolean} opts.forceFork If true always treat as fork flow even if owner matches (for fork=1 flag)
+   * @returns {Promise<{repo:Object, source:'self'|'fork'}>}
+   */
+  async ensureAccessibleRepo(owner, repo, { forceFork = false } = {}) {
+    const currentUsername = this.getCurrentUsername ? this.getCurrentUsername() : this.auth?.getUsername();
+    if (!currentUsername) throw new Error('Not authenticated');
+
+    const namesEq = owner && currentUsername && owner.toLowerCase() === currentUsername.toLowerCase();
+    const shouldDirect = namesEq && !forceFork;
+
+    const getUserRepo = async () => {
+      // Use suppressNotFoundLog to avoid noisy console.error for expected 404 prior to fork creation
+      return await this.request(`/repos/${currentUsername}/${repo}`, { suppressNotFoundLog: true });
+    };
+
+    if (shouldDirect) {
+      const selfRepo = await getUserRepo();
+      if (!selfRepo) throw new Error('Repository not found under current user');
+      return { repo: selfRepo, source: 'self' };
+    }
+
+    // Fork path
+    let forkMeta = await getUserRepo();
+    const existingFork = !!forkMeta;
+    if (!forkMeta) {
+      // Initiate fork (POST). SAML not required for fork creation.
+      try {
+        await this.request(`/repos/${owner}/${repo}/forks`, { method: 'POST' });
+      } catch (postErr) {
+        // If 403 here it's likely token scope (public_repo) not SAML; rethrow with clearer context.
+        if (postErr.status === 403 && !postErr.isSamlError) {
+          postErr.message = `Fork creation forbidden (check token scopes). Original: ${postErr.message}`;
+        }
+        throw postErr;
+      }
+
+      // Poll for availability (extended for large / security-scanned repos)
+      const attempts = 14; // ~ up to ~22s with current delays
+      for (let i = 0; i < attempts; i++) {
+        const delay = 1100 + i * 250; // grow delay slightly each attempt
+        await new Promise((r) => setTimeout(r, delay));
+        forkMeta = await getUserRepo();
+        if (forkMeta) break;
+      }
+    }
+    if (!forkMeta) throw new Error('Fork did not become available in time');
+    // If newly created fork may not have populated trees yet; annotate
+    if (!existingFork && !forkMeta.default_branch) {
+      // Best effort: retry a few short polls for default_branch field to appear
+      for (let j = 0; j < 4; j++) {
+        await new Promise((r) => setTimeout(r, 800 + j * 200));
+        const refreshed = await getUserRepo();
+        if (refreshed && refreshed.default_branch) {
+          forkMeta = refreshed;
+          break;
+        }
+      }
+    }
+    // Sync existing fork (not newly created) to upstream main branch WITHOUT upstream GET.
+    if (existingFork) {
+      try {
+        const targetBranch = 'main';
+        await this.request(`/repos/${currentUsername}/${repo}/merge-upstream`, {
+          method: 'POST',
+          body: JSON.stringify({ branch: targetBranch }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        // If merge-upstream fails due to branch mismatch, fallback to default branch if different.
+      } catch (syncErr) {
+        try {
+          if (forkMeta && forkMeta.default_branch && forkMeta.default_branch !== 'main') {
+            await this.request(`/repos/${currentUsername}/${repo}/merge-upstream`, {
+              method: 'POST',
+              body: JSON.stringify({ branch: forkMeta.default_branch }),
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        } catch (_) {
+          // swallow secondary failure; fork remains usable even if not synced
+        }
+      }
+    }
+    return { repo: forkMeta, source: 'fork' };
+  }
+
+  /**
+   * Derive default branch name from repo metadata (already fetched) without extra GET.
+   * @param {Object} repoMeta Repository object
+   * @returns {string}
+   */
+  getDefaultBranchFromMeta(repoMeta) {
+    return (repoMeta && repoMeta.default_branch) || 'main';
   }
 
   /**
@@ -521,8 +688,15 @@ class GitHubClient {
    * @returns {Promise<string>} - Default branch name
    */
   async getDefaultBranch(owner, repo) {
-    const repoInfo = await this.getRepository(owner, repo);
-    return repoInfo.default_branch;
+    // Legacy callers may still invoke this; preserve behavior but avoid upstream GET when mismatched.
+    const currentUsername = this.getCurrentUsername ? this.getCurrentUsername() : this.auth?.getUsername();
+    const namesEq = owner && currentUsername && owner.toLowerCase() === currentUsername.toLowerCase();
+    if (namesEq) {
+      const repoInfo = await this.getRepository(owner, repo);
+      return repoInfo.default_branch;
+    }
+    const { repo: forkMeta } = await this.ensureAccessibleRepo(owner, repo, { forceFork: true });
+    return this.getDefaultBranchFromMeta(forkMeta);
   }
 
   /**
