@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:05:09.064Z",
+    "repoUrl": "https://github.com/dminkovski/agent-openai-banking-assistant-csharp",
+    "ruleSet": "dod",
+    "dataPath": "1758740709064-data.js",
+    "dashboardPath": "1758740709064-dashboard.html",
+    "compliance": {
+      "percentage": 82,
+      "issues": 4,
+      "passed": 19
+    }
+  }
+]

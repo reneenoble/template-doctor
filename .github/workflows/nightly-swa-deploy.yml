@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: swa-deploy-production
@@ -25,22 +26,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install SWA CLI
-        run: npm i -g @azure/static-web-apps-cli
-
-      - name: Deploy Static Web App (PRODUCTION)
+      # Resolve deployment token via secret or Azure OIDC
+      - name: Resolve deployment token
         env:
-          SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.SWA_CLI_DEPLOYMENT_TOKEN }}
+          GH_SWA_TOKEN: ${{ secrets.SWA_CLI_DEPLOYMENT_TOKEN }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          if [ -z "$SWA_CLI_DEPLOYMENT_TOKEN" ]; then
-            echo "SWA_CLI_DEPLOYMENT_TOKEN secret is not set. Please add it in repo or org secrets." >&2
+          set -euo pipefail
+          if [ -n "${GH_SWA_TOKEN:-}" ]; then
+            echo "Using SWA token from GitHub secret."
+            echo "DEPLOY_TOKEN=$GH_SWA_TOKEN" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+            echo "Neither SWA_CLI_DEPLOYMENT_TOKEN nor Azure OIDC credentials are configured. Set SWA_CLI_DEPLOYMENT_TOKEN or AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID secrets." >&2
             exit 1
           fi
-          npx swa --version
-          # swa-cli.config.json in repo defines locations. This mirrors local 'swa deploy --env=PRODUCTION'.
-          swa deploy --env=PRODUCTION
+
+      - name: Azure login (OIDC)
+        if: ${{ env.DEPLOY_TOKEN == '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get SWA deployment token via Azure CLI
+        if: ${{ env.DEPLOY_TOKEN == '' }}
+        run: |
+          set -euo pipefail
+          token=$(az staticwebapp secrets list \
+            --name "template-doctor-new" \
+            --resource-group "template-doctor-rg" \
+            --query properties.apiKey -o tsv)
+          if [ -z "$token" ]; then
+            echo "Failed to retrieve SWA deployment token via Azure CLI" >&2
+            exit 1
+          fi
+          echo "DEPLOY_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Deploy to Static Web Apps (PRODUCTION)
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.DEPLOY_TOKEN }}
+          app_location: packages/app
+          api_location: packages/api
+          # Explicitly set action/environment for non-PR triggers
+          action: upload
+          deployment_environment: production
+          # Point to the folder containing staticwebapp.config.json (now at repo root)
+          config_file_location: .
+          # Treat app content as prebuilt; upload from the app folder directly
+          app_artifact_location: packages/app
+          skip_app_build: true
+          skip_api_build: true

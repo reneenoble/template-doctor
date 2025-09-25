@@ -1,0 +1,34 @@
+name: Manual SWA Deploy (Simple)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: false
+        default: production
+        type: choice
+        options: [production, preview]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy (no build, token only)
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_CLI_DEPLOYMENT_TOKEN }}
+          action: upload
+          deployment_environment: ${{ github.event.inputs.environment || 'production' }}
+          app_location: packages/app
+          app_artifact_location: packages/app
+          api_location: packages/api
+          config_file_location: .
+          skip_app_build: true
+          skip_api_build: true

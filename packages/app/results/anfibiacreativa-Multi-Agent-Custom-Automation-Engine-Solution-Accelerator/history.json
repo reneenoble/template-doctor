@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:05:20.110Z",
+    "repoUrl": "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator",
+    "ruleSet": "dod",
+    "dataPath": "1758740720110-data.js",
+    "dashboardPath": "1758740720110-dashboard.html",
+    "compliance": {
+      "percentage": 76,
+      "issues": 7,
+      "passed": 23
+    }
+  }
+]

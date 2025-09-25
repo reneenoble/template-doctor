@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-24T19:01:55.291Z",
+  "repoUrl": "https://github.com/pinecone-io/pinecone-rag-demo-azd",
+  "ruleSet": "dod",
+  "dataPath": "1758740515291-data.js",
+  "dashboardPath": "1758740515291-dashboard.html",
+  "compliance": {
+    "percentage": 52,
+    "issues": 11,
+    "passed": 13
+  }
+}

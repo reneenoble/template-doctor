@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:00:51.408Z",
+    "repoUrl": "https://github.com/Azure-Samples/llama-index-python",
+    "ruleSet": "dod",
+    "dataPath": "1758740451408-data.js",
+    "dashboardPath": "1758740451408-dashboard.html",
+    "compliance": {
+      "percentage": 83,
+      "issues": 4,
+      "passed": 21
+    }
+  }
+]

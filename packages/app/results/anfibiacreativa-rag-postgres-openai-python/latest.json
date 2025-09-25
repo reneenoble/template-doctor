@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-24T19:00:38.907Z",
+  "repoUrl": "https://github.com/Azure-Samples/rag-postgres-openai-python",
+  "ruleSet": "dod",
+  "dataPath": "1758740438907-data.js",
+  "dashboardPath": "1758740438907-dashboard.html",
+  "compliance": {
+    "percentage": 74,
+    "issues": 6,
+    "passed": 18
+  }
+}

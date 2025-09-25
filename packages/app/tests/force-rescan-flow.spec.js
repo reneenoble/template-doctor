@@ -28,6 +28,16 @@ test.describe('Force rescan flow', () => {
 
   test('force rescan bypasses reuse', async ({ page }) => {
     const networkLog = [];
+    // Track simulated fork creation state so that first access forces a fork POST
+    let forkCreated = false;
+    // Helper to wait for analyzer + github client
+    async function waitForAnalyzer(page) {
+      await page.waitForFunction(() => !!window.GitHubClient && !!window.TemplateAnalyzer, null, { timeout: 4000 });
+      // Also wait until GitHubClient has a username
+      await page.waitForFunction(() => {
+        try { return !!(window.GitHubClient.getCurrentUsername && window.GitHubClient.getCurrentUsername()); } catch(_) { return false; }
+      }, null, { timeout: 4000 }).catch(() => {});
+    }
     await page.route(/https:\/\/api\.github\.com\/.*/, (route) => {
       const req = route.request();
       const url = req.url();
@@ -37,8 +47,17 @@ test.describe('Force rescan flow', () => {
       }
       // Basic mocked endpoints
       if (/\/user$/.test(url)) return route.fulfill({ status: 200, json: { login: 'test-user' } });
-      if (/\/repos\/SomeOrg\/sample\/forks$/.test(url) && method === 'POST') return route.fulfill({ status: 202, json: {} });
-      if (/\/repos\/test-user\/sample$/.test(url) && method === 'GET') return route.fulfill({ status: 200, json: { name: 'sample', owner: { login: 'test-user' }, default_branch: 'default', fork: true } });
+      if (/\/repos\/SomeOrg\/sample\/forks$/.test(url) && method === 'POST') {
+        forkCreated = true;
+        return route.fulfill({ status: 202, json: {} });
+      }
+      if (/\/repos\/test-user\/sample$/.test(url) && method === 'GET') {
+        if (!forkCreated) {
+          // Simulate fork not existing yet so client triggers POST
+            return route.fulfill({ status: 404, json: { message: 'Not Found' } });
+        }
+        return route.fulfill({ status: 200, json: { name: 'sample', owner: { login: 'test-user' }, default_branch: 'default', fork: true } });
+      }
       if (/merge-upstream/.test(url) && method === 'POST') return route.fulfill({ status: 200, json: { merged: true } });
       if (/git\/trees\/main/.test(url)) return route.fulfill({ status: 404, json: { message: 'Not Found' } });
       if (/git\/trees\/default/.test(url)) return route.fulfill({ status: 200, json: { tree: [{ path: 'README.md', type: 'blob' }] } });
@@ -47,6 +66,12 @@ test.describe('Force rescan flow', () => {
     });
 
     await page.goto('/');
+    await waitForAnalyzer(page);
+    await page.evaluate(() => console.log('DIAG readiness', {
+      hasGitHubClient: !!window.GitHubClient,
+      hasAnalyzer: !!window.TemplateAnalyzer,
+      username: window.GitHubClient && window.GitHubClient.getCurrentUsername && window.GitHubClient.getCurrentUsername()
+    }));
 
     // First run to populate
     await page.evaluate(() => {
@@ -56,7 +81,9 @@ test.describe('Force rescan flow', () => {
     await page.waitForTimeout(1400);
 
     const forkPostsFirst = networkLog.filter(l => l.includes('POST https://api.github.com/repos/SomeOrg/sample/forks'));
-    expect(forkPostsFirst.length).toBe(1);
+    expect(forkPostsFirst.length, 
+      `DIAG: Expected 1 fork POST on first run but saw ${forkPostsFirst.length}. Full networkLog follows:\n${networkLog.join('\n')}`
+    ).toBe(1);
 
     // Second run with force-rescan sentinel
     const beforeSecond = networkLog.length;

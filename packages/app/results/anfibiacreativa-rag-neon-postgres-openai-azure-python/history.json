@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:04:41.253Z",
+    "repoUrl": "https://github.com/neondatabase-labs/rag-neon-postgres-openai-azure-python",
+    "ruleSet": "dod",
+    "dataPath": "1758740681253-data.js",
+    "dashboardPath": "1758740681253-dashboard.html",
+    "compliance": {
+      "percentage": 82,
+      "issues": 4,
+      "passed": 19
+    }
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:03:41.643Z",
+    "repoUrl": "https://github.com/Azure-Samples/get-started-with-ai-chat",
+    "ruleSet": "dod",
+    "dataPath": "1758740621643-data.js",
+    "dashboardPath": "1758740621643-dashboard.html",
+    "compliance": {
+      "percentage": 72,
+      "issues": 7,
+      "passed": 19
+    }
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-24T19:03:18.972Z",
+  "repoUrl": "https://github.com/microsoft/Conversation-Knowledge-Mining-Solution-Accelerator",
+  "ruleSet": "dod",
+  "dataPath": "1758740598972-data.js",
+  "dashboardPath": "1758740598972-dashboard.html",
+  "compliance": {
+    "percentage": 68,
+    "issues": 8,
+    "passed": 18
+  }
+}

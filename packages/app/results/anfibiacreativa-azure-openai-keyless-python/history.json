@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:01:29.705Z",
+    "repoUrl": "https://github.com/Azure-Samples/azure-openai-keyless-python",
+    "ruleSet": "dod",
+    "dataPath": "1758740489705-data.js",
+    "dashboardPath": "1758740489705-dashboard.html",
+    "compliance": {
+      "percentage": 68,
+      "issues": 7,
+      "passed": 16
+    }
+  }
+]

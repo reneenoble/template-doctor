@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:04:16.486Z",
+    "repoUrl": "https://github.com/microsoft/document-generation-solution-accelerator",
+    "ruleSet": "dod",
+    "dataPath": "1758740656486-data.js",
+    "dashboardPath": "1758740656486-dashboard.html",
+    "compliance": {
+      "percentage": 71,
+      "issues": 7,
+      "passed": 18
+    }
+  }
+]

@@ -17,7 +17,8 @@
         "test:debug": "npm run -w packages/app test:debug --",
         "test:unit": "vitest run --reporter=basic",
         "test:unit:watch": "vitest",
-        "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js"
+        "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js",
+    "analyze": "node scripts/analyzer-node.js"
     },
     "keywords": [
         "azd",

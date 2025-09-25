@@ -272,15 +272,54 @@ class TemplateAnalyzer {
    * @returns {Promise<Object>} - The analysis result
    */
   async analyzeTemplate(repoUrl, ruleSet = 'dod', selectedCategories = null) {
+    // --- Reuse / force-rescan handling (added) ---
+    // Support a sentinel ruleset value "force-rescan" (acts like 'dod' but bypasses cache)
+    let forceRescan = false;
+    if (ruleSet === 'force-rescan') {
+      forceRescan = true;
+      ruleSet = 'dod';
+    }
+
     if (!ruleSet || ruleSet === 'dod') {
       const cfg = window.TemplateDoctorConfig || {};
       if (cfg.defaultRuleSet && typeof cfg.defaultRuleSet === 'string') {
         ruleSet = cfg.defaultRuleSet;
       }
     }
+    // Normalize URL (strip query params that do not affect repo identity for cache key, except fork flag)
+    const rawUrl = repoUrl;
+    const hasForkQuery = /[?&]fork=1\b/.test(rawUrl);
+    const cacheRepoUrl = rawUrl.replace(/[?&]fork=1\b/, '').replace(/[?&]$/, '');
+    const cache = (window.__TD_ANALYSIS_CACHE = window.__TD_ANALYSIS_CACHE || {});
+    const cacheKey = `${cacheRepoUrl}::${ruleSet}`;
+    if (!forceRescan && !hasForkQuery && cache[cacheKey] && cache[cacheKey].ready) {
+      try {
+        const cached = cache[cacheKey].result;
+        document.dispatchEvent(
+          new CustomEvent('template-analysis-reused', { detail: { cacheKey, timestamp: Date.now() } }),
+        );
+        return cached;
+      } catch (e) {
+        console.warn('[TemplateAnalyzer] Failed returning cached result, falling through', e);
+      }
+    }
   // Get the appropriate configuration based on the rule set
     const config = this.getConfig(ruleSet);
     const repoInfo = this.extractRepoInfo(repoUrl);
+
+    // Ensure GitHub client has resolved current username (auth init may be slightly delayed in tests)
+    const waitForUsername = async () => {
+      if (!this.githubClient) return null;
+      for (let i = 0; i < 12; i++) { // up to ~1.8s
+        try {
+          const u = this.githubClient.getCurrentUsername ? this.githubClient.getCurrentUsername() : this.githubClient.auth?.getUsername?.();
+          if (u) return u;
+        } catch (_) {}
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      return null;
+    };
+    await waitForUsername();
 
     // Store custom config details if using custom ruleset
     let customConfig = null;
@@ -594,8 +633,8 @@ class TemplateAnalyzer {
             
             if (devContainerFile) {
               const devContainerContent = await this.githubClient.getFileContent(
-                repoInfo.owner,
-                repoInfo.repo,
+                analysisOwner,
+                analysisRepo,
                 devContainerFile
               );
               
@@ -649,8 +688,8 @@ class TemplateAnalyzer {
       ) {
         try {
           const readmeContent = await this.githubClient.getFileContent(
-            repoInfo.owner,
-            repoInfo.repo,
+            analysisOwner,
+            analysisRepo,
             'README.md',
           );
           this.checkReadmeRequirements(
@@ -693,8 +732,8 @@ class TemplateAnalyzer {
         for (const file of bicepFiles) {
           try {
             const content = await this.githubClient.getFileContent(
-              repoInfo.owner,
-              repoInfo.repo,
+              analysisOwner,
+              analysisRepo,
               file,
             );
 
@@ -765,8 +804,8 @@ class TemplateAnalyzer {
 
         try {
           const azureYamlContent = await this.githubClient.getFileContent(
-            repoInfo.owner,
-            repoInfo.repo,
+            analysisOwner,
+            analysisRepo,
             azureYamlPath,
           );
           if (
@@ -908,6 +947,11 @@ class TemplateAnalyzer {
         },
       };
 
+      // Store in cache unless explicit force rescan or fork flag used
+      if (!forceRescan && !hasForkQuery) {
+        cache[cacheKey] = { ready: true, result };
+      }
+
       // Add custom configuration details if applicable
       if (ruleSet === 'custom' && customConfig) {
         result.customConfig = {
@@ -957,8 +1001,8 @@ class TemplateAnalyzer {
     for (const path of candidateFiles) {
       try {
         const content = await this.githubClient.getFileContent(
-          repoInfo.owner,
-          repoInfo.repo,
+          analysisOwner,
+          analysisRepo,
           path,
         );
         const lower = content.toLowerCase();

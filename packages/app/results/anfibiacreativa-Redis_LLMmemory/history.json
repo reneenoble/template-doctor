@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2025-09-24T19:05:25.382Z",
+    "repoUrl": "https://github.com/robertopc1/Redis_LLMmemory",
+    "ruleSet": "dod",
+    "dataPath": "1758740725382-data.js",
+    "dashboardPath": "1758740725382-dashboard.html",
+    "compliance": {
+      "percentage": 71,
+      "issues": 7,
+      "passed": 18
+    }
+  }
+]

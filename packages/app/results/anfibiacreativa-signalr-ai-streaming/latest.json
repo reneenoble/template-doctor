@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-24T19:02:12.604Z",
+  "repoUrl": "https://github.com/Azure-Samples/signalr-ai-streaming",
+  "ruleSet": "dod",
+  "dataPath": "1758740532604-data.js",
+  "dashboardPath": "1758740532604-dashboard.html",
+  "compliance": {
+    "percentage": 70,
+    "issues": 7,
+    "passed": 17
+  }
+}

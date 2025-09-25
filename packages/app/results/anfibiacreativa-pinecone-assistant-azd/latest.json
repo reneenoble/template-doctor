@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-24T19:02:03.702Z",
+  "repoUrl": "https://github.com/pinecone-io/pinecone-assistant-azd",
+  "ruleSet": "dod",
+  "dataPath": "1758740523702-data.js",
+  "dashboardPath": "1758740523702-dashboard.html",
+  "compliance": {
+    "percentage": 57,
+    "issues": 10,
+    "passed": 14
+  }
+}

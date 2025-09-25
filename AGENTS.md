@@ -105,6 +105,13 @@ npm run test -- "-g" "should handle search functionality" packages/app/tests/app
 - For AZD deployment, Azure Managed Identity is required
 - The Security Analysis feature reviews Bicep files for security best practices
 
+### SAML/SSO and Forking Policy
+
+- Organization SAML/SSO does NOT block creating a fork. Only direct access to organization repository content can be constrained by SAML/SSO policies.
+- Therefore, agents must always use a fork-first workflow for any repository that is not owned by the authenticated user.
+- Never issue content reads (GET to contents/trees/etc.) against the upstream organization repo. All content operations must target the user’s fork namespace.
+- If a fork appears to fail for any reason, do not attribute it to SAML/SSO. Instead, retry briefly and log a neutral message. As a fallback, instruct the operator to create the fork from the GitHub UI; subsequent scans will operate exclusively on the fork.
+
 ## Common Troubleshooting
 
 - OAuth redirect issues: Ensure ports match between GitHub OAuth app settings and local server

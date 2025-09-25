@@ -22,39 +22,82 @@
     ) {
       console.log('[templates-data-loader] User is authenticated, loading template data');
 
-      // Create a script element to load the index-data.js file
-      const script = document.createElement('script');
-      const cacheBuster = '?_cb=' + new Date().getTime(); // Add cache buster
-      script.src = 'results/index-data.js' + cacheBuster; // Relative path to the index-data.js file
-      script.async = true;
-      script.onload = function () {
-        console.log('[templates-data-loader] Successfully loaded template data');
-        // Check if the data was actually loaded
-        if (window.templatesData && Array.isArray(window.templatesData)) {
-          console.log(
-            '[templates-data-loader] Loaded templatesData with',
-            window.templatesData.length,
-            'entries',
-          );
-        } else {
-          console.warn(
-            '[templates-data-loader] templatesData is not available or not an array after loading',
-          );
+      const cacheBuster = '?_cb=' + new Date().getTime();
+      // Load dynamic scan meta first so index-data can merge entries
+      const metaScript = document.createElement('script');
+      metaScript.src = 'results/scan-meta-backfill.js' + cacheBuster;
+      metaScript.async = true;
+      metaScript.onload = function () {
+        console.log('[templates-data-loader] Loaded scan-meta-backfill.js');
+        loadIndexData();
+      };
+      metaScript.onerror = function () {
+        console.warn('[templates-data-loader] scan-meta-backfill.js not found; proceeding without it');
+        loadIndexData();
+      };
+      document.head.appendChild(metaScript);
+
+      function loadIndexData(){
+        const script = document.createElement('script');
+        script.src = 'results/index-data.js' + cacheBuster;
+        script.async = true;
+        script.onload = function () {
+          console.log('[templates-data-loader] Successfully loaded template data');
+          if (window.templatesData && Array.isArray(window.templatesData)) {
+            console.log('[templates-data-loader] Loaded templatesData with', window.templatesData.length, 'entries');
+            try { showTilesLoadedDebug(window.templatesData.length); } catch(_) {}
+          } else {
+            console.warn('[templates-data-loader] templatesData is not available or not an array after loading');
+            window.templatesData = [];
+            try { showTilesLoadedDebug(0); } catch(_) {}
+          }
+          document.dispatchEvent(new CustomEvent('template-data-loaded'));
+        };
+        script.onerror = function (error) {
+          console.warn('[templates-data-loader] Failed to load template data from results/index-data.js', error);
           window.templatesData = [];
+          try { showTilesLoadedDebug(0); } catch(_) {}
+          document.dispatchEvent(new CustomEvent('template-data-loaded'));
+        };
+        document.head.appendChild(script);
+      }
+
+      // Visible debug banner to confirm tile count on homepage
+      function showTilesLoadedDebug(count){
+        if (typeof document === 'undefined') return;
+        // Defer until DOM ready
+        const mount = () => {
+          let el = document.getElementById('td-tiles-banner');
+          if (!el) {
+            el = document.createElement('div');
+            el.id = 'td-tiles-banner';
+            el.style.cssText = [
+              'position:fixed',
+              'right:12px',
+              'bottom:72px',
+              'z-index:9999',
+              'background:#111827',
+              'color:#fff',
+              'padding:8px 12px',
+              'border-radius:6px',
+              'box-shadow:0 2px 8px rgba(0,0,0,0.25)',
+              'font-family:monospace',
+              'font-size:12px',
+              'opacity:0.9'
+            ].join(';');
+            document.body.appendChild(el);
+          }
+          const ts = new Date().toLocaleTimeString();
+          el.textContent = `Tiles loaded: ${count} @ ${ts}`;
+          // Auto-fade after 10s to avoid clutter
+          setTimeout(() => { if (el) el.style.opacity = '0.2'; }, 10000);
+        };
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', mount, { once: true });
+        } else {
+          mount();
         }
-        // Dispatch an event to notify app.js that template data is ready
-        document.dispatchEvent(new CustomEvent('template-data-loaded'));
-      };
-      script.onerror = function (error) {
-        console.warn(
-          '[templates-data-loader] Failed to load template data from results/index-data.js',
-          error,
-        );
-        // Initialize empty array if data doesn't load
-        window.templatesData = [];
-        document.dispatchEvent(new CustomEvent('template-data-loaded'));
-      };
-      document.head.appendChild(script);
+      }
     } else {
       console.log('[templates-data-loader] User is not authenticated, not loading template data');
       // Initialize empty array since user is not authenticated

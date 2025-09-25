@@ -1,0 +1,112 @@
+name: Manual Static Web Apps Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Reason for manual deploy
+        required: false
+        type: string
+      environment:
+        description: Target environment (production or preview)
+        required: false
+        default: production
+        type: choice
+        options:
+          - production
+          - preview
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: swa-deploy-manual
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sanity check - app content exists
+        run: |
+          set -euo pipefail
+          if [ ! -f "packages/app/index.html" ]; then
+            echo "packages/app/index.html not found" >&2
+            exit 1
+          fi
+          if [ ! -f "staticwebapp.config.json" ]; then
+            echo "staticwebapp.config.json not found at repo root" >&2
+            exit 1
+          fi
+          # Validate JSON (avoid heredoc to keep YAML simple)
+          python3 -c "import json,sys; json.load(open('staticwebapp.config.json')); print('staticwebapp.config.json is valid JSON')"
+
+      - name: Resolve deployment token
+        env:
+          GH_SWA_TOKEN: ${{ secrets.SWA_CLI_DEPLOYMENT_TOKEN }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ -n "${GH_SWA_TOKEN:-}" ]; then
+            echo "Using SWA token from GitHub secret."
+            echo "DEPLOY_TOKEN=$GH_SWA_TOKEN" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+            echo "Neither SWA_CLI_DEPLOYMENT_TOKEN nor Azure OIDC credentials are configured. Set SWA_CLI_DEPLOYMENT_TOKEN or AZURE_CLIENT_ID/AZURE_TENANT_ID/AZURE_SUBSCRIPTION_ID secrets." >&2
+            exit 1
+          fi
+
+      - name: Azure login (OIDC)
+        if: ${{ env.DEPLOY_TOKEN == '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get SWA deployment token via Azure CLI
+        if: ${{ env.DEPLOY_TOKEN == '' }}
+        run: |
+          set -euo pipefail
+          token=$(az staticwebapp secrets list \
+            --name "template-doctor-new" \
+            --resource-group "template-doctor-rg" \
+            --query properties.apiKey -o tsv)
+          if [ -z "$token" ]; then
+            echo "Failed to retrieve SWA deployment token via Azure CLI" >&2
+            exit 1
+          fi
+          echo "DEPLOY_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Deploy to Static Web Apps
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.DEPLOY_TOKEN }}
+          app_location: packages/app
+          api_location: packages/api
+          # Upload prebuilt content directly from packages/app
+          app_artifact_location: packages/app
+          action: upload
+          deployment_environment: ${{ github.event.inputs.environment || 'production' }}
+          # Config file now lives at repo root; pass the folder
+          config_file_location: .
+          skip_app_build: true
+          skip_api_build: true
+
+      - name: Show site URL (best effort)
+        if: ${{ always() }}
+        run: |
+          set +e
+          if [ -n "${AZURE_CLIENT_ID:-}" ] && [ -n "${AZURE_TENANT_ID:-}" ] && [ -n "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+            az staticwebapp show \
+              --name "template-doctor-new" \
+              --resource-group "template-doctor-rg" \
+              --query defaultHostname -o tsv || true
+          fi

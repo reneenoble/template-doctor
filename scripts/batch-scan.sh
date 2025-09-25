@@ -42,10 +42,9 @@ while IFS= read -r repo_url || [ -n "$repo_url" ]; do
   
   echo "[$count/$total] Scanning repository: $repo_name"
   
-  # Run the analysis command
-  # Add timeout to prevent hanging on problematic repositories
-  timeout 600 npm run analyze -- "$repo_url" $SCAN_OPTIONS || {
-    echo "Warning: Scan failed or timed out for $repo_name"
+  # Run the analysis command (no timeout on macOS)
+  npm run analyze -- "$repo_url" $SCAN_OPTIONS || {
+    echo "Warning: Scan failed for $repo_name"
     continue
   }
   
@@ -56,3 +55,8 @@ done < "$URL_FILE"
 
 echo "Batch scan completed. Processed $count repositories."
 echo "Results are available in the packages/app/results directory."
+
+# Generate aggregated backfill meta so template index can load tiles
+echo "Generating scan meta backfill..."
+npm run generate:scan-meta-backfill || echo "Warning: Failed to generate scan meta backfill."
+echo "Done. Open packages/app/results/template-index.html via local server to view tiles."
