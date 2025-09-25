@@ -81,9 +81,12 @@ test.describe('Force rescan flow', () => {
     await page.waitForTimeout(1400);
 
     const forkPostsFirst = networkLog.filter(l => l.includes('POST https://api.github.com/repos/SomeOrg/sample/forks'));
-    expect(forkPostsFirst.length, 
-      `DIAG: Expected 1 fork POST on first run but saw ${forkPostsFirst.length}. Full networkLog follows:\n${networkLog.join('\n')}`
-    ).toBe(1);
+    if (forkPostsFirst.length !== 1) {
+      // Extra diagnostics to help understand why fork wasn't triggered
+      // eslint-disable-next-line no-console
+      console.error('DIAG: Expected 1 fork POST on first run but saw', forkPostsFirst.length, 'Full networkLog follows:\n' + networkLog.join('\n'));
+    }
+    expect(forkPostsFirst.length).toBe(1);
 
     // Second run with force-rescan sentinel
     const beforeSecond = networkLog.length;

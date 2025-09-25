@@ -31,6 +31,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure config is present under app folder
+        run: |
+          mkdir -p packages/app
+          if [ -f "staticwebapp.config.json" ]; then
+            cp -f staticwebapp.config.json packages/app/staticwebapp.config.json
+          fi
       - name: Sanity check - app content exists
         run: |
           set -euo pipefail
