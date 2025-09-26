@@ -11,14 +11,9 @@
     "start": "python3 -m http.server 8080",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "node build.js",
-    "build:dev": "MODE=development node build.js",
-    "clean": "rm -rf dist"
+    "build": "echo 'Static site - copying files as-is' && cp -r . ."
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "terser": "^5.32.0",
-    "clean-css": "^5.3.3",
-    "html-minifier-terser": "^7.2.0"
+    "prettier": "^3.6.2"
   }
 }

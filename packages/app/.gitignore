@@ -2,6 +2,3 @@ _backup_unused/
 
 .env
 local.settings.json
-
-# Build output
-dist/
