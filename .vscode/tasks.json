@@ -1,220 +1,182 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Run Playwright tests (issue-labels)",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"problemMatcher": [
-				"$eslint-stylish"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Re-run Playwright tests (issue-labels)",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"problemMatcher": [
-				"$tsc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Re-run Playwright tests (issue-labels, direct process)",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Re-run Playwright tests (issue-labels after showLoading)",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run Playwright smoke for issue handler after label var rename",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run focused Playwright tests after ensureLabelsExist concurrency refactor",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Re-run focused Playwright tests after label dedupe tweak",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run focused Playwright tests after pagination helper change",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"GitHub issue creation labels and body metadata",
-				"src/frontend/tests/issue-labels.spec.js"
-			],
-			"group": "build"
-		},
-		{
-			"type": "func",
-			"label": "func: host start",
-			"command": "host start",
-			"problemMatcher": "$func-node-watch",
-			"isBackground": true,
-			"dependsOn": "npm install (functions)",
-			"options": {
-				"cwd": "${workspaceFolder}/packages/functions-aca"
-			}
-		},
-		{
-			"type": "shell",
-			"label": "npm install (functions)",
-			"command": "npm install",
-			"options": {
-				"cwd": "${workspaceFolder}/packages/functions-aca"
-			}
-		},
-		{
-			"type": "shell",
-			"label": "npm prune (functions)",
-			"command": "npm prune --production",
-			"problemMatcher": [],
-			"options": {
-				"cwd": "${workspaceFolder}/packages/functions-aca"
-			}
-		},
-		{
-			"label": "Start Azure Functions (functions-aca)",
-			"type": "shell",
-			"command": "npx",
-			"args": [
-				"func",
-				"start"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Run Playwright focused search test",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--",
-				"-g",
-				"should handle search functionality",
-				"packages/app/tests/app.spec.js"
-			]
-		},
-		{
-			"label": "Node syntax check analyzer.js",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"-e",
-				"require('./packages/app/js/analyzer.js')"
-			],
-			"group": "build"
-		},
-		{
-			"label": "JS parse check analyzer.js",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"-e",
-				"new Function(require('fs').readFileSync('./packages/app/js/analyzer.js','utf8'))"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run frontend unit/e2e tests smoke",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"test",
-				"--workspaces=false",
-				"--silent"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run app workspace tests",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"-w",
-				"packages/app",
-				"test",
-				"--silent"
-			],
-			"group": "build"
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Playwright tests (issue-labels)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "problemMatcher": ["$eslint-stylish"],
+            "group": "build"
+        },
+        {
+            "label": "Re-run Playwright tests (issue-labels)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "problemMatcher": ["$tsc"],
+            "group": "build"
+        },
+        {
+            "label": "Re-run Playwright tests (issue-labels, direct process)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Re-run Playwright tests (issue-labels after showLoading)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Run Playwright smoke for issue handler after label var rename",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Run focused Playwright tests after ensureLabelsExist concurrency refactor",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Re-run focused Playwright tests after label dedupe tweak",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Run focused Playwright tests after pagination helper change",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "GitHub issue creation labels and body metadata",
+                "src/frontend/tests/issue-labels.spec.js"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "func",
+            "label": "func: host start",
+            "command": "host start",
+            "problemMatcher": "$func-node-watch",
+            "isBackground": true,
+            "dependsOn": "npm install (functions)",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/functions-aca"
+            }
+        },
+        {
+            "type": "shell",
+            "label": "npm install (functions)",
+            "command": "npm install",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/functions-aca"
+            }
+        },
+        {
+            "type": "shell",
+            "label": "npm prune (functions)",
+            "command": "npm prune --production",
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}/packages/functions-aca"
+            }
+        },
+        {
+            "label": "Start Azure Functions (functions-aca)",
+            "type": "shell",
+            "command": "npx",
+            "args": ["func", "start"],
+            "isBackground": false,
+            "group": "build"
+        },
+        {
+            "label": "Run Playwright focused search test",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "test",
+                "--",
+                "-g",
+                "should handle search functionality",
+                "packages/app/tests/app.spec.js"
+            ]
+        },
+        {
+            "label": "Run frontend unit/e2e tests smoke",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "test", "--workspaces=false", "--silent"],
+            "group": "build"
+        },
+        {
+            "label": "Run app workspace tests",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "-w", "packages/app", "test", "--silent"],
+            "group": "build"
+        }
+    ]
 }

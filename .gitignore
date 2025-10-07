@@ -1,5 +1,11 @@
+# Legacy build artifacts removed after Vite migration
+packages/app/js/analyzer.bundle.js
+packages/app/js/api-client.bundle.js
 node_modules
 .env
+.env.local
+.env.prod
+.env.*.local
 .env.consolidated
 .env.bak
 
@@ -20,4 +26,4 @@ local.settings.json
 
 __azurite*
 
-gallery.json
+gallery.jsonpackages/server/config/

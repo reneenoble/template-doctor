@@ -1,11 +1,6 @@
 {
   "githubOAuth": {
-    "scope": "repo read:user",
-    "redirectUri": ""
-  },
-  "backend": {
-    "baseUrl": "http://localhost:7071",
-    "functionKey": ""
+    "clientId": "${GITHUB_OAUTH_CLIENT_ID}"
   },
   "defaultRuleSet": "dod",
   "requireAuthForResults": true,

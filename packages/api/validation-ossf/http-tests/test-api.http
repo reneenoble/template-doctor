@@ -1,7 +1,0 @@
-POST http://localhost:7071/api/validation-ossf HTTP/1.1
-content-type: application/json
-
-{
-    "templateUrl": "azure-samples/azure-search-static-web-app",
-    "minScore": 6.0
-}

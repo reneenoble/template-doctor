@@ -1,46 +1,58 @@
 # Template Doctor – Architecture Overview
 
+## Containerized Express Architecture
+
+Template Doctor has migrated from Azure Functions to a containerized Express server architecture. The application now runs as Docker containers, providing better local development experience, easier deployment, and more flexibility in hosting options.
+
+### Components
+
+- **Express Backend** (`packages/server`): TypeScript-based REST API running on port 3001
+- **Static Frontend** (`packages/app`): Vite-built SPA running on port 3000 (preview) or 4000 (dev)
+- **Docker**: Multi-container (docker-compose) and single-container (Dockerfile.combined) deployment options
+- **Legacy Azure Functions** (`packages/api`): Maintained in a separate branch for reference
+
 ## Template Validation Flow
 
-This diagram shows how the Static Web App (frontend), Functions App, and GitHub workflow interact during the template validation flow, with client-side storage of GitHub run IDs.
+This diagram shows how the frontend, Express backend, and GitHub workflow interact during the template validation flow, with client-side storage of GitHub run IDs.
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant SWA as SWA Frontend
+    participant FE as Frontend (Vite SPA)
     participant LS as localStorage
-    participant FA as Functions App
+    participant EX as Express Backend
     participant GH as GitHub Workflow
     participant GHA as GitHub API
 
-    U->>SWA: Trigger template validation
-    SWA->>FA: POST /api/validate-template (templateName)
-    FA->>FA: Generate UUID (runId)
-    FA->>FA: Store in run-id-store (initially with null GitHub info)
-    FA->>GHA: Trigger workflow dispatch to validation-template.yml with runId
-    FA-->>SWA: Return runId
-    
+    U->>FE: Trigger template validation
+    FE->>EX: POST /api/v4/validate-template (templateName)
+    EX->>EX: Generate UUID (runId)
+    EX->>EX: Store in run-id-store (initially with null GitHub info)
+    EX->>GHA: Trigger workflow dispatch to validation-template.yml with runId
+    EX-->>FE: Return runId
+
     GH->>GH: Execute validation workflow
     GH->>GH: Parse repo URL and matrix strategy
     GH->>GH: Clone and validate template with microsoft/template-validation-action
-    GH-->>FA: POST /api/validation-callback (runId, githubRunId, githubRunUrl)
-    FA->>FA: Update run-id-store with GitHub info
-    
+    GH-->>EX: POST /api/v4/validation-callback (runId, githubRunId, githubRunUrl)
+    EX->>EX: Update run-id-store with GitHub info
+
     loop Until validation complete
-        SWA->>LS: Check for stored GitHub run ID
-        LS-->>SWA: Return stored run ID (if available)
-        SWA->>FA: GET /api/validation-status?runId={runId}&githubRunId={id}
-        FA->>FA: Use client-provided GitHub run ID or fallback to store
-        FA->>GHA: Query workflow status (githubRunId)
-        GHA-->>FA: Return workflow status and results
-        FA-->>SWA: Return status, conclusion, and results (with githubRunId)
-        SWA->>LS: Store GitHub run ID for future requests
+        FE->>LS: Check for stored GitHub run ID
+        LS-->>FE: Return stored run ID (if available)
+        FE->>EX: GET /api/v4/validation-status?runId={runId}&githubRunId={id}
+        EX->>EX: Use client-provided GitHub run ID or fallback to store
+        EX->>GHA: Query workflow status (githubRunId)
+        GHA-->>EX: Return workflow status and results
+        EX-->>FE: Return status, conclusion, and results (with githubRunId)
+        FE->>LS: Store GitHub run ID for future requests
     end
-    
-    SWA-->>U: Display validation results
+
+    FE-->>U: Display validation results
 ```
 
 Notes:
+
 - The in-memory run-id-store maps internal UUIDs to GitHub workflow run IDs and URLs
 - The frontend stores GitHub run IDs in localStorage to maintain mapping across browser sessions
 - When polling for status, the frontend includes the stored GitHub run ID in the request
@@ -63,16 +75,16 @@ sequenceDiagram
 
     EC->>GHD: Trigger template-analysis-completed
     GHD->>SAW: Execute submit-analysis workflow
-    
+
     SAW->>SAW: Checkout repository & setup Node.js
     SAW->>TDA: Process analysis result with action
     Note right of TDA: Uses repository action.yml
     TDA->>TDA: Generate dashboard & data files
     TDA-->>SAW: Return template data (JSON)
-    
+
     SAW->>GH: Create Pull Request with analysis results
     GH-->>SAW: Return PR details
-    
+
     alt If archiveEnabled is true
         SAW->>ARC: POST to archive-collection API
         ARC-->>SAW: Return archive status
@@ -80,6 +92,7 @@ sequenceDiagram
 ```
 
 Notes:
+
 - The submit-analysis workflow is triggered by a repository_dispatch event of type "template-analysis-completed"
 - The workflow uses the Template Doctor action (action.yml in the repository root) to process analysis results
 - The action generates dashboard HTML and data JS files for the analyzed template
@@ -88,88 +101,223 @@ Notes:
 
 ## GitHub issue creation flow
 
-This diagram shows how the frontend uses the managed OAuth function to exchange the code for a token and then opens a GitHub issue, applying labels and assigning it to Copilot.
+This diagram shows how the frontend uses the Express OAuth endpoint to exchange the code for a token and then opens a GitHub issue, applying labels and assigning it to Copilot.
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant SWA as SWA Frontend
-    participant MF as Managed OAuth Function
+    participant FE as Frontend (Vite SPA)
+    participant EX as Express Backend
     participant GH as GitHub API
 
-    U->>SWA: Click Open Issue
-    SWA->>MF: GET /api/github-oauth-token with code
-    MF-->>SWA: Return access token
-    SWA->>GH: POST /repos/:owner/:repo/issues (title, body, labels, assignees: copilot)
-    GH-->>SWA: 201 Created (issue number and url)
+    U->>FE: Click Open Issue
+    FE->>EX: GET /api/v4/github-oauth-token with code
+    EX-->>FE: Return access token
+    FE->>GH: POST /repos/:owner/:repo/issues (title, body, labels, assignees: copilot)
+    GH-->>FE: 201 Created (issue number and url)
     opt Add more labels
-        SWA->>GH: POST /repos/:owner/:repo/issues/:number/labels (labels)
-        GH-->>SWA: 200 OK
+        FE->>GH: POST /repos/:owner/:repo/issues/:number/labels (labels)
+        GH-->>FE: 200 OK
     end
-    SWA-->>U: Show issue link and assigned to Copilot
+    FE-->>U: Show issue link and assigned to Copilot
 ```
 
 ## Overall System Architecture
 
-The following diagram illustrates the high-level system architecture of Template Doctor:
+The following diagram illustrates the high-level containerized system architecture of Template Doctor:
 
 ```mermaid
 graph TB
     User((User))
-    
-    subgraph "Frontend (Static Web App)"
+
+    subgraph "Frontend Container (Vite SPA)"
         UI[Web UI]
         ResultsViewer[Results Viewer]
         BatchManager[Batch Manager]
         NotificationSystem[Notification System]
     end
-    
-    subgraph "Azure Functions"
-        ValidateTemplate[validate-template]
-        ValidationStatus[validation-status]
-        ValidationCallback[validation-callback]
-        GithubOAuth[github-oauth-token]
-        ArchiveCollection[archive-collection]
+
+    subgraph "Express Backend Container"
+        AnalyzeAPI[/api/v4/analyze]
+        ConfigAPI[/api/v4/client-settings]
+        AuthAPI[/api/v4/github-oauth-token]
+        ValidateAPI[/api/v4/validate-template]
+        StatusAPI[/api/v4/validation-status]
+        CallbackAPI[/api/v4/validation-callback]
+        ArchiveAPI[/api/v4/archive-collection]
     end
-    
+
+    subgraph "Docker Deployment"
+        DockerCompose[docker-compose.yml]
+        SingleContainer[Dockerfile.combined]
+    end
+
     subgraph "GitHub Workflows"
         ValidationWorkflow[validation-template.yml]
         SubmitAnalysis[submit-analysis.yml]
     end
-    
+
     subgraph "Storage"
         localStorage[(localStorage)]
         ResultsRepo[(GitHub Pages Results)]
     end
-    
+
     User --> UI
     UI --> BatchManager
     UI --> NotificationSystem
     UI --> ResultsViewer
-    
-    BatchManager --> ValidateTemplate
-    UI --> ValidateTemplate
-    UI --> ValidationStatus
-    UI --> GithubOAuth
-    
-    ValidateTemplate --> ValidationWorkflow
-    ValidationWorkflow --> ValidationCallback
-    ValidationCallback --> ValidationStatus
-    
+
+    BatchManager --> AnalyzeAPI
+    UI --> ValidateAPI
+    UI --> StatusAPI
+    UI --> AuthAPI
+    UI --> ConfigAPI
+
+    AnalyzeAPI --> GitHub
+    ValidateAPI --> ValidationWorkflow
+    ValidationWorkflow --> CallbackAPI
+    CallbackAPI --> StatusAPI
+
     ValidationWorkflow --> SubmitAnalysis
     SubmitAnalysis --> ResultsRepo
-    SubmitAnalysis --> ArchiveCollection
-    
-    ValidationStatus --> localStorage
-    localStorage --> ValidationStatus
-    
+    SubmitAnalysis --> ArchiveAPI
+
+    StatusAPI --> localStorage
+    localStorage --> StatusAPI
+
     ResultsRepo --> ResultsViewer
-    
-    GithubOAuth --> GitHub
-    
+
+    AuthAPI --> GitHub
+
+    DockerCompose -.-> UI
+    DockerCompose -.-> AnalyzeAPI
+    SingleContainer -.-> UI
+    SingleContainer -.-> AnalyzeAPI
+
     class UI,BatchManager,ResultsViewer,NotificationSystem highlight
-    class ValidateTemplate,ValidationStatus,ValidationCallback,GithubOAuth,ArchiveCollection highlight
+    class AnalyzeAPI,ConfigAPI,AuthAPI,ValidateAPI,StatusAPI,CallbackAPI,ArchiveAPI highlight
     class ValidationWorkflow,SubmitAnalysis highlight
-    
+
     classDef highlight fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+## Deployment Options
+
+### Local Development
+
+**Two-Terminal Approach (Recommended):**
+
+Terminal 1 - Express Backend:
+
+```bash
+cd packages/server
+npm run dev  # Runs on port 3001
+```
+
+Terminal 2 - Vite Frontend:
+
+```bash
+cd packages/app
+npm run dev  # Runs on port 4000
+```
+
+**Production Preview:**
+
+```bash
+cd packages/app
+npm run preview  # Runs on port 3000
+```
+
+### Docker Deployment
+
+**Multi-Container (Development):**
+
+```bash
+docker-compose up
+```
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:3001
+
+**Single Container (Production):**
+
+```bash
+docker build -f Dockerfile.combined -t template-doctor .
+docker run -p 80:80 template-doctor
+```
+
+- All services: http://localhost
+
+### Port Allocation
+
+| Service                  | Development | Preview | Docker (Multi) | Docker (Single) |
+| ------------------------ | ----------- | ------- | -------------- | --------------- |
+| Vite Dev Server          | 4000        | -       | -              | -               |
+| Vite Preview             | -           | 3000    | 3000           | -               |
+| Express Backend          | 3001        | 3001    | 3001           | -               |
+| Nginx (Combined)         | -           | -       | -              | 80              |
+| Azure Functions (Legacy) | 7071        | 7071    | -              | -               |
+
+## Migration Status
+
+### Completed Migrations
+
+✅ **Core API Endpoints:**
+
+- `/api/v4/analyze` - Template analysis with fork-first SAML strategy
+- `/api/v4/github-oauth-token` - OAuth token exchange
+- `/api/v4/client-settings` - Runtime configuration
+
+✅ **Infrastructure:**
+
+- Docker Compose configuration for multi-container deployment
+- Combined Dockerfile for single-container production deployment
+- Environment variable consolidation
+- CORS and security configuration
+
+### Pending Migrations (17 Functions)
+
+The following Azure Functions remain to be migrated to Express endpoints:
+
+**Validation Workflow:**
+
+- `validate-template` → `/api/v4/validate-template`
+- `validation-status` → `/api/v4/validation-status`
+- `validation-callback` → `/api/v4/validation-callback`
+- `validation-cancel` → `/api/v4/validation-cancel`
+- `validation-docker-image` → `/api/v4/validation-docker-image`
+- `validation-ossf` → `/api/v4/validation-ossf`
+
+**GitHub Actions:**
+
+- `action-trigger` → `/api/v4/action-trigger`
+- `action-run-status` → `/api/v4/action-run-status`
+- `action-run-artifacts` → `/api/v4/action-run-artifacts`
+
+**Analysis & Submission:**
+
+- `submit-analysis-dispatch` → `/api/v4/submit-analysis-dispatch`
+- `add-template-pr` → `/api/v4/add-template-pr`
+- `archive-collection` → `/api/v4/archive-collection` ✅ (migrated)
+
+**Repository Management:**
+
+- `repo-fork` → `/api/v4/repo-fork`
+- `batch-scan-start` → `/api/v4/batch-scan-start`
+
+**Issue Management:**
+
+- `issue-create` → `/api/v4/issue-create`
+- `issue-ai-proxy` → `/api/v4/issue-ai-proxy`
+
+**Setup:**
+
+- `setup` → `/api/v4/setup`
+
+### Legacy Branch
+
+Azure Functions code is maintained in the `legacy/azure-functions` branch for reference and potential rollback scenarios.
+
+```
+
 ```

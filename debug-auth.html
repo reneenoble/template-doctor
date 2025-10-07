@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Debug</title>
+  <style>
+    body { font-family: system-ui; padding: 20px; max-width: 800px; margin: 0 auto; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+    .status { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+    .ok { background: #d4edda; }
+    .error { background: #f8d7da; }
+  </style>
+</head>
+<body>
+  <h1>🔍 OAuth Debug Page</h1>
+  
+  <div id="checks"></div>
+  
+  <button id="login-button">🔐 Login with GitHub</button>
+  <button id="logout-button">🚪 Logout</button>
+  <button onclick="runChecks()">🔄 Re-run Checks</button>
+  
+  <h2>Console Output:</h2>
+  <pre id="console"></pre>
+  
+  <script type="module">
+    const logs = [];
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    function addLog(type, ...args) {
+      logs.push({ type, args, time: new Date().toISOString() });
+      updateConsole();
+    }
+    
+    console.log = (...args) => { addLog('log', ...args); originalLog(...args); };
+    console.error = (...args) => { addLog('error', ...args); originalError(...args); };
+    console.warn = (...args) => { addLog('warn', ...args); originalWarn(...args); };
+    
+    function updateConsole() {
+      const div = document.getElementById('console');
+      div.textContent = logs.map(l => 
+        `[${l.time}] [${l.type}] ${l.args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' ')}`
+      ).join('\n');
+    }
+    
+    window.runChecks = async function() {
+      const checks = document.getElementById('checks');
+      checks.innerHTML = '';
+      
+      function addCheck(name, status, details) {
+        const div = document.createElement('div');
+        div.className = `status ${status ? 'ok' : 'error'}`;
+        div.innerHTML = `<strong>${status ? '✅' : '❌'} ${name}</strong><br>${details}`;
+        checks.appendChild(div);
+      }
+      
+      // Check 1: config.json loaded
+      try {
+        const resp = await fetch('/config.json');
+        const config = await resp.json();
+        addCheck('config.json', true, `Client ID: ${config.githubOAuth?.clientId || 'NOT SET'}<br>Redirect: ${config.githubOAuth?.redirectUri || 'NOT SET'}`);
+        window._debugConfig = config;
+      } catch (e) {
+        addCheck('config.json', false, e.message);
+      }
+      
+      // Check 2: ConfigLoader global
+      if (window.ConfigLoader) {
+        addCheck('ConfigLoader global', true, 'Available');
+        try {
+          const cfg = await window.ConfigLoader.loadConfig();
+          addCheck('ConfigLoader.loadConfig()', true, `Client ID: ${cfg.githubOAuth?.clientId || cfg.GITHUB_CLIENT_ID || 'NOT SET'}`);
+          window._debugLoadedConfig = cfg;
+        } catch (e) {
+          addCheck('ConfigLoader.loadConfig()', false, e.message);
+        }
+      } else {
+        addCheck('ConfigLoader global', false, 'Not found');
+      }
+      
+      // Check 3: GitHubAuth global
+      if (window.GitHubAuth) {
+        addCheck('GitHubAuth global', true, 'Available');
+        addCheck('GitHubAuth.login', typeof window.GitHubAuth.login === 'function', `Type: ${typeof window.GitHubAuth.login}`);
+      } else {
+        addCheck('GitHubAuth global', false, 'Not found - auth.ts may not be loaded');
+      }
+      
+      // Check 4: Login button
+      const btn = document.getElementById('login-button');
+      if (btn) {
+        const listeners = getEventListeners ? getEventListeners(btn) : 'N/A (use Chrome DevTools)';
+        addCheck('Login button', true, `Found. Click listeners: ${listeners === 'N/A (use Chrome DevTools)' ? listeners : JSON.stringify(listeners)}`);
+      } else {
+        addCheck('Login button', false, 'Not found');
+      }
+      
+      // Check 5: Backend health
+      try {
+        const resp = await fetch('http://localhost:3001/api/health');
+        const data = await resp.json();
+        addCheck('Backend health', resp.ok, `Status: ${resp.status}<br>${JSON.stringify(data, null, 2)}`);
+      } catch (e) {
+        addCheck('Backend health', false, e.message);
+      }
+      
+      // Check 6: Backend config
+      try {
+        const resp = await fetch('http://localhost:3001/api/v4/client-settings');
+        const data = await resp.json();
+        addCheck('Backend client-settings', resp.ok, `GITHUB_CLIENT_ID: ${data.GITHUB_CLIENT_ID || 'NOT SET'}<br>githubOAuth: ${data.githubOAuth ? JSON.stringify(data.githubOAuth) : 'NOT SET'}`);
+        window._debugBackendConfig = data;
+      } catch (e) {
+        addCheck('Backend client-settings', false, e.message);
+      }
+    };
+    
+    // Import modules
+    import './src/scripts/config-loader.js';
+    import './src/scripts/auth.js';
+    
+    // Run checks after modules load
+    setTimeout(runChecks, 500);
+  </script>
+</body>
+</html>

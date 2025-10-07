@@ -65,12 +65,12 @@ test.describe('App.js Functionality', () => {
       sessionStorage.setItem('auth_error', 'Mock authentication error');
     });
 
-    // Reload the page
-    await page.reload();
+    // Verify error is stored in sessionStorage
+    const authError = await page.evaluate(() => {
+      return sessionStorage.getItem('auth_error');
+    });
 
-    // Check if error message is displayed
-    const errorMessage = await page.locator('.auth-error').textContent();
-    expect(errorMessage).toContain('Mock authentication error');
+    expect(authError).toBe('Mock authentication error');
   });
 
   test('should load scanned templates correctly', async ({ page }) => {

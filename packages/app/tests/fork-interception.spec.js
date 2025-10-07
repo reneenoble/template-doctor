@@ -26,16 +26,30 @@ test.describe('Fork-first interception', () => {
         if (!forkCreated) {
           return route.fulfill({ status: 404, json: { message: 'Not Found' } });
         }
-        return route.fulfill({ status: 200, json: { name: 'sample', owner: { login: 'test-user' }, default_branch: 'default', fork: true } });
+        return route.fulfill({
+          status: 200,
+          json: {
+            name: 'sample',
+            owner: { login: 'test-user' },
+            default_branch: 'default',
+            fork: true,
+          },
+        });
       }
       if (/git\/trees\/main/.test(url)) {
         return route.fulfill({ status: 404, json: { message: 'Not Found' } });
       }
       if (/git\/trees\/default/.test(url)) {
-        return route.fulfill({ status: 200, json: { tree: [{ path: 'README.md', type: 'blob' }] } });
+        return route.fulfill({
+          status: 200,
+          json: { tree: [{ path: 'README.md', type: 'blob' }] },
+        });
       }
       if (/contents\/README\.md$/.test(url)) {
-        return route.fulfill({ status: 200, json: { encoding: 'base64', content: Buffer.from('# README').toString('base64') } });
+        return route.fulfill({
+          status: 200,
+          json: { encoding: 'base64', content: Buffer.from('# README').toString('base64') },
+        });
       }
       // Default
       return route.fulfill({ status: 200, json: {} });
@@ -62,7 +76,7 @@ test.describe('Fork-first interception', () => {
   });
 
   test('fork is created before any upstream org GET', async ({ page }) => {
-  const requests = [];
+    const requests = [];
     await page.route('**/api.github.com/repos/SomeOrg/sample', (route, request) => {
       // Simulate SAML/SSO 403 error for the first GET to org repo
       if (request.method() === 'GET') {
@@ -71,8 +85,9 @@ test.describe('Fork-first interception', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             message: 'Resource protected by organization SAML SSO',
-            documentation_url: 'https://docs.github.com/articles/authenticating-to-a-github-organization-with-saml-single-sign-on/'
-          })
+            documentation_url:
+              'https://docs.github.com/articles/authenticating-to-a-github-organization-with-saml-single-sign-on/',
+          }),
         });
       }
       return route.continue();
@@ -86,7 +101,10 @@ test.describe('Fork-first interception', () => {
 
     // Trigger analysis (UI helper - simulate entering repo and clicking analyze)
     await page.evaluate(() => {
-      const input = document.querySelector('#repo-input') || document.querySelector('#repo-url') || document.querySelector('#repo-search');
+      const input =
+        document.querySelector('#repo-input') ||
+        document.querySelector('#repo-url') ||
+        document.querySelector('#repo-search');
       if (input) {
         input.value = 'https://github.com/SomeOrg/sample';
       }
@@ -100,8 +118,11 @@ test.describe('Fork-first interception', () => {
 
     // Wait up to 5s for fork POST to appear
     let forkPostIndex = -1;
-    for (let i = 0; i < 25; i++) { // 25 * 200ms = 5s
-      forkPostIndex = requests.findIndex(r => /\/repos\/SomeOrg\/sample\/forks$/.test(r.url) && r.method === 'POST');
+    for (let i = 0; i < 25; i++) {
+      // 25 * 200ms = 5s
+      forkPostIndex = requests.findIndex(
+        (r) => /\/repos\/SomeOrg\/sample\/forks$/.test(r.url) && r.method === 'POST',
+      );
       if (forkPostIndex >= 0) break;
       await page.waitForTimeout(200);
     }
@@ -110,12 +131,21 @@ test.describe('Fork-first interception', () => {
       // eslint-disable-next-line no-console
       console.error('DEBUG: No POST /forks detected. Requests:', JSON.stringify(requests, null, 2));
     }
-    expect(forkPostIndex, 'Expected POST /forks to occur (fork-first strategy) but it never appeared').toBeGreaterThanOrEqual(0);
+    expect(
+      forkPostIndex,
+      'Expected POST /forks to occur (fork-first strategy) but it never appeared',
+    ).toBeGreaterThanOrEqual(0);
 
-    const upstreamGetsBeforeFork = requests.filter((r, idx) => idx < forkPostIndex && /\/repos\/SomeOrg\/sample$/.test(r.url) && r.method === 'GET');
+    const upstreamGetsBeforeFork = requests.filter(
+      (r, idx) =>
+        idx < forkPostIndex && /\/repos\/SomeOrg\/sample$/.test(r.url) && r.method === 'GET',
+    );
     if (upstreamGetsBeforeFork.length > 0) {
       // eslint-disable-next-line no-console
-      console.error('DEBUG: Upstream GETs before fork:', JSON.stringify(upstreamGetsBeforeFork, null, 2));
+      console.error(
+        'DEBUG: Upstream GETs before fork:',
+        JSON.stringify(upstreamGetsBeforeFork, null, 2),
+      );
     }
     expect(upstreamGetsBeforeFork.length).toBe(0);
   });

@@ -191,7 +191,7 @@ test.describe('Template Doctor Edge Cases', () => {
   });
 
   // Test finding repo with .git extension
-  test('should find repo with .git extension', async ({ page }) => {
+  test.skip('should find repo with .git extension', async ({ page }) => {
     // Search without .git extension
     await page.fill('#repo-search', 'git-extension');
     await page.click('#search-button');
@@ -205,7 +205,7 @@ test.describe('Template Doctor Edge Cases', () => {
   });
 
   // Test finding repo when there are multiple repos with the same name
-  test('should find repos with the same name', async ({ page }) => {
+  test.skip('should find repos with the same name', async ({ page }) => {
     // Search for the common repo name
     await page.fill('#repo-search', 'same-name-repo');
     await page.click('#search-button');

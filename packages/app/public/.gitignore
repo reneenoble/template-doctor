@@ -1,0 +1,4 @@
+# This directory is populated during build
+# Source files are maintained at the parent level
+*
+!.gitignore

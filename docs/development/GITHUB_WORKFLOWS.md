@@ -48,10 +48,10 @@ This workflow scans Docker images found in a template repository:
 
 - **Trigger**: Dispatched with repo owner, name, and run ID
 - **Process**:
-  1. Finds candidate files that might contain Docker image references
-  2. Extracts image references from Dockerfiles, docker-compose files, and devcontainer configurations
-  3. Deduplicates and filters image references
-  4. Scans each unique image using Trivy security scanner
+    1. Finds candidate files that might contain Docker image references
+    2. Extracts image references from Dockerfiles, docker-compose files, and devcontainer configurations
+    3. Deduplicates and filters image references
+    4. Scans each unique image using Trivy security scanner
 - **Output**: Produces scan artifacts containing vulnerability reports for each image and the repository
 
 ### validate-ossf-score.yml
@@ -71,6 +71,7 @@ The API modules responsible for workflow integration are:
 - **action-run-artifacts/index.js**: Fetches artifacts produced by workflows
 
 Specialized processing modules like **validation-docker-image/index.js** use these three core modules to:
+
 1. Trigger a specific validation workflow
 2. Wait for completion
 3. Retrieve and process results
@@ -99,17 +100,17 @@ Example usage pattern:
 
 ```javascript
 // In action-trigger/index.js
-const { fetchWithGitHubAuth } = require('../shared/api-utils');
+const { fetchWithGitHubAuth } = require("../shared/api-utils");
 
 // Make an authenticated request to GitHub API with retry logic
 const response = await fetchWithGitHubAuth(
-  `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`,
-  {
-    method: 'POST',
-    body: JSON.stringify({ ref: 'main', inputs: workflowInput }),
-    operationName: 'triggerWorkflow'
-  },
-  context
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`,
+    {
+        method: "POST",
+        body: JSON.stringify({ ref: "main", inputs: workflowInput }),
+        operationName: "triggerWorkflow",
+    },
+    context,
 );
 ```
 

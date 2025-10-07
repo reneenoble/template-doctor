@@ -15,25 +15,24 @@ The OpenSSF Scorecard scanning is implemented through the GitHub Actions workflo
 The OpenSSF Scorecard evaluation process consists of several key steps:
 
 1. **Workflow Triggering**: The `validation-ossf` API endpoint triggers the `validate-ossf-score.yml` workflow with:
-   - Repository details (owner/repo format)
-   - A unique run ID for tracking
-   
+    - Repository details (owner/repo format)
+    - A unique run ID for tracking
 2. **Repository Analysis**: The workflow runs the OpenSSF Scorecard Docker image to analyze the repository across multiple security dimensions:
-   - Dependency update mechanisms
-   - Code review practices
-   - Branch protection settings
-   - Continuous integration testing
-   - Vulnerability reporting process
-   - Use of dangerous patterns
-   - Token permissions
+    - Dependency update mechanisms
+    - Code review practices
+    - Branch protection settings
+    - Continuous integration testing
+    - Vulnerability reporting process
+    - Use of dangerous patterns
+    - Token permissions
 
 3. **Score Calculation**: The tool generates a composite security score (0-10) based on the repository's compliance with security best practices.
 
 4. **Result Processing**: After the workflow completes, the system:
-   - Retrieves the artifact containing the OpenSSF score
-   - Parses the score from the artifact name
-   - Compares against the minimum required score
-   - Records compliance or issues based on the result
+    - Retrieves the artifact containing the OpenSSF score
+    - Parses the score from the artifact name
+    - Compares against the minimum required score
+    - Records compliance or issues based on the result
 
 ## Technical Implementation
 
@@ -45,6 +44,7 @@ The OpenSSF scoring system comprises these API components:
 - **validation-ossf/scorecard.js**: Core implementation that leverages the shared action APIs
 
 The system uses the following shared action API components:
+
 - **action-trigger/index.js**: Triggers GitHub workflows and retrieves run IDs
 - **action-run-status/index.js**: Monitors workflow execution status
 - **action-run-artifacts/index.js**: Retrieves workflow artifacts with results
@@ -83,23 +83,23 @@ A successful scan will record compliance information like:
 
 ```json
 {
-  "compliance": [
-    {
-      "id": "ossf-score-meets-minimum",
-      "category": "security",
-      "message": "OpenSSF Score 8.2 >= 7.0",
-      "details": {
-        "templateOwnerRepo": "owner/repo",
-        "score": "8.2",
-        "minScore": 7,
-        "artifact": {
-          "name": "ossf-scorecard_owner_repo_abc123_score_8_2",
-          "id": 12345678,
-          "url": "https://api.github.com/repos/Template-Doctor/template-doctor/actions/artifacts/12345678"
+    "compliance": [
+        {
+            "id": "ossf-score-meets-minimum",
+            "category": "security",
+            "message": "OpenSSF Score 8.2 >= 7.0",
+            "details": {
+                "templateOwnerRepo": "owner/repo",
+                "score": "8.2",
+                "minScore": 7,
+                "artifact": {
+                    "name": "ossf-scorecard_owner_repo_abc123_score_8_2",
+                    "id": 12345678,
+                    "url": "https://api.github.com/repos/Template-Doctor/template-doctor/actions/artifacts/12345678"
+                }
+            }
         }
-      }
-    }
-  ]
+    ]
 }
 ```
 
@@ -107,23 +107,23 @@ If the score fails to meet the minimum threshold, an issue is recorded:
 
 ```json
 {
-  "issues": [
-    {
-      "id": "ossf-score-below-minimum",
-      "severity": "warning",
-      "message": "OSSF workflow concluded with score 5.8 < 7.0",
-      "details": {
-        "templateOwnerRepo": "owner/repo",
-        "score": "5.8",
-        "minScore": "7.0",
-        "artifact": {
-          "name": "ossf-scorecard_owner_repo_abc123_score_5_8",
-          "id": 12345678,
-          "url": "https://api.github.com/repos/Template-Doctor/template-doctor/actions/artifacts/12345678"
+    "issues": [
+        {
+            "id": "ossf-score-below-minimum",
+            "severity": "warning",
+            "message": "OSSF workflow concluded with score 5.8 < 7.0",
+            "details": {
+                "templateOwnerRepo": "owner/repo",
+                "score": "5.8",
+                "minScore": "7.0",
+                "artifact": {
+                    "name": "ossf-scorecard_owner_repo_abc123_score_5_8",
+                    "id": 12345678,
+                    "url": "https://api.github.com/repos/Template-Doctor/template-doctor/actions/artifacts/12345678"
+                }
+            }
         }
-      }
-    }
-  ]
+    ]
 }
 ```
 
@@ -154,6 +154,7 @@ The OSSF validation API follows a standardized response format that's shared wit
 ```
 
 Key fields in the shared response structure:
+
 - **templateUrl**: The repository being analyzed (owner/repo format)
 - **runId**: Unique identifier for this validation run
 - **githubRunId**: GitHub Actions workflow run ID

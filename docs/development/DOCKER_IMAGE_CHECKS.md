@@ -15,28 +15,28 @@ The Docker image scanning is implemented through the GitHub Actions workflow sys
 The Docker image scanning process consists of several key steps:
 
 1. **Image Discovery**: Searches a repository for Docker image references in:
-   - Dockerfiles (`FROM` statements)
-   - Docker Compose files (`image:` entries)
-   - Devcontainer configuration files (`image:` property)
-   - Infrastructure as Code files (Bicep, Terraform)
-   - Generic files that might contain image references
+    - Dockerfiles (`FROM` statements)
+    - Docker Compose files (`image:` entries)
+    - Devcontainer configuration files (`image:` property)
+    - Infrastructure as Code files (Bicep, Terraform)
+    - Generic files that might contain image references
 
 2. **Image Filtering**: Deduplicates found images and filters out non-scannable references:
-   - Removes development container features (not actual images)
-   - Filters out patterns that don't represent valid Docker images
-   - Normalizes image references
+    - Removes development container features (not actual images)
+    - Filters out patterns that don't represent valid Docker images
+    - Normalizes image references
 
 3. **Security Scanning**: Uses Trivy, a comprehensive vulnerability scanner to check each image for:
-   - OS and package vulnerabilities
-   - Application dependencies vulnerabilities
-   - Secret detection
-   - License violations
-   - Misconfigurations
+    - OS and package vulnerabilities
+    - Application dependencies vulnerabilities
+    - Secret detection
+    - License violations
+    - Misconfigurations
 
 4. **Repository Scanning**: In addition to scanning individual images, the entire repository is scanned for:
-   - Secrets in code
-   - Misconfigurations in IaC files
-   - License issues
+    - Secrets in code
+    - Misconfigurations in IaC files
+    - License issues
 
 ## Technical Implementation
 
@@ -49,6 +49,7 @@ The Docker image scanning system comprises several API components:
 - **zip-utils.js**: Helper for extracting scan artifacts
 
 The system uses the following shared action API components:
+
 - **action-trigger/index.js**: Triggers GitHub workflows and retrieves run IDs
 - **action-run-status/index.js**: Monitors workflow execution status
 - **action-run-artifacts/index.js**: Retrieves workflow artifacts with results
@@ -86,33 +87,33 @@ A successful scan produces JSON results with this structure:
 
 ```json
 {
-  "repositoryScan": {
-    "totalMisconfigurations": 3,
-    "criticalMisconfigurations": 0,
-    "highMisconfigurations": 1,
-    "mediumMisconfigurations": 2,
-    "totalVulnerabilities": 12,
-    "criticalVulns": 0,
-    "highVulns": 3,
-    "mediumVulns": 5,
-    "lowVulns": 4,
-    "secretsFound": 0,
-    "licenseIssues": 0
-  },
-  "imageScans": [
-    {
-      "artifactName": "mcr.microsoft.com/devcontainers/javascript-node:0-18",
-      "totalVulnerabilities": 54,
-      "criticalVulns": 2,
-      "highVulns": 14,
-      "mediumVulns": 23,
-      "lowVulns": 15,
-      "secretsFound": 0,
-      "licenseIssues": 0,
-      "repository": "mcr.microsoft.com/devcontainers/javascript-node",
-      "tag": "0-18"
-    }
-  ]
+    "repositoryScan": {
+        "totalMisconfigurations": 3,
+        "criticalMisconfigurations": 0,
+        "highMisconfigurations": 1,
+        "mediumMisconfigurations": 2,
+        "totalVulnerabilities": 12,
+        "criticalVulns": 0,
+        "highVulns": 3,
+        "mediumVulns": 5,
+        "lowVulns": 4,
+        "secretsFound": 0,
+        "licenseIssues": 0
+    },
+    "imageScans": [
+        {
+            "artifactName": "mcr.microsoft.com/devcontainers/javascript-node:0-18",
+            "totalVulnerabilities": 54,
+            "criticalVulns": 2,
+            "highVulns": 14,
+            "mediumVulns": 23,
+            "lowVulns": 15,
+            "secretsFound": 0,
+            "licenseIssues": 0,
+            "repository": "mcr.microsoft.com/devcontainers/javascript-node",
+            "tag": "0-18"
+        }
+    ]
 }
 ```
 
@@ -154,6 +155,7 @@ The Docker image validation API follows a standardized response format that's sh
 ```
 
 Key fields in the shared response structure:
+
 - **templateUrl**: The repository being analyzed (owner/repo format)
 - **runId**: Unique identifier for this validation run
 - **githubRunId**: GitHub Actions workflow run ID

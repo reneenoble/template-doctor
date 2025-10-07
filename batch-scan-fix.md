@@ -30,13 +30,13 @@ async forkRepository(owner, repo) {
     return result;
   } catch (error) {
     // Check if this is a SAML or SSO related error
-    const isSamlError = 
+    const isSamlError =
       (error.response?.status === 403 && /saml|sso/i.test(error.response?.data?.message)) ||
       (error.message && /saml|sso/i.test(error.message));
-    
+
     // Enhance the error object with SAML detection
     error.isSamlError = isSamlError;
-    
+
     console.error(`Error forking repository ${owner}/${repo}:`, error);
     throw error;
   }
@@ -56,27 +56,35 @@ Update the `checkAndUpdateRepoUrl` function to accept a `isBatchMode` parameter 
  * @returns {Promise<string>} - New repository URL (might be the same or a user fork)
  */
 async function checkAndUpdateRepoUrl(repoUrl, isBatchMode = false) {
-  // ... (existing code)
+    // ... (existing code)
 
-  // Skip confirmation dialog in batch mode
-  if (ORGANIZATIONS_CONFIG.requireConfirmationForFork && !dueToSaml && !directiveFork && !isBatchMode) {
-    // ... (existing confirmation dialog code)
-  }
+    // Skip confirmation dialog in batch mode
+    if (
+        ORGANIZATIONS_CONFIG.requireConfirmationForFork &&
+        !dueToSaml &&
+        !directiveFork &&
+        !isBatchMode
+    ) {
+        // ... (existing confirmation dialog code)
+    }
 
-  // ... (existing fork creation code)
+    // ... (existing fork creation code)
 
-  // For SAML errors in batch mode, just return the original URL instead of throwing an error
-  if (isSamlError && isBatchMode) {
-    debug('app', `SAML restriction detected for ${owner}/${repo} in batch mode - using original URL`);
-    return repoUrl;
-  }
+    // For SAML errors in batch mode, just return the original URL instead of throwing an error
+    if (isSamlError && isBatchMode) {
+        debug(
+            "app",
+            `SAML restriction detected for ${owner}/${repo} in batch mode - using original URL`,
+        );
+        return repoUrl;
+    }
 
-  // For batch mode, we want to continue with the original URL on fork errors
-  if (isBatchMode) {
-    return repoUrl;
-  }
-  
-  // ... (rest of existing code)
+    // For batch mode, we want to continue with the original URL on fork errors
+    if (isBatchMode) {
+        return repoUrl;
+    }
+
+    // ... (rest of existing code)
 }
 ```
 
@@ -88,22 +96,22 @@ Update the repository check in the batch scan process:
 // First check if the repository needs to be forked
 let processedUrl = url;
 try {
-  // Pass true as the second parameter to indicate batch mode
-  processedUrl = await checkAndUpdateRepoUrl(url, true);
+    // Pass true as the second parameter to indicate batch mode
+    processedUrl = await checkAndUpdateRepoUrl(url, true);
 
-  if (processedUrl !== url) {
-    itemElement.querySelector('.batch-item-message').textContent =
-      'Using fork of the repository...';
-  } else {
-    itemElement.querySelector('.batch-item-message').textContent =
-      'Analyzing repository...';
-  }
+    if (processedUrl !== url) {
+        itemElement.querySelector(".batch-item-message").textContent =
+            "Using fork of the repository...";
+    } else {
+        itemElement.querySelector(".batch-item-message").textContent =
+            "Analyzing repository...";
+    }
 } catch (forkError) {
-  debug('app', `Error during fork check: ${forkError.message}`, forkError);
-  itemElement.querySelector('.batch-item-message').textContent =
-    'Proceeding with original repository...';
-  // Always fall back to original URL on error in batch mode
-  processedUrl = url;
+    debug("app", `Error during fork check: ${forkError.message}`, forkError);
+    itemElement.querySelector(".batch-item-message").textContent =
+        "Proceeding with original repository...";
+    // Always fall back to original URL on error in batch mode
+    processedUrl = url;
 }
 ```
 

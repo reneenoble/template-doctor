@@ -10,7 +10,6 @@
 }
 
 .notification {
-  background-color: #fff;
   border-radius: 6px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   margin-bottom: 15px;
@@ -84,21 +83,29 @@
   transition: width 0.3s linear;
 }
 
-/* Notification types */
+/* Notification types with background colors */
 .notification.info {
   border-left: 4px solid #0078d4;
+  background-color: #e3f2fd;
+  color: #014361;
 }
 
 .notification.success {
   border-left: 4px solid #107c10;
+  background-color: #dff6dd;
+  color: #0e5a0e;
 }
 
 .notification.warning {
   border-left: 4px solid #ff8c00;
+  background-color: #fff4e5;
+  color: #663c00;
 }
 
 .notification.error {
   border-left: 4px solid #d83b01;
+  background-color: #fde7e9;
+  color: #6e2000;
 }
 
 .notification.info .notification-progress-bar {

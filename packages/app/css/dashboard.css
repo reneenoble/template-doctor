@@ -79,10 +79,10 @@
   border-color: #c82333;
 }
 
-/* Raw data content styling */
+/* Raw data content styling - visibility controlled by JavaScript */
 #raw-data-content {
   margin-top: 15px;
-  display: none;
+  /* display: none removed - controlled by JS inline styles */
 }
 
 #raw-data-content pre {

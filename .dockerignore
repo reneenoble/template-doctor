@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Build outputs
+dist/
+.vite/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Azure Functions (not needed in containers)
+packages/api/
+
+# Misc
+*.log
+.azurite/
+__azurite_db_*

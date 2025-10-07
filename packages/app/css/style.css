@@ -45,6 +45,78 @@ header {
   padding: 16px 0;
 }
 
+/* SAML Warning Banner */
+.saml-warning-banner {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-bottom: 2px solid #ffc107;
+  padding: 16px 0;
+  position: sticky;
+  top: 68px; /* Position below header */
+  z-index: 99;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.saml-warning-banner .banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.saml-warning-banner i.fa-exclamation-triangle {
+  color: #ff9800;
+  font-size: 24px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.saml-warning-banner .banner-text {
+  color: #664d03;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.saml-warning-banner .banner-text strong {
+  font-weight: 600;
+  color: #523208;
+}
+
+.saml-warning-banner ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.saml-warning-banner ul li {
+  margin: 4px 0;
+}
+
+.saml-warning-banner .banner-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #856404;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .saml-warning-banner {
+    top: 62px; /* Adjust for smaller header */
+  }
+  
+  .saml-warning-banner .banner-content {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .saml-warning-banner i.fa-exclamation-triangle {
+    font-size: 20px;
+  }
+  
+  .saml-warning-banner .banner-text {
+    font-size: 0.9rem;
+  }
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -431,7 +503,7 @@ main {
   text-decoration: underline;
 }
 
-/* Pagination Styles */
+/* Pagination Styles (Legacy - being replaced by Load More) */
 .pagination {
   display: flex;
   justify-content: center;
@@ -457,6 +529,58 @@ main {
 
 .pagination button:hover:not(:disabled) {
   background-color: var(--primary-dark);
+}
+
+/* Load More Button Styles */
+.load-more-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30px;
+  gap: 10px;
+}
+
+.load-more-btn {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 120, 212, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 120, 212, 0.3);
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+}
+
+.load-more-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.load-more-btn.loading {
+  pointer-events: none;
+}
+
+.load-more-info {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .page-numbers {
@@ -487,6 +611,11 @@ main {
   border-radius: 8px;
   padding: 24px;
   box-shadow: var(--shadow);
+  display: none; /* Hidden by default - only show when clicking View Report */
+}
+
+.analysis-section.active {
+  display: block; /* Shown when active class is added */
 }
 
 .analysis-header {
@@ -531,11 +660,17 @@ main {
 }
 
 .loading-container {
+  flex-direction: column;
+  padding: 48px 0;
+  text-align: center;
+}
+
+.loading-spinner-wrapper {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 0;
 }
 
 .loading-spinner {

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Doctor - Admin Setup</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: #1f2937;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 8px 0 0;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f9fafb;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-group label.checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 0;
+        }
+        
+        .form-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .form-group input[readonly] {
+            background-color: #f9fafb;
+            color: #6b7280;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #047857;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .deprecated-models {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .model-tag {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #fbbf24;
+            transition: background-color 0.2s;
+        }
+        
+        .model-tag:hover {
+            background: #fde68a;
+        }
+        
+        .model-tag span {
+            flex: 1;
+            margin-right: 8px;
+            word-break: break-word;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-connected {
+            background: #10b981;
+        }
+        
+        .status-disconnected {
+            background: #ef4444;
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box .title {
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+        
+        .info-box .content {
+            color: #1e40af;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+                <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" style="height: 48px; width: auto;" />
+                <div>
+                    <h1><i class="fas fa-cog"></i> Admin Setup</h1>
+                    <p>Template Doctor Configuration Management</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Connection Status -->
+            <div class="info-box">
+                <div class="title">
+                    <span id="connection-status" class="status-indicator status-disconnected"></span>
+                    System Status
+                </div>
+                <div class="content" id="status-text">
+                    Loading configuration...
+                </div>
+            </div>
+            
+            <!-- GitHub OAuth Configuration -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fab fa-github"></i>
+                    GitHub OAuth Configuration
+                </div>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="github-client-id">Client ID</label>
+                            <input type="text" id="github-client-id" readonly placeholder="Loading...">
+                        </div>
+                        <div class="form-group">
+                            <label for="github-scope">OAuth Scope</label>
+                            <input type="text" id="github-scope" readonly placeholder="Loading...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="github-redirect">Redirect URI</label>
+                        <input type="text" id="github-redirect" readonly placeholder="Loading...">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Backend Configuration -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fas fa-server"></i>
+                    Backend Configuration
+                </div>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="backend-base-url">Base URL</label>
+                            <input type="text" id="backend-base-url" placeholder="Loading...">
+                        </div>
+                        <div class="form-group">
+                            <label for="backend-function-key">Function Key</label>
+                            <input type="password" id="backend-function-key" placeholder="Loading...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="backend-api-version">API Version</label>
+                        <select id="backend-api-version">
+                            <option value="v4">v4 (Recommended)</option>
+                            <option value="v3">v3 (Legacy)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Application Settings -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fas fa-cogs"></i>
+                    Application Settings
+                </div>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="default-rule-set">Default Rule Set</label>
+                            <select id="default-rule-set">
+                                <option value="dod">DoD (Definition of Done)</option>
+                                <option value="basic">Basic</option>
+                                <option value="comprehensive">Comprehensive</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="archive-collection">Archive Collection</label>
+                            <input type="text" id="archive-collection" placeholder="Loading...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="require-auth"> Require Authentication for Results
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="auto-save"> Auto Save Results
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="archive-enabled"> Enable Archive
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Deprecated Models -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Deprecated Models Management
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 15px; color: #6b7280;">
+                        These models are flagged as deprecated and will show warnings in analysis results.
+                    </p>
+                    <div id="deprecated-models-list" class="deprecated-models">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="btn-group" style="margin-top: 20px; padding-top: 15px;">
+                        <button class="btn btn-secondary" onclick="refreshDeprecatedModels()">
+                            <i class="fas fa-sync-alt"></i> Refresh Deprecated Models
+                        </button>
+                        <span style="color: #6b7280; font-size: 12px; align-self: center;">
+                            This manually runs the workflow to update deprecated models
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveConfiguration()">
+                    <i class="fas fa-save"></i> Save Configuration
+                </button>
+                <button class="btn btn-secondary" onclick="loadConfiguration()">
+                    <i class="fas fa-refresh"></i> Reload Configuration
+                </button>
+                <button class="btn btn-success" onclick="testConnection()">
+                    <i class="fas fa-link"></i> Test Connection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConfig = {};
+        
+        // Load configuration on page load
+        window.addEventListener('load', () => {
+            loadConfiguration();
+        });
+        
+        async function loadConfiguration() {
+            try {
+                // First try to load local config.json
+                let hasLocalConfig = false;
+                try {
+                    const configResponse = await fetch('/config.json');
+                    if (configResponse.ok) {
+                        const contentType = configResponse.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            currentConfig = await configResponse.json();
+                            hasLocalConfig = true;
+                            console.log('Loaded local config:', currentConfig);
+                        } else {
+                            console.warn('config.json returned non-JSON content');
+                        }
+                    }
+                } catch (configError) {
+                    console.warn('Failed to load local config.json:', configError.message);
+                }
+                
+                // Try to load from the client-settings endpoint
+                try {
+                    const response = await fetch('/api/v4/client-settings');
+                    if (response.ok) {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const serverConfig = await response.json();
+                            console.log('Loaded server config:', serverConfig);
+                            
+                            // Merge server config with local config
+                            currentConfig = { ...currentConfig, ...serverConfig };
+                            updateConnectionStatus(true, 'Connected to backend API');
+                        } else {
+                            throw new Error('Server returned non-JSON response');
+                        }
+                    } else {
+                        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                    }
+                } catch (serverError) {
+                    console.warn('Failed to load server config:', serverError.message);
+                    if (hasLocalConfig) {
+                        updateConnectionStatus(false, 'Using local configuration only - ' + serverError.message);
+                    } else {
+                        throw new Error('No configuration available: ' + serverError.message);
+                    }
+                }
+                
+                if (!currentConfig || Object.keys(currentConfig).length === 0) {
+                    throw new Error('No configuration data loaded');
+                }
+                
+                populateForm();
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                updateConnectionStatus(false, 'Failed to load configuration: ' + error.message);
+                
+                // Provide fallback configuration for demo
+                currentConfig = {
+                    githubOAuth: {
+                        clientId: 'Demo mode - not connected',
+                        scope: 'repo read:user',
+                        redirectUri: ''
+                    },
+                    backend: {
+                        baseUrl: '',
+                        functionKey: '',
+                        apiVersion: 'v4'
+                    },
+                    defaultRuleSet: 'dod',
+                    requireAuthForResults: true,
+                    autoSaveResults: false,
+                    archiveEnabled: false,
+                    archiveCollection: 'aigallery',
+                    deprecatedModels: [
+                        'N/A',
+                        'Cohere Command R 08-2024',
+                        'Cohere Command R+ 08-2024',
+                        'Cohere-rerank-v3.5',
+                        'DeepSeek-V3-0324',
+                        'Meta-Llama-3.1-8B-Instruct',
+                        'Llama-3.3-70B-Instruct',
+                        'Phi-4',
+                        'Phi-4-mini-instruct',
+                        'Mistral-small-2503',
+                        'Mistral-medium-2505'
+                    ]
+                };
+                populateForm();
+            }
+        }
+        
+        function updateConnectionStatus(connected, message) {
+            const indicator = document.getElementById('connection-status');
+            const text = document.getElementById('status-text');
+            
+            indicator.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+            text.textContent = message;
+        }
+        
+        function populateForm() {
+            // GitHub OAuth
+            document.getElementById('github-client-id').value = currentConfig.GITHUB_CLIENT_ID || currentConfig.githubOAuth?.clientId || '';
+            document.getElementById('github-scope').value = currentConfig.githubOAuth?.scope || 'repo read:user';
+            document.getElementById('github-redirect').value = currentConfig.githubOAuth?.redirectUri || '';
+            
+            // Backend
+            document.getElementById('backend-base-url').value = currentConfig.backend?.baseUrl || '';
+            document.getElementById('backend-function-key').value = currentConfig.backend?.functionKey || '';
+            document.getElementById('backend-api-version').value = currentConfig.backend?.apiVersion || 'v4';
+            
+            // Application Settings
+            document.getElementById('default-rule-set').value = currentConfig.defaultRuleSet || currentConfig.DEFAULT_RULE_SET || 'dod';
+            document.getElementById('archive-collection').value = currentConfig.archiveCollection || currentConfig.ARCHIVE_COLLECTION || 'aigallery';
+            document.getElementById('require-auth').checked = currentConfig.requireAuthForResults || currentConfig.REQUIRE_AUTH_FOR_RESULTS === 'true';
+            document.getElementById('auto-save').checked = currentConfig.autoSaveResults || currentConfig.AUTO_SAVE_RESULTS === 'true';
+            document.getElementById('archive-enabled').checked = currentConfig.archiveEnabled || currentConfig.ARCHIVE_ENABLED === 'true';
+            
+            // Deprecated Models
+            populateDeprecatedModels();
+        }
+        
+        function populateDeprecatedModels() {
+            const container = document.getElementById('deprecated-models-list');
+            const models = currentConfig.deprecatedModels || [];
+            
+            container.innerHTML = '';
+            
+            if (models.length === 0) {
+                container.innerHTML = '<div style="color: #6b7280; font-style: italic; text-align: center; padding: 20px;">No deprecated models configured</div>';
+                return;
+            }
+            
+            models.forEach((model, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'model-tag';
+                tag.innerHTML = `
+                    <span title="${model}">${model}</span>
+                    <button onclick="removeDeprecatedModel('${model.replace(/'/g, "\\'")}')" 
+                            style="background:none;border:none;color:#92400e;cursor:pointer;padding:2px;" 
+                            title="Remove this model">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(tag);
+            });
+            
+            // Add count info
+            const countInfo = document.createElement('div');
+            countInfo.style.cssText = 'grid-column: 1 / -1; text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px;';
+            countInfo.innerHTML = `${models.length} deprecated model${models.length !== 1 ? 's' : ''} configured`;
+            container.appendChild(countInfo);
+        }
+        
+        function removeDeprecatedModel(modelName) {
+            if (currentConfig.deprecatedModels) {
+                currentConfig.deprecatedModels = currentConfig.deprecatedModels.filter(m => m !== modelName);
+                populateDeprecatedModels();
+            }
+        }
+        
+        function saveConfiguration() {
+            // Collect form data
+            const formData = {
+                githubOAuth: {
+                    clientId: document.getElementById('github-client-id').value,
+                    scope: document.getElementById('github-scope').value,
+                    redirectUri: document.getElementById('github-redirect').value
+                },
+                backend: {
+                    baseUrl: document.getElementById('backend-base-url').value,
+                    functionKey: document.getElementById('backend-function-key').value,
+                    apiVersion: document.getElementById('backend-api-version').value
+                },
+                defaultRuleSet: document.getElementById('default-rule-set').value,
+                archiveCollection: document.getElementById('archive-collection').value,
+                requireAuthForResults: document.getElementById('require-auth').checked,
+                autoSaveResults: document.getElementById('auto-save').checked,
+                archiveEnabled: document.getElementById('archive-enabled').checked,
+                deprecatedModels: currentConfig.deprecatedModels || []
+            };
+            
+            // For demo purposes, just show the JSON
+            alert('Configuration would be saved:\\n\\n' + JSON.stringify(formData, null, 2));
+            console.log('Configuration to save:', formData);
+        }
+        
+        async function testConnection() {
+            try {
+                const response = await fetch('/api/v4/client-settings');
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ Connection successful!\\n\\nReceived configuration with ' + Object.keys(data).length + ' settings.');
+                    updateConnectionStatus(true, 'Connection test successful');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                alert('❌ Connection failed:\\n\\n' + error.message);
+                updateConnectionStatus(false, 'Connection test failed: ' + error.message);
+            }
+        }
+        
+        function refreshDeprecatedModels() {
+            // For demo purposes, simulate a workflow trigger
+            if (confirm('This will trigger a workflow to update deprecated models. Continue?')) {
+                alert('🔄 Deprecated models refresh initiated!\\n\\nThis would normally trigger a GitHub workflow to update the list.');
+                // In a real implementation, this would call an API endpoint
+                console.log('Would trigger deprecated models workflow');
+            }
+        }
+    </script>
+</body>
+</html>

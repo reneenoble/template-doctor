@@ -4,68 +4,145 @@ This document provides specific guidance for AI agents working with the Template
 
 ## Project Overview
 
-Template Doctor analyzes and validates sample templates, with a focus on Azure Developer CLI (azd) templates. It's structured as a monorepo with independently deployable packages:
+Template Doctor analyzes and validates sample templates, with a focus on Azure Developer CLI (azd) templates. It runs as a containerized application with Express backend and Vite frontend.
 
-- **packages/app**: Static web app (frontend UI)
-- **packages/api**: Azure Functions (PR creation, OAuth helpers, AZD validation)
-- **packages/analyzer-core**: Core analyzer functionality
-- **packages/server**: Server-side functions (deprecated)
+### Architecture (Current)
+
+- **packages/app**: Vite SPA (TypeScript frontend)
+- **packages/server**: Express backend (TypeScript REST API)
+- **packages/analyzer-core**: Core analyzer functionality (shared)
+- **Docker**: Containerized deployment (multi-container and single-container options)
+
+### Architecture (Legacy - Separate Branch)
+
+- **packages/api**: Azure Functions (maintained in `legacy/azure-functions` branch)
+- **packages/parity-tests**: Legacy test suite
 
 ## Development Environment Setup
 
 ### Prerequisites
 
-- Node.js LTS
-- npm 
-- Azure Functions Core Tools (for API development)
-- Python 3 (for serving frontend locally)
+- Node.js LTS (v18+)
+- npm
+- Docker and Docker Compose (recommended for local development)
 
-### Installation Steps
+### Quick Start with Docker (Recommended)
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/Template-Doctor/template-doctor.git
-   cd template-doctor
-   ```
+
+    ```bash
+    git clone https://github.com/Template-Doctor/template-doctor.git
+    cd template-doctor
+    ```
 
 2. Install dependencies:
-   ```bash
-   npm ci
-   ```
+
+    ```bash
+    npm ci
+    ```
 
 3. Environment setup:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit the `.env` file with appropriate values.
 
-4. Start services (in separate terminals):
-   - API: `npm run -w packages/api start`
-   - Frontend: `cd ./packages/app && python3 -m http.server 4000`
+    ```bash
+    cp .env.example .env
+    ```
 
-5. Access the application at http://localhost:4000
+    Edit the `.env` file with appropriate values. **CRITICAL**: You must set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `.env`.
 
-## Code Structure Insights
+4. Start with Docker Compose:
 
-- The frontend is vanilla JavaScript (planned migration to TypeScript)
-- The API is Azure Functions
-- Results are stored as JS files under `packages/app/results/`
-- Configuration is split across:
-  - `.env` file (root)
-  - `config.json` files (in packages)
+    ```bash
+    docker-compose up
+    ```
 
-## OAuth Configuration
+5. Access the application:
+    - Frontend: http://localhost:3000
+    - Backend API: http://localhost:3001
 
-For local development:
-- GitHub OAuth callback URL must match frontend port: `http://localhost:4000/callback.html`
-- If changing the port, update both:
-  1. The local server command in README.md
-  2. The callback URL in GitHub OAuth app settings
-  3. The examples in docs/development/OAUTH_CONFIGURATION.md
+### Manual Development (Two-Terminal Approach)
+
+If you prefer running services without Docker:
+
+1. Follow steps 1-3 from Quick Start above
+
+2. Build both packages:
+
+    ```bash
+    npm run build -w packages/server
+    npm run build -w packages/app
+    ```
+
+3. **IMPORTANT**: Start services in SEPARATE terminals (do not use background processes):
+
+    **Terminal 1 - Express Backend (on port 3001):**
+
+    ```bash
+    cd packages/server
+    npm run dev
+    ```
+
+    **Terminal 2 - Vite dev server (on port 4000):**
+
+    ```bash
+    cd packages/app
+    npm run dev
+    ```
+
+4. Access the application at http://localhost:4000
+
+### Port Allocation
+
+| Service                  | Development | Preview | Docker | Legacy (Functions) |
+| ------------------------ | ----------- | ------- | ------ | ------------------ |
+| Vite Dev Server          | 4000        | -       | -      | 4000               |
+| Vite Preview             | -           | 3000    | 3000   | -                  |
+| Express Backend          | 3001        | 3001    | 3001   | -                  |
+| Azure Functions (Legacy) | -           | -       | -      | 7071               |
+
+### Critical Local Development Requirements
+
+- **Docker Compose (Recommended)**: Single command starts all services with proper networking
+- **Manual Mode**: Two separate terminals required (Express on 3001, Vite on 4000)
+- **Express Backend MUST be running** before using OAuth login or analysis features
+- **Hard refresh required** (Cmd+Shift+R / Ctrl+Shift+R) after any config changes
+- **Port conflicts**: If you see EADDRINUSE errors, kill processes: `lsof -ti :3000 | xargs kill -9` and `lsof -ti :3001 | xargs kill -9` and `lsof -ti :4000 | xargs kill -9`
+
+## Configuration Architecture (Express Migration)
+
+The configuration system has three layers optimized for the containerized architecture:
+
+1. **Backend** (`packages/server/.env`): Express server configuration
+    - Required: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GH_WORKFLOW_TOKEN`
+    - Copied from root `.env` during Docker build
+    - Used by OAuth token exchange and API endpoints
+    - Port configured via `PORT` (default: 3001)
+
+2. **Frontend** (`packages/app/config.json`): Client configuration
+    - Required: `githubOAuth.clientId` (must match server's `GITHUB_CLIENT_ID`)
+    - Backend URLs:
+        - Local dev: `"http://localhost:3001"` (manual) or `"http://localhost:3001"` (Docker)
+        - Preview: `"http://localhost:3001"`
+        - Production: Configured via environment
+    - Three-tier override system:
+        - `config.json` - Base configuration
+        - `config.local.json` - Local overrides (not committed)
+        - `config.preview.json` - Preview/production overrides
+
+3. **Environment** (`.env` at repo root): Shared configuration
+    - Used by build tools, Docker Compose, and copied to backend
+    - Single source of truth for GitHub tokens and OAuth credentials
+
+**Local Development Flow:**
+
+- Frontend loads config from `/api/v4/client-settings` endpoint (served by Express)
+- OAuth calls: `http://localhost:3001/api/v4/github-oauth-token`
+- Analysis calls: `http://localhost:3001/api/v4/analyze`
+- Docker networking handles inter-container communication automatically
 
 ## Testing Guidelines
 
 Run all tests from the project root:
+
 ```bash
 npm test           # Run all tests
 npm run test:ui    # Run tests with UI
@@ -73,11 +150,36 @@ npm run test:debug # Run tests in debug mode
 ```
 
 Run specific tests:
+
 ```bash
 npm run test -- "-g" "should handle search functionality" packages/app/tests/app.spec.js
 ```
 
+### API Smoke Script
+
+For a quick end‑to‑end verification of the Express endpoints (config, validation, analysis, etc.) use the smoke script:
+
+```bash
+./scripts/smoke-api.sh            # assumes host at http://localhost:3001 and reads .env
+BASE=http://localhost:3001 ./scripts/smoke-api.sh   # override base
+DRY_RUN=1 ./scripts/smoke-api.sh  # print commands only
+```
+
+The script will:
+
+1. Load variables from `.env` (simple KEY=VALUE lines)
+2. Probe each public endpoint (GET/POST) and basic negative routes
+3. Attempt authenticated operations if `GITHUB_TOKEN` is present
+4. Summarize success/fail at the end
+
+Environment variable precedence: explicitly exported shell vars > `.env`. Override any value by exporting before invoking the script.
+
+The script exits non‑zero on the first critical failure (missing endpoint / unexpected HTTP code) so it can be wired into CI.
+
+**Note**: Update `BASE` to match your Express server port (default: 3001)
+
 ### Test Conventions
+
 - Frontend tests use Playwright
 - No native browser dialogs (use notifications) to keep tests stable
 - Test files are stored in `packages/app/tests/`
@@ -94,16 +196,23 @@ npm run test -- "-g" "should handle search functionality" packages/app/tests/app
 - `packages/app/results/index-data.js`: Master list of scanned templates
 - `packages/app/results/<owner-repo>/<timestamp>-data.js`: Per-scan data
 - `packages/app/results/<owner-repo>/<timestamp>-dashboard.html`: Per-scan dashboard
+- `packages/server/src/routes/`: Express API route handlers
+- `packages/server/src/middleware/`: CORS, error handling, logging
 - `docs/development/ENVIRONMENT_VARIABLES.md`: Complete reference of all environment variables
 - `docs/development/OAUTH_CONFIGURATION.md`: OAuth setup details
+- `docs/development/EXPRESS_MIGRATION_MATRIX.md`: Azure Functions → Express migration tracking
 - `docs/usage/GITHUB_ACTION_SETUP.md`: GitHub Action setup guide
+- `docker-compose.yml`: Multi-container development setup
+- `Dockerfile.combined`: Single-container production build
 
 ## Security Considerations
 
 - Sensitive credentials should be stored in environment variables, not committed to the repo
 - GitHub OAuth requires different app registrations for local and production environments
-- For AZD deployment, Azure Managed Identity is required
+- Express server validates CORS origins and handles authentication middleware
 - The Security Analysis feature reviews Bicep files for security best practices
+- Docker containers run with minimal privileges
+- Environment variables are passed securely through Docker secrets in production
 
 ### SAML/SSO and Forking Policy
 
@@ -114,12 +223,115 @@ npm run test -- "-g" "should handle search functionality" packages/app/tests/app
 
 ## Common Troubleshooting
 
-- OAuth redirect issues: Ensure ports match between GitHub OAuth app settings and local server
-- Azure Function issues: Check local.settings.json and environment variables
-- Deployment failures: Review the CI/CD workflows and environment setup
+- **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server (3000 for preview/Docker, 4000 for dev, 3001 for Express API)
+- **Express server not starting**: Check `.env` file exists and has required variables, verify port 3001 is not in use
+- **Docker issues**: Ensure Docker and Docker Compose are installed and running, check `docker-compose logs` for errors
+- **Configuration mismatch**: Verify `config.json` has correct `githubOAuth.clientId` matching `.env`
+- **Port conflicts**: Kill processes using ports 3000, 3001, 4000 as needed
+- **Deployment failures**: Review the CI/CD workflows and environment setup
 
 ## Known Quirks
 
-- The frontend is JavaScript for fast prototyping, with plans to migrate to TypeScript
+- The frontend has been fully migrated to TypeScript (TS modules are authoritative)
 - Results are stored as JS files rather than a database for simplicity
 - After "Save Results" creates a PR and the PR is merged, results appear on the site after the nightly deploy or manual admin deploy
+- Express migration is in progress: 3/20 endpoints migrated (see EXPRESS_MIGRATION_MATRIX.md)
+- Legacy Azure Functions code preserved in separate branch for reference
+
+## Express Architecture Notes
+
+The Express server (`packages/server/`) provides a simplified backend architecture:
+
+- **Route Handlers**: Located in `src/routes/`, one file per major feature (analyze.ts, auth.ts, etc.)
+- **Middleware**: CORS handling, error handling, request logging in `src/middleware/`
+- **Shared Utilities**: Common functions in `src/shared/` (GitHub client, utilities, types)
+- **Port**: Default 3001, configurable via `PORT` environment variable
+- **CORS**: Configured to allow frontend origins (localhost:3000, localhost:4000, production domain)
+- **Error Handling**: Centralized error handler with proper HTTP status codes
+- **Logging**: Request/response logging for debugging
+
+### Migration from Azure Functions
+
+When migrating an Azure Function to Express:
+
+1. Create new route file in `packages/server/src/routes/`
+2. Copy core logic from Azure Function
+3. Replace `context` with `req`/`res` Express patterns
+4. Update error handling to use Express `next(error)` pattern
+5. Add route to `src/index.ts`
+6. Update `EXPRESS_MIGRATION_MATRIX.md`
+7. Add tests in `packages/server/tests/`
+8. Update frontend to use new endpoint (if route changed)
+9. Run smoke tests: `./scripts/smoke-api.sh`
+
+## Frontend TypeScript Migration & Legacy File Deletion (Production Policy)
+
+This repository is executing a phased migration from legacy browser JavaScript under `packages/app/js/` to TypeScript modules under `packages/app/src/` that are built/bundled. Agents MUST follow these production‑grade rules (no stubs/mocks/throwaway placeholders) when participating in migration or cleanup tasks:
+
+### Authoritative Artifacts
+
+1. Analyzer logic: The authoritative implementation is the TypeScript build output `packages/app/js/analyzer.bundle.js` produced by `packages/app/build-analyzer.js` (esbuild). Do NOT reintroduce logic into `js/analyzer.js`.
+2. Runtime configuration: The authoritative source is `src/scripts/runtime-config.ts`, loaded via module import (`src/main.ts` and `callback.html`). The legacy `js/runtime-config.js` must be removed once all pages import the TS module.
+3. Report / templates / issue template helpers: Their TypeScript counterparts live under `src/report/`, `src/scripts/`, `src/issue/`, or `src/data/` directories. The similarly named legacy JS files are slated for hard deletion.
+
+### Hard Deletion Requirements
+
+When a legacy JS file has a complete TS replacement with parity:
+
+- Physically delete the legacy file (preferred) OR fully replace its contents with a minimal, deterministic production stub that immediately errors on access—ONLY if technical tooling limitations block physical removal in the current PR. Do **not** leave partial old logic or large commented blobs.
+- Ensure no remaining imports or dynamic script tags reference the legacy filename (grep for `js/<name>.js`).
+- Update any docs (including this section and `docs/development/migration-matrix.md`) marking the file as removed.
+- Run Playwright + unit tests + `smoke-api.sh` to validate no behavioral regression.
+
+### Analyzer File Specifics
+
+`js/analyzer.js` must NOT accumulate stub logic plus legacy method bodies (that creates parsing risk). The only acceptable end states are:
+
+1. File deleted entirely.
+2. File replaced by a <= ~20 line strict stub that throws on use and references `analyzer.bundle.js`.
+
+If a bulk patch tool cannot delete the large historical file in the same change set, perform a **full overwrite** (truncate + stub) and open a follow‑up issue to physically remove it in a small PR. Do not postpone the overwrite while leaving unreachable method bodies.
+
+### Environment Variables Clarification
+
+`BASE` (in `.env`) is consumed by `scripts/smoke-api.sh` to know the Azure Functions base URL for local probing (defaults `http://localhost:7071`).
+`TD_BACKEND_BASE_URL` is exposed through the runtime-config endpoint to the browser for API calls when the frontend is pointed at a remote Functions instance. During local dev they usually match, but they have distinct purposes—do not assume one automatically sets the other.
+
+### Acceptance Checklist Before Marking a Legacy File “Removed”
+
+- [ ] TS replacement merged and imported everywhere needed.
+- [ ] No runtime references (import / dynamic script tag / global eval) to the legacy filename.
+- [ ] File deleted OR fully overwritten with strict stub (temporary only if deletion blocked).
+- [ ] Playwright focus tests covering affected feature pass.
+- [ ] `npm test` overall suite passes (or unrelated flaky tests annotated in PR).
+- [ ] `./scripts/smoke-api.sh` succeeds (verifies client settings & analyzer endpoints unaffected).
+- [ ] Docs updated (`migration-matrix.md`, this section).
+
+### Prohibited During Migration
+
+- Adding “temporary shim” code that silently forwards calls to both legacy and new implementations.
+- Leaving large commented legacy bodies that cause lint, size, or parse overhead.
+- Introducing new public globals under legacy names (except the minimal throwing stubs when absolutely necessary as described above).
+
+Following these rules ensures the migration remains auditable, keeps bundle size controlled, and prevents accidental re‑coupling to deprecated globals.
+
+### Phase 2 Deletions (2025-09-29)
+
+The following legacy scripts have been physically removed after confirming 1:1 TypeScript parity, absence of runtime references (grep for script tags/imports), and passing Playwright + smoke tests:
+
+- `packages/app/js/runtime-config.js`
+- `packages/app/js/api-client.js`
+- `packages/app/js/report-loader.js`
+- `packages/app/js/templates-data-loader.js`
+- `packages/app/js/issue-template-engine.js`
+
+Analyzer Status: `packages/app/js/analyzer.js` no longer contains legacy logic; it is a minimal dynamic loader stub that injects `analyzer.bundle.js`. This stub will be deleted in a subsequent cleanup once a full grep confirms no stale external references (e.g., downstream docs or integrations) still point to `js/analyzer.js`.
+
+Action Items Before Deleting `analyzer.js` Stub:
+
+1. Grep repo (and any dependent deployment templates if applicable) for `analyzer.js` script tags.
+2. Run `npm test` (all suites) and `./scripts/smoke-api.sh`.
+3. Remove file and update both this section and `docs/development/migration-matrix.md` (set status to Removed).
+4. Re-run Playwright focused analyzer-related specs (add one if gap identified) to ensure bundle loads deterministically.
+
+Do not reintroduce logic into `analyzer.js`; only proceed directly to deletion once conditions met.

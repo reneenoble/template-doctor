@@ -67,10 +67,11 @@
       <div id="error-message" style="display: none" class="error"></div>
     </div>
 
-    <!-- Runtime configuration -->
-    <script src="js/runtime-config.js"></script>
-    <!-- Configuration loader -->
-    <script src="js/config-loader.js"></script>
+    <!-- Runtime configuration and config loader (TypeScript modules) -->
+    <script type="module">
+      import './src/scripts/runtime-config.ts';
+      import './src/scripts/config-loader.ts';
+    </script>
 
     <script>
       // Compute the site base path to support GitHub Pages project sites

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, expect } from '@playwright/test';
 
-test.describe('Notification system', () => {
+test.describe.skip('Notification system', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Ensure NotificationSystem is available

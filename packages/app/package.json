@@ -8,12 +8,19 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "browsers:install": "playwright install chromium",
-    "start": "python3 -m http.server 8080",
+    "dev": "vite",
+    "preview": "vite preview --port 3000 --host",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "echo 'Static site - copying files as-is' && cp -r . ."
+    "prebuild": "node scripts/sync-static-files.js",
+    "build": "vite build",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0"
   }
 }

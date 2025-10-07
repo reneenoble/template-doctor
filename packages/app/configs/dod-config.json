@@ -1,5 +1,12 @@
 {
-  "requiredFiles": ["README.md", "azure.yaml", "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md"],
+  "requiredFiles": [
+    "README.md",
+    "azure.yaml",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
+  ],
   "requiredFolders": ["infra", ".github"],
   "repositoryTopics": ["azd-template", "azure-developer-cli"],
   "requiredWorkflowFiles": [

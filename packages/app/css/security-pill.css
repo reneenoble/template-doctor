@@ -11,16 +11,16 @@
 }
 
 .security-alert-banner {
-  display: block; 
-  margin: 6px 0 10px 0; 
-  background-color: #dc3545; 
-  color: white; 
-  padding: 6px 12px; 
-  border-radius: 6px; 
-  font-size: 0.9rem; 
-  font-weight: 600; 
-  max-width: fit-content; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  display: block;
+  margin: 6px 0 10px 0;
+  background-color: #dc3545;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  max-width: fit-content;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .security-pill {
@@ -32,7 +32,7 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   animation: pulse-attention 2s infinite;
   text-transform: uppercase;
   letter-spacing: 0.5px;

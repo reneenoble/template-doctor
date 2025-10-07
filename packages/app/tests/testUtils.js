@@ -14,5 +14,6 @@ export async function enableBatchMode(page) {
       toggle.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
-  await expect(page.locator('#batch-urls-container')).toHaveClass(/active/);
+  // Check that batch container is visible (display: block)
+  await expect(page.locator('#batch-urls-container')).toBeVisible();
 }

@@ -11,7 +11,7 @@
 }
 
 /* Style security-specific error codes differently */
-.error-code[class*="SEC-"] {
+.error-code[class*='SEC-'] {
   background-color: #ffebee;
   border-color: #ffcdd2;
   color: #c62828;
@@ -47,7 +47,7 @@
 
 .item-detailed-remediation code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
   padding: 2px 4px;
   border-radius: 3px;
 }

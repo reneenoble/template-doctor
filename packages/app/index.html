@@ -25,6 +25,34 @@
     <link rel="stylesheet" href="css/security-pill.css" />
     <link rel="stylesheet" href="css/error-codes.css" />
     <style>
+      /* Header navigation styles */
+      .header-nav {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+      
+      .nav-link {
+        text-decoration: none;
+        color: #64748b;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        font-size: 14px;
+      }
+      
+      .nav-link:hover, .nav-link.active {
+        background: #3b82f6;
+        color: white;
+      }
+      
+      @media (max-width: 768px) {
+        .header-nav {
+          display: none;
+        }
+      }
+
       /* Inline styles for the product icon menu */
       .product-menu {
         width: 500px;
@@ -59,6 +87,11 @@
           <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" />
           <h1>Template Doctor</h1>
         </div>
+        <nav class="header-nav">
+          <a href="/" class="nav-link active">Dashboard</a>
+          <a href="/leaderboards" class="nav-link">🏆 Leaderboards</a>
+          <a href="/setup" class="nav-link">⚙️ Setup</a>
+        </nav>
         <div id="user-info" class="user-info">
           <button id="login-button" class="login-button">
             <i class="fab fa-github"></i> Login with GitHub
@@ -73,6 +106,23 @@
         </div>
       </div>
     </header>
+
+    <!-- SAML Warning Banner -->
+    <div class="saml-warning-banner">
+      <div class="container">
+        <div class="banner-content">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div class="banner-text">
+            <strong>Important:</strong> To avoid SAML/SSO authentication issues when analyzing Azure-Samples or organization repositories:
+            <ul>
+              <li>Authorize your GitHub token with the <strong>Azure-Samples</strong> organization, OR</li>
+              <li>Fork the template to your personal account and analyze your fork instead</li>
+            </ul>
+            <small class="banner-note">We're working on bypassing this requirement in a future update.</small>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <main class="container">
       <section id="welcome-section" class="welcome-section">
@@ -235,8 +285,10 @@
           </div>
         </div>
         <div class="loading-container" id="loading-container" style="display: none">
-          <div class="loading-spinner"></div>
-          <p>Analyzing repository... This may take a moment.</p>
+                     <div class="loading-spinner-wrapper">
+                 <div class="loading-spinner"></div>
+                    <p>Analyzing repository... This may take a moment.</p>
+            </div>
         </div>
         <div id="results-container" class="results-container" style="display: none">
           <!-- Results will be populated by JavaScript -->
@@ -257,9 +309,9 @@
 
     <footer class="site-footer">
       <div class="container footer-content">
-        <div class="copyright">©2025 - DevDiv Microsoft</div>
+        <div class="copyright">©2025 - CoreAI Microsoft</div>
         <div class="footer-links">
-          <a href="https://aka.ms/gallery/submit" class="footer-link" target="_blank">
+          <a href="https://aka.ms/ai-gallery/submit" class="footer-link" target="_blank">
             <i class="fas fa-plus-circle"></i> Submit new template to gallery
           </a>
           <a
@@ -273,81 +325,7 @@
       </div>
     </footer>
 
-    <!-- Debug console (press Alt+D to show) - Must load first for logging -->
-    <script src="js/debug-console.js"></script>
-    <!-- New Notification system -->
-    <script src="js/notification-system.js"></script>
-    <!-- Legacy Notification system (for backward compatibility) -->
-    <script src="js/notifications.js"></script>
-    <!-- Notification system compatibility layer -->
-    <script src="js/notifications-compat.js"></script>
-    <!-- Notification system initialization -->
-    <script src="js/notifications-init.js"></script>
-    <!-- Configuration loader - Loads and merges configuration from multiple sources -->
-    <script src="js/config-loader.js"></script>
-    <!-- Early CSP guard & runtime config (moved earlier to precede dependent modules) -->
-    <script>
-      (function(){
-        // If running on GitHub Pages / github.com domain, force same-origin apiBase BEFORE other modules run
-        var host = window.location.hostname;
-        var githubHosted = /\.github\.io$/i.test(host) || /github\.com$/i.test(host);
-        if(githubHosted){
-          window.TemplateDoctorConfig = window.TemplateDoctorConfig || {};
-          window.TemplateDoctorConfig.apiBase = window.location.origin;
-          window.getTemplateDoctorApiBase = function(){ return window.location.origin; };
-          // Mark reason for diagnostics
-          window.__TD_CSP_FORCED_SAME_ORIGIN__ = true;
-        }
-      })();
-    </script>
-    <!-- Runtime configuration (moved earlier) -->
-    <script src="js/runtime-config.js"></script>
-    <!-- GitHub OAuth handling -->
-    <script src="js/auth.js"></script>
-    <!-- GitHub API client -->
-    <script src="js/github-client-new.js"></script>
-    <!-- GitHub client patches for SAML/SSO handling -->
-    <script src="js/github-client-patch.js"></script>
-    <!-- Markdown renderer for formatting detailed remediation -->
-    <script src="js/markdown-renderer.js"></script>
-    <!-- Dashboard generation logic -->
-    <script src="js/dashboard-renderer.js"></script>
-    <!-- Report loader - handles loading report data from various sources -->
-    <script src="js/report-loader.js"></script>
-  <!-- Issue template engine (must load before issue handler) -->
-  <script src="js/issue-template-engine.js"></script>
-  <!-- Optional AI enrichment provider (defines window.CustomIssueAIProvider) -->
-  <script src="js/issue-ai-provider.js"></script>
-    <!-- GitHub issue handling -->
-    <script src="js/github-issue-handler.js"></script>
-    <!-- Template Doctor analysis logic -->
-    <script src="js/analyzer.js"></script>
-    <!-- Ruleset for Docs org -->
-    <script src="js/ruleset-docs/analyzer.js"></script>
-    <!-- Template data loader - loads previously scanned templates -->
-    <script src="js/templates-data-loader.js"></script>
-    <!-- Tooltips functionality -->
-    <script src="js/tooltips.js"></script>
-    <!-- Ruleset modal functionality -->
-    <script src="js/ruleset-modal.js"></script>
-    <!-- GitHub Action hook for analysis submission -->
-    <script src="js/github-action-hook.js"></script>
-    <!-- AZD Provision functionality -->
-    <script src="js/azd-provision.js"></script>
-  <!-- Template validation via GitHub workflow -->
-  <script src="js/github-workflow-validation.js?v=20250829"></script>
-    <!-- Demo mode for presentations -->
-    <script src="js/enable-demo-mode.js"></script>
-    <!-- Main application logic -->
-    <script src="js/app.js"></script>
-    <!-- Fallback scripts to ensure action buttons are visible -->
-    <script src="js/action-buttons-fallback.js"></script>
-    <script src="js/action-buttons-direct.js"></script>
-    <!-- Docs ruleset validation badge (external module) -->
-    <script src="js/docs-validation-badge.js"></script>
-    <!-- Fork handling fix for SAML/SSO repositories -->
-    <script src="js/github-fork-patch-fix.js"></script>
-    <!-- SAML/SSO batch scan patch loader -->
-    <script src="js/saml-batch-patch-loader.js"></script>
+    <!-- Vite unified entry -->
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

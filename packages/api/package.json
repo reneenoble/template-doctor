@@ -1,22 +1,30 @@
 {
-  "name": "template-doctor-api",
-  "version": "1.0.0",
-  "description": "API functions for Template Doctor",
-  "scripts": {
-    "start": "func start",
-    "test": "echo \"No tests yet\"",
-    "test:trivy": "node ./validation-docker-image/tests/test-trivy-processor.js ./validation-docker-image/example-scan-files/image-scan.json"
-  },
-  "dependencies": {
-    "@azure/arm-appcontainers": "^2.2.0",
-    "@azure/functions": "^3.5.0",
-    "@azure/identity": "^4.0.0",
-    "@azure/monitor-query": "^1.2.0",
-    "@octokit/rest": "^22.0.0",
-    "uuid": "^9.0.0",
-    "yauzl": "^3.2.0"
-  },
-  "engines": {
-    "node": ">=16"
-  }
+    "name": "template-doctor-api",
+    "version": "1.0.0",
+    "description": "API functions for Template Doctor",
+    "type": "commonjs",
+    "scripts": {
+        "start": "func start",
+        "build": "node bundle-analyzer-core.js && tsc -p .",
+        "clean": "rm -rf dist",
+        "test": "echo \"No tests yet\"",
+        "test:trivy": "node ./validation-docker-image/tests/test-trivy-processor.js ./validation-docker-image/example-scan-files/image-scan.json",
+        "typecheck": "tsc -p . --noEmit"
+    },
+    "dependencies": {
+        "@azure/arm-appcontainers": "^2.2.0",
+        "@azure/functions": "^3.5.0",
+        "@azure/identity": "^4.0.0",
+        "@azure/monitor-query": "^1.2.0",
+        "@octokit/rest": "^19.0.0",
+        "analyzer-core": "file:../analyzer-core",
+        "uuid": "^9.0.0",
+        "yauzl": "^3.2.0"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0"
+    }
 }

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-nocheck
 import { test } from '@playwright/test';
 
 // Global guard: fail if any native dialog api is used

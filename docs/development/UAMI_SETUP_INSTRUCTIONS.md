@@ -6,13 +6,14 @@ This replaces the older Service Principal + Federated Credential approach.
 ---
 
 ## 1. Prerequisites
-- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) installed  
+
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) installed
 - Logged into the correct Azure tenant and subscription:
 
 ```sh
   az login
   az account set --subscription <your-subscription-id>
-  ```
+```
 
 ## 2. Configure .env
 
@@ -20,18 +21,18 @@ Copy the template file:
 
 `cp .env.example .env`
 
-
 Open .env and update these values:
 
 # Azure Configuration
+
 AZURE_SUBSCRIPTION_ID=your_subscription_id_here
 AZURE_TENANT_ID=your_tenant_id_here
 ACA_RESOURCE_GROUP=your_aca_resource_group_here
 
 # GitHub Repo for OIDC
+
 GITHUB_OWNER=your_github_org_or_user
 GITHUB_REPO=template-doctor
-
 
 The .env file should not be committed. Only .env.example should be in Git.
 
@@ -41,15 +42,14 @@ From the repo root, run:
 
 `./scripts/setup.sh`
 
-or 
+or
 
 `npm run setup:uami`
-
 
 This script will:
 
 - Check if a UAMI named template-doctor-identity already exists in your resource group.
-If it exists, it prompts before continuing.
+  If it exists, it prompts before continuing.
 
 - Create the UAMI (or reuse existing)
 
@@ -92,7 +92,3 @@ Each installation of this repo’s workflow provisions its own UAMI.
 The federated credential is tied to the workflow repo, not to the ephemeral repos cloned by the action.
 
 The script can be safely run from any branch. Feature branches do not interfere with main.
-
-
-
-

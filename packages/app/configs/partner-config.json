@@ -9,7 +9,7 @@
     }
   ],
   "readmeRequirements": {
-    "requiredHeadings": [ "Features", "Getting Started", "Resources", "Guidance"],
+    "requiredHeadings": ["Features", "Getting Started", "Resources", "Guidance"],
     "architectureDiagram": {
       "heading": "Architecture",
       "requiresImage": true

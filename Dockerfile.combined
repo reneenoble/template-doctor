@@ -1,0 +1,48 @@
+# Combined Dockerfile - Frontend + Backend in one container
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Build Frontend
+COPY packages/app/package*.json ./app/
+WORKDIR /app/app
+RUN npm install
+COPY packages/app/ ./
+RUN npm run build
+
+# Build Backend
+WORKDIR /app
+COPY packages/server/package*.json ./server/
+WORKDIR /app/server
+RUN npm install --omit=dev
+COPY packages/server/dist ./dist
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy backend
+COPY --from=builder /app/server/package*.json ./
+COPY --from=builder /app/server/node_modules ./node_modules
+COPY --from=builder /app/server/dist ./dist
+
+# Copy frontend build to be served by Express
+COPY --from=builder /app/app/dist ./app/dist
+
+# Set configurable port (default 3000 for OAuth compatibility)
+ARG PORT=3000
+ENV PORT=$PORT
+
+# Set frontend static files path for Express
+ENV FRONTEND_DIST_PATH=/app/app/dist
+
+# Expose port
+EXPOSE $PORT
+
+# Health check (uses PORT environment variable)
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:$PORT/api/health || exit 1
+
+# Start Express server (which now also serves frontend)
+CMD ["node", "dist/index.js"]

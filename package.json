@@ -1,6 +1,6 @@
 {
     "name": "template-doctor",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "An Azure template analysis and healing app",
     "main": "bin/cli.js",
     "private": true,
@@ -12,13 +12,24 @@
     },
     "scripts": {
         "setup:uami": "bash ./scripts/setup.sh",
+        "build:all": "npm run build:analyzer-core && npm run build:api --if-present && npm run build:app",
+        "build:analyzer-core": "npm run -w packages/analyzer-core build",
+        "build:api": "npm run -w packages/api build --if-present || true",
+        "build:app": "npm run -w packages/app build",
+        "clean:all": "npm run -w packages/analyzer-core clean && npm run -w packages/api clean --if-present || true && npm run -w packages/app clean || true",
+        "rebuild:all": "npm run clean:all && npm run build:all",
+        "dev:app": "npm run -w packages/app dev",
+        "dev:api": "npm run -w packages/api start --if-present || true",
         "test": "npm run -w packages/app test --",
         "test:ui": "npm run -w packages/app test:ui --",
         "test:debug": "npm run -w packages/app test:debug --",
         "test:unit": "vitest run --reporter=basic",
         "test:unit:watch": "vitest",
+        "pretest:unit": "npm run -w packages/api build --if-present || true",
+        "test:all": "npm run test:unit && npm test",
         "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js",
-    "analyze": "node scripts/analyzer-node.js"
+        "analyze": "node scripts/analyzer-node.js",
+        "typecheck": "npm run -w packages/app typecheck && npm run -w packages/api typecheck --if-present || true"
     },
     "keywords": [
         "azd",
@@ -36,8 +47,8 @@
         "vitest": "^1.0.0"
     },
     "dependencies": {
-    "@actions/core": "^1.11.1",
+        "@actions/core": "^1.11.1",
         "dotenv": "^17.2.0",
-            "open": "^10.2.0"
+        "open": "^10.2.0"
     }
 }
