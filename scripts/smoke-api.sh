@@ -183,14 +183,7 @@ else
   log "Skipping issue-create (no GITHUB_TOKEN)"
 fi
 
-section "11. Submit Analysis Dispatch"
-DISPATCH_RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE/api/v4/submit-analysis-dispatch" \
-  -H "Content-Type: application/json" \
-  -d "{\"event_type\":\"analysis-submitted\",\"client_payload\":{\"repoUrl\":\"$TEMPLATE_REPO_URL\",\"ruleSet\":\"$RULE_SET\"}}")
-DISPATCH_CODE=$(echo "$DISPATCH_RESP" | tail -n1)
-ok "submit-analysis-dispatch HTTP $DISPATCH_CODE"
-
-section "12. Add Template PR"
+section "11. Add Template PR"
 if [[ -n $GITHUB_TOKEN ]]; then
   PR_RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE/api/v4/add-template-pr" \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -211,7 +204,7 @@ else
   log "Skipping add-template-pr (no GITHUB_TOKEN)"
 fi
 
-section "13. Archive Collection"
+section "12. Archive Collection"
 ARCHIVE_RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE/api/v4/archive-collection" \
   -H "Content-Type: application/json" \
   -d "{\"collection\":\"smoke-test\",\"repoUrl\":\"$TEMPLATE_REPO_URL\",\"repoName\":\"test-repo\",\"analysisId\":\"smoke-$TIMESTAMP\",\"username\":\"smoketest\",\"timestamp\":\"$TIMESTAMP\",\"metadata\":{\"test\":true}}")

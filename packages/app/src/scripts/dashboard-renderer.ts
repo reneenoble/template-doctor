@@ -60,7 +60,7 @@ class DashboardRenderer {
       }
 
       // Render action buttons section
-      const actionHtml = `<div id="action-section" class="action-footer action-header" style="background: white !important; border-radius: 5px !important; padding: 16px !important; margin-bottom: 20px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; width: 100% !important;"><div style="width: 100% !important; text-align: center !important; margin-bottom: 15px !important;"><h3 style="margin: 0 !important; padding: 0 !important; font-size: 1.2rem !important; color: #333 !important;">Template Doctor Actions</h3></div><div style="display: flex !important; flex-wrap: wrap !important; justify-content: center !important; gap: 15px !important; width: 100% !important;"><a href="#" id="fixButton" class="btn" style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #0078d4 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; text-decoration: none !important; pointer-events: auto !important;"><i class="fas fa-code"></i> Fix with AI Agent</a><button id="create-github-issue-btn" class="btn" style="opacity: 0 !important; visibility: hidden !important; padding: 12px 24px !important; background-color: #2b3137 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: none !important; transition: opacity 0.25s ease;" aria-disabled="true"><i class="fab fa-github"></i> Create GitHub Issue</button><button id="testProvisionButton" class="btn" style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #0078d4 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: auto !important;"><i class="fas fa-rocket"></i> Test AZD Provision</button><button id="save-results-btn" class="btn" title="Opens a PR in the configured repository to save this analysis report" style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #198754 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: auto !important;"><i class="fas fa-save"></i> Save Results</button></div><div id="save-results-note" style="margin-top: 8px; color: #6c757d; font-size: 0.9rem; text-align: center;"></div></div>`;
+      const actionHtml = `<div id="action-section" class="action-footer action-header" style="background: white !important; border-radius: 5px !important; padding: 16px !important; margin-bottom: 20px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; width: 100% !important;"><div style="width: 100% !important; text-align: center !important; margin-bottom: 15px !important;"><h3 style="margin: 0 !important; padding: 0 !important; font-size: 1.2rem !important; color: #333 !important;">Template Doctor Actions</h3></div><div style="display: flex !important; flex-wrap: wrap !important; justify-content: center !important; gap: 15px !important; width: 100% !important;"><a href="#" id="fixButton" class="btn" style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #0078d4 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; text-decoration: none !important; pointer-events: auto !important;"><i class="fas fa-code"></i> Fix with AI Agent</a><button id="create-github-issue-btn" class="btn" style="opacity: 0 !important; visibility: hidden !important; padding: 12px 24px !important; background-color: #2b3137 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: none !important; transition: opacity 0.25s ease;" aria-disabled="true"><i class="fab fa-github"></i> Create GitHub Issue</button><button id="testProvisionButton" class="btn" style="opacity: 1 !important; visibility: visible !important; padding: 12px 24px !important; background-color: #0078d4 !important; color: white !important; border: none !important; border-radius: 4px !important; font-size: 1rem !important; font-weight: 500 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; min-width: 180px !important; justify-content: center !important; pointer-events: auto !important;"><i class="fas fa-rocket"></i> Test AZD Provision</button></div></div>`;
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = actionHtml;
       const actionSection = tempDiv.firstElementChild as HTMLElement | null;
@@ -745,98 +745,6 @@ class DashboardRenderer {
                   5000,
                 );
               }
-            }
-          });
-        }
-        const saveBtn = document.getElementById('save-results-btn') as HTMLElement | null;
-        if (saveBtn) {
-          const newSaveBtn = saveBtn.cloneNode(true) as HTMLElement;
-          saveBtn.parentNode && saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-          try {
-            const cfg = (window as any).TemplateDoctorConfig || {};
-            const noteEl = document.getElementById('save-results-note') as HTMLElement | null;
-            if (cfg.autoSaveResults) {
-              (newSaveBtn as any).disabled = true;
-              (newSaveBtn as any).title = 'Auto-save is enabled; results are saved automatically.';
-              if (noteEl) {
-                noteEl.textContent = 'Auto-save is enabled; results are saved automatically.';
-              }
-            } else {
-              if (noteEl) {
-                noteEl.textContent =
-                  'Clicking "Save Results" will open a pull request to store this analysis under the results directory in the configured repo.';
-              }
-            }
-          } catch (_) {}
-          newSaveBtn.addEventListener('click', async () => {
-            try {
-              if (!(window as any).submitAnalysisToGitHub) {
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showError(
-                    'Feature Unavailable',
-                    'Saving is not available right now. Please refresh and try again.',
-                    5000,
-                  );
-                } else {
-                  console.error('Saving is not available right now');
-                }
-                return;
-              }
-              if (
-                !(window as any).GitHubClient ||
-                !(window as any).GitHubClient.auth?.isAuthenticated()
-              ) {
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showWarning(
-                    'Authentication Required',
-                    'Please sign in with GitHub to save results.',
-                    5000,
-                  );
-                } else {
-                  console.error('Please sign in with GitHub to save results');
-                }
-                return;
-              }
-              const username = (window as any).GitHubClient.auth.getUsername();
-              const original = (window as any).reportDataOriginal || data;
-              (newSaveBtn as any).disabled = true;
-              const originalLabel = (newSaveBtn as any).innerHTML;
-              (newSaveBtn as any).innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-              const res = await (window as any).submitAnalysisToGitHub(original, username);
-              if (res && res.success) {
-                const msg =
-                  'A pull request is being created with your analysis results. Once the PR is merged, results will appear on the site after the nightly deployment. If you are an admin, you can deploy the site manually to publish immediately.';
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showSuccess('Save Requested', msg, 9000);
-                } else {
-                  console.log('Save requested:', msg);
-                }
-              } else {
-                const msg = (res && (res.error || res.message)) || 'Unknown error';
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showWarning(
-                    'Save Failed',
-                    `Could not save results: ${msg}`,
-                    8000,
-                  );
-                } else {
-                  console.error('Could not save results:', msg);
-                }
-              }
-              (newSaveBtn as any).innerHTML = originalLabel;
-              (newSaveBtn as any).disabled = false;
-            } catch (e: any) {
-              console.error('Save results error:', e);
-              if ((window as any).NotificationSystem) {
-                (window as any).NotificationSystem.showError(
-                  'Save Failed',
-                  e.message || String(e),
-                  8000,
-                );
-              } else {
-                console.error('Save failed:', e.message || e);
-              }
-              (newSaveBtn as any).disabled = false;
             }
           });
         }

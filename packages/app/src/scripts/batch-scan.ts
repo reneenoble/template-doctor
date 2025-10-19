@@ -462,21 +462,8 @@ function finalizeBatch(total: number, processed: number) {
 }
 
 function showSaveAllButton(count: number) {
-  const container = $(batchItemsId);
-  if (!container) return;
-
-  let saveAllBtn = document.getElementById('save-all-btn');
-  if (!saveAllBtn) {
-    saveAllBtn = document.createElement('button');
-    saveAllBtn.id = 'save-all-btn';
-    saveAllBtn.className = 'save-all-btn';
-    saveAllBtn.textContent = `Save All ${count} Successful Scans`;
-    container.parentElement?.insertBefore(saveAllBtn, container.nextSibling);
-
-    saveAllBtn.addEventListener('click', () => saveAllAnalyses());
-  } else {
-    saveAllBtn.textContent = `Save All ${count} Successful Scans`;
-  }
+  // Save All functionality removed - analyses are automatically saved to database
+  // Legacy file-based save workflow has been deprecated
 }
 
 function displayResult(result: any) {
@@ -512,59 +499,6 @@ function displayResult(result: any) {
     analysisSection.scrollIntoView({ behavior: 'smooth' });
   } catch (e: any) {
     showError('Display Error', e.message || 'Failed to display results');
-  }
-}
-
-async function saveAnalysis(result: any, url: string) {
-  try {
-    const submitFn = (window as any).submitAnalysisToGitHub;
-    if (!submitFn) throw new Error('Submit function unavailable');
-
-    const authClient = (window as any).GitHubClient?.auth;
-    if (!authClient?.isAuthenticated()) throw new Error('Please log in to save analysis');
-
-    const username = authClient.getUsername();
-    const submitResult = await submitFn(result, username);
-
-    if (submitResult.success) {
-      showSuccess('Analysis Saved', `Submitted analysis for ${url}`);
-    } else {
-      showError('Save Failed', submitResult.error || 'Failed to submit analysis');
-    }
-  } catch (e: any) {
-    showError('Save Error', e.message || 'Failed to save analysis');
-  }
-}
-
-async function saveAllAnalyses() {
-  const container = $(batchItemsId);
-  if (!container) return;
-
-  const successItems = container.querySelectorAll('.batch-item.success');
-  if (successItems.length === 0) {
-    showWarning('No Results', 'No successful scans to save');
-    return;
-  }
-
-  try {
-    const progress = await getAllProgress();
-    const successfulScans = progress.filter((p) => p.status === 'success' && p.result);
-
-    showInfo('Saving All', `Submitting ${successfulScans.length} analyses...`);
-
-    let savedCount = 0;
-    for (const scan of successfulScans) {
-      try {
-        await saveAnalysis(scan.result, scan.url);
-        savedCount++;
-      } catch (e: any) {
-        console.error(`Failed to save ${scan.url}:`, e);
-      }
-    }
-
-    showSuccess('Save Complete', `Saved ${savedCount}/${successfulScans.length} analyses`);
-  } catch (e: any) {
-    showError('Save All Failed', e.message || 'Failed to save analyses');
   }
 }
 
