@@ -31,7 +31,9 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
 
     try {
         // Get configuration from database (with fallback to env vars)
-        const { ConfigurationStorage } = await import("../services/configuration-storage.js");
+        const { ConfigurationStorage } = await import(
+            "../services/configuration-storage.js"
+        );
         const dbConfig = await ConfigurationStorage.getAsObject();
 
         const baseUrl = getMergedValue(
@@ -57,43 +59,72 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
         // Use database config with environment variable fallbacks
         const defaultRuleSet = getMergedValue(
             "DEFAULT_RULE_SET",
-            String(dbConfig.DEFAULT_RULE_SET || process.env.DEFAULT_RULE_SET || process.env.TD_DEFAULT_RULE_SET || "dod"),
+            String(
+                dbConfig.DEFAULT_RULE_SET ||
+                    process.env.DEFAULT_RULE_SET ||
+                    process.env.TD_DEFAULT_RULE_SET ||
+                    "dod",
+            ),
         );
 
         const requireAuthForResults = getMergedValue(
             "REQUIRE_AUTH_FOR_RESULTS",
-            String(dbConfig.REQUIRE_AUTH_FOR_RESULTS || process.env.REQUIRE_AUTH_FOR_RESULTS ||
-                process.env.TD_REQUIRE_AUTH_FOR_RESULTS ||
-                "false"),
+            String(
+                dbConfig.REQUIRE_AUTH_FOR_RESULTS ||
+                    process.env.REQUIRE_AUTH_FOR_RESULTS ||
+                    process.env.TD_REQUIRE_AUTH_FOR_RESULTS ||
+                    "false",
+            ),
         );
 
         const autoSaveResults = getMergedValue(
             "AUTO_SAVE_RESULTS",
-            String(dbConfig.AUTO_SAVE_RESULTS || process.env.AUTO_SAVE_RESULTS || process.env.TD_AUTO_SAVE_RESULTS || "false"),
+            String(
+                dbConfig.AUTO_SAVE_RESULTS ||
+                    process.env.AUTO_SAVE_RESULTS ||
+                    process.env.TD_AUTO_SAVE_RESULTS ||
+                    "false",
+            ),
         );
 
         const archiveEnabled = getMergedValue(
             "ARCHIVE_ENABLED",
-            String(dbConfig.ARCHIVE_ENABLED || process.env.TD_ARCHIVE_ENABLED || process.env.ARCHIVE_ENABLED || "true"),
+            String(
+                dbConfig.ARCHIVE_ENABLED ||
+                    process.env.TD_ARCHIVE_ENABLED ||
+                    process.env.ARCHIVE_ENABLED ||
+                    "true",
+            ),
         );
 
         const archiveCollection = getMergedValue(
             "ARCHIVE_COLLECTION",
-            String(dbConfig.ARCHIVE_COLLECTION || process.env.TD_ARCHIVE_COLLECTION ||
-                process.env.ARCHIVE_COLLECTION ||
-                "gallery"),
+            String(
+                dbConfig.ARCHIVE_COLLECTION ||
+                    process.env.TD_ARCHIVE_COLLECTION ||
+                    process.env.ARCHIVE_COLLECTION ||
+                    "gallery",
+            ),
         );
 
         const dispatchTargetRepo = getMergedValue(
             "DISPATCH_TARGET_REPO",
-            String(dbConfig.DISPATCH_TARGET_REPO || process.env.DISPATCH_TARGET_REPO ||
-                process.env.TD_DISPATCH_TARGET_REPO ||
-                ""),
+            String(
+                dbConfig.DISPATCH_TARGET_REPO ||
+                    process.env.DISPATCH_TARGET_REPO ||
+                    process.env.TD_DISPATCH_TARGET_REPO ||
+                    "",
+            ),
         );
 
         const issueAIEnabled = getMergedValue(
             "ISSUE_AI_ENABLED",
-            String(dbConfig.ISSUE_AI_ENABLED || process.env.ISSUE_AI_ENABLED || process.env.TD_ISSUE_AI_ENABLED || "false"),
+            String(
+                dbConfig.ISSUE_AI_ENABLED ||
+                    process.env.ISSUE_AI_ENABLED ||
+                    process.env.TD_ISSUE_AI_ENABLED ||
+                    "false",
+            ),
         );
 
         const payload: PublicConfig = {
@@ -115,8 +146,8 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
 
         return res.status(200).json(payload);
     } catch (error: any) {
-        console.error('[Config] Error loading client settings:', error);
-        
+        console.error("[Config] Error loading client settings:", error);
+
         // Fallback to environment variables only if database fails
         const baseUrl = getMergedValue(
             "TD_BACKEND_BASE_URL",
@@ -140,7 +171,9 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
 
         const defaultRuleSet = getMergedValue(
             "DEFAULT_RULE_SET",
-            process.env.DEFAULT_RULE_SET || process.env.TD_DEFAULT_RULE_SET || "dod",
+            process.env.DEFAULT_RULE_SET ||
+                process.env.TD_DEFAULT_RULE_SET ||
+                "dod",
         );
 
         const requireAuthForResults = getMergedValue(
@@ -152,12 +185,16 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
 
         const autoSaveResults = getMergedValue(
             "AUTO_SAVE_RESULTS",
-            process.env.AUTO_SAVE_RESULTS || process.env.TD_AUTO_SAVE_RESULTS || "false",
+            process.env.AUTO_SAVE_RESULTS ||
+                process.env.TD_AUTO_SAVE_RESULTS ||
+                "false",
         );
 
         const archiveEnabled = getMergedValue(
             "ARCHIVE_ENABLED",
-            process.env.TD_ARCHIVE_ENABLED || process.env.ARCHIVE_ENABLED || "true",
+            process.env.TD_ARCHIVE_ENABLED ||
+                process.env.ARCHIVE_ENABLED ||
+                "true",
         );
 
         const archiveCollection = getMergedValue(
@@ -176,7 +213,9 @@ configRouter.get("/client-settings", async (req: Request, res: Response) => {
 
         const issueAIEnabled = getMergedValue(
             "ISSUE_AI_ENABLED",
-            process.env.ISSUE_AI_ENABLED || process.env.TD_ISSUE_AI_ENABLED || "false",
+            process.env.ISSUE_AI_ENABLED ||
+                process.env.TD_ISSUE_AI_ENABLED ||
+                "false",
         );
 
         const payload: PublicConfig = {

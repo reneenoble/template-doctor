@@ -94,7 +94,7 @@ declare global {
           try {
             // Extract owner/repo from URL params or template object
             let owner: string | undefined, repo: string | undefined;
-            
+
             // Check URL params first (e.g., /report.html?repo=owner/repo)
             const urlParams = new URLSearchParams(window.location.search);
             const repoParam = urlParams.get('repo');
@@ -102,7 +102,7 @@ declare global {
               [owner, repo] = repoParam.split('/');
               debug('report-loader', `Extracted from URL: ${owner}/${repo}`);
             }
-            
+
             // Otherwise try to extract from template object
             if (!owner && !repo && typeof template === 'object' && template?.repoUrl) {
               const match = template.repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
@@ -112,26 +112,26 @@ declare global {
                 debug('report-loader', `Extracted from repoUrl: ${owner}/${repo}`);
               }
             }
-            
+
             if (owner && repo) {
               debug('report-loader', `Attempting API load for ${owner}/${repo}`);
               const response = await fetch(`/api/v4/results/repo/${owner}/${repo}`, {
                 cache: 'no-store',
-                headers: { 'Accept': 'application/json' }
+                headers: { Accept: 'application/json' },
               });
-              
+
               if (response.ok) {
                 const apiData = await response.json();
                 debug('report-loader', 'API load successful', apiData);
-                
+
                 // Transform API response to match expected report data structure
                 if (apiData.analyses && apiData.analyses.length > 0) {
                   const latest = apiData.analyses[0];
-                  
+
                   // Use the complete analysisResult which contains all compliance data with categories
                   const analysisResult = latest.analysisResult || {};
                   const compliance = analysisResult.compliance || latest.compliance || {};
-                  
+
                   const transformedData = {
                     repoUrl: apiData.repoUrl,
                     owner: apiData.owner,
@@ -144,11 +144,11 @@ declare global {
                     // Keep raw API data for debugging
                     _apiData: apiData,
                   };
-                  
+
                   debug('report-loader', 'Transformed data:', transformedData);
                   debug('report-loader', 'Compliance object:', compliance);
                   debug('report-loader', 'Categories:', compliance.categories);
-                  
+
                   return transformedData;
                 }
               }
@@ -160,91 +160,96 @@ declare global {
         };
 
         // Try API first, then fall back to existing filesystem logic
-        tryApiLoad().then((apiData) => {
-          if (apiData) {
-            return resolve(apiData);
-          }
-          
-          // Fall back to existing filesystem loading logic...
-          let templateName: string | undefined,
-          templatePath: string | undefined,
-          directData: ReportData | undefined,
-          dataJsPath: string | undefined,
-          folderName: string | undefined;
-        if (typeof template === 'object' && template !== null && !Array.isArray(template)) {
-          debug('report-loader', 'Template is an object', template);
-          if (template.relativePath) {
-            const parts = template.relativePath.split('/');
-            if (parts.length > 0) {
-              folderName = parts[0];
-              debug('report-loader', `Extracted folder name from relativePath: ${folderName}`);
+        tryApiLoad()
+          .then((apiData) => {
+            if (apiData) {
+              return resolve(apiData);
             }
-            let pathPrefix = folderName;
-            if (template.folderPath) {
-              pathPrefix = template.folderPath;
-              debug('report-loader', `Using provided folderPath: ${pathPrefix}`);
-            } else if (template.scannedBy && template.scannedBy.length > 0) {
-              const lastScanner = template.scannedBy[template.scannedBy.length - 1];
-              pathPrefix = `${lastScanner}-${folderName}`;
-              debug('report-loader', `Created folderPath with scanner prefix: ${pathPrefix}`);
-            }
-            if (template.dataPath) {
-              dataJsPath = `${pathPrefix}/${template.dataPath}`;
-              debug('report-loader', `Found data.js path: ${dataJsPath}`);
-            }
-            templatePath = template.relativePath;
-            debug('report-loader', `Using relative path: ${templatePath}`);
-          }
-          if (template.repoUrl) {
-            const repoUrlParts = template.repoUrl.split('/');
-            templateName = repoUrlParts[repoUrlParts.length - 1].replace(/\.git$/, '');
-            debug('report-loader', `Extracted template name from URL: ${templateName}`);
-            if (!folderName) {
-              const repoOwner = repoUrlParts[repoUrlParts.length - 2] || '';
-              folderName = `${repoOwner}-${templateName}`.toLowerCase();
-              debug('report-loader', `Constructed folder name from URL: ${folderName}`);
-            }
-          }
-          if (template.result) {
-            directData = template.result;
-            debug('report-loader', 'Using direct result data');
-          }
-        } else if (typeof template === 'string') {
-          templateName = template;
-        }
-        debug('report-loader', `Loading report data for template: ${templateName || 'unknown'}`);
-        if (directData) {
-          debug('report-loader', 'Using direct data from template object');
-          return resolve(directData);
-        }
 
-        const afterFallback = (promise: Promise<ReportData>) => {
-          promise
-            .then((d) => {
-              if (d) resolve(d);
-              else reject(new Error('Failed to load report data'));
-            })
-            .catch((error) => {
-              debug('report-loader', 'All report loading strategies failed', error);
-              reject(new Error((error as Error).message || 'Failed to load report data'));
-            });
-        };
+            // Fall back to existing filesystem loading logic...
+            let templateName: string | undefined,
+              templatePath: string | undefined,
+              directData: ReportData | undefined,
+              dataJsPath: string | undefined,
+              folderName: string | undefined;
+            if (typeof template === 'object' && template !== null && !Array.isArray(template)) {
+              debug('report-loader', 'Template is an object', template);
+              if (template.relativePath) {
+                const parts = template.relativePath.split('/');
+                if (parts.length > 0) {
+                  folderName = parts[0];
+                  debug('report-loader', `Extracted folder name from relativePath: ${folderName}`);
+                }
+                let pathPrefix = folderName;
+                if (template.folderPath) {
+                  pathPrefix = template.folderPath;
+                  debug('report-loader', `Using provided folderPath: ${pathPrefix}`);
+                } else if (template.scannedBy && template.scannedBy.length > 0) {
+                  const lastScanner = template.scannedBy[template.scannedBy.length - 1];
+                  pathPrefix = `${lastScanner}-${folderName}`;
+                  debug('report-loader', `Created folderPath with scanner prefix: ${pathPrefix}`);
+                }
+                if (template.dataPath) {
+                  dataJsPath = `${pathPrefix}/${template.dataPath}`;
+                  debug('report-loader', `Found data.js path: ${dataJsPath}`);
+                }
+                templatePath = template.relativePath;
+                debug('report-loader', `Using relative path: ${templatePath}`);
+              }
+              if (template.repoUrl) {
+                const repoUrlParts = template.repoUrl.split('/');
+                templateName = repoUrlParts[repoUrlParts.length - 1].replace(/\.git$/, '');
+                debug('report-loader', `Extracted template name from URL: ${templateName}`);
+                if (!folderName) {
+                  const repoOwner = repoUrlParts[repoUrlParts.length - 2] || '';
+                  folderName = `${repoOwner}-${templateName}`.toLowerCase();
+                  debug('report-loader', `Constructed folder name from URL: ${folderName}`);
+                }
+              }
+              if (template.result) {
+                directData = template.result;
+                debug('report-loader', 'Using direct result data');
+              }
+            } else if (typeof template === 'string') {
+              templateName = template;
+            }
+            debug(
+              'report-loader',
+              `Loading report data for template: ${templateName || 'unknown'}`,
+            );
+            if (directData) {
+              debug('report-loader', 'Using direct data from template object');
+              return resolve(directData);
+            }
 
-        if (dataJsPath) {
-          debug('report-loader', `Attempting to load data.js file: ${dataJsPath}`);
-          this._loadDataJsFile(dataJsPath)
-            .then((data: ReportData) => {
-              debug('report-loader', 'Successfully loaded data from data.js file', data);
-              resolve(data);
-            })
-            .catch((err: any) => {
-              debug('report-loader', `Failed data.js, falling back: ${err.message}`);
+            const afterFallback = (promise: Promise<ReportData>) => {
+              promise
+                .then((d) => {
+                  if (d) resolve(d);
+                  else reject(new Error('Failed to load report data'));
+                })
+                .catch((error) => {
+                  debug('report-loader', 'All report loading strategies failed', error);
+                  reject(new Error((error as Error).message || 'Failed to load report data'));
+                });
+            };
+
+            if (dataJsPath) {
+              debug('report-loader', `Attempting to load data.js file: ${dataJsPath}`);
+              this._loadDataJsFile(dataJsPath)
+                .then((data: ReportData) => {
+                  debug('report-loader', 'Successfully loaded data from data.js file', data);
+                  resolve(data);
+                })
+                .catch((err: any) => {
+                  debug('report-loader', `Failed data.js, falling back: ${err.message}`);
+                  afterFallback(this._tryLoadReport(templateName, templatePath, folderName));
+                });
+            } else {
               afterFallback(this._tryLoadReport(templateName, templatePath, folderName));
-            });
-        } else {
-          afterFallback(this._tryLoadReport(templateName, templatePath, folderName));
-        }
-        }).catch(reject); // Close tryApiLoad().then() and handle errors
+            }
+          })
+          .catch(reject); // Close tryApiLoad().then() and handle errors
       });
     },
     _loadDataJsFile: function (dataJsPath: string) {

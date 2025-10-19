@@ -15,43 +15,45 @@ The deployment provisions:
 ## Prerequisites
 
 1. **Install Azure Developer CLI (azd)**:
-   ```bash
-   # macOS/Linux
-   curl -fsSL https://aka.ms/install-azd.sh | bash
-   
-   # Windows (PowerShell)
-   powershell -ex AllSigned -c "Invoke-RestMethod 'https://aka.ms/install-azd.sh' | Invoke-Expression"
-   ```
+
+    ```bash
+    # macOS/Linux
+    curl -fsSL https://aka.ms/install-azd.sh | bash
+
+    # Windows (PowerShell)
+    powershell -ex AllSigned -c "Invoke-RestMethod 'https://aka.ms/install-azd.sh' | Invoke-Expression"
+    ```
 
 2. **Install Azure CLI**:
-   ```bash
-   # macOS
-   brew install azure-cli
-   
-   # Windows
-   winget install Microsoft.AzureCLI
-   
-   # Linux
-   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-   ```
+
+    ```bash
+    # macOS
+    brew install azure-cli
+
+    # Windows
+    winget install Microsoft.AzureCLI
+
+    # Linux
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    ```
 
 3. **Install Docker**:
-   - Docker Desktop: https://www.docker.com/products/docker-desktop
+    - Docker Desktop: https://www.docker.com/products/docker-desktop
 
 4. **GitHub Configuration**:
-   
-   **A. OAuth App (for user login)**:
-   - Create OAuth app at https://github.com/settings/developers
-   - Set Authorization callback URL to: `https://<your-app-url>/callback.html`
-   - Note down Client ID and Client Secret
-   
-   **B. Personal Access Token (for repository operations)**:
-   - Create token at https://github.com/settings/tokens/new
-   - Required scopes:
-     - ✅ `repo` - Full control of private repositories (includes cloning, creating PRs)
-     - ✅ `workflow` - Update GitHub Action workflows
-     - ✅ `read:org` - Read org membership (for SAML/SSO handling)
-   - Note down the token (you won't see it again!)
+
+    **A. OAuth App (for user login)**:
+    - Create OAuth app at https://github.com/settings/developers
+    - Set Authorization callback URL to: `https://<your-app-url>/callback.html`
+    - Note down Client ID and Client Secret
+
+    **B. Personal Access Token (for repository operations)**:
+    - Create token at https://github.com/settings/tokens/new
+    - Required scopes:
+        - ✅ `repo` - Full control of private repositories (includes cloning, creating PRs)
+        - ✅ `workflow` - Update GitHub Action workflows
+        - ✅ `read:org` - Read org membership (for SAML/SSO handling)
+    - Note down the token (you won't see it again!)
 
 ## Quick Start
 
@@ -76,15 +78,16 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 - **GITHUB_CLIENT_ID/SECRET**: OAuth login for users to authenticate
 - **GITHUB_TOKEN**: Backend operations:
-  - 🔍 Cloning repositories for analysis
-  - 💾 Creating PRs to save results
-  - 🚀 Triggering workflow runs
-  - 📊 Accessing repository metadata
-  - 🔐 Handling SAML/SSO repositories
+    - 🔍 Cloning repositories for analysis
+    - 💾 Creating PRs to save results
+    - 🚀 Triggering workflow runs
+    - 📊 Accessing repository metadata
+    - 🔐 Handling SAML/SSO repositories
 
 **⚠️ Important**: Add these to `.env` BEFORE running `azd provision`. The values will be automatically loaded by `azd`.
 
 **Alternative**: You can also set them via `azd env set` after initialization:
+
 ```bash
 azd env set GITHUB_CLIENT_ID "your-value"
 azd env set GITHUB_CLIENT_SECRET "your-value"
@@ -112,6 +115,7 @@ azd deploy
 ```
 
 This will:
+
 1. Build the Docker image from `Dockerfile.combined`
 2. Push image to Azure Container Registry
 3. Deploy to Azure Container Apps
@@ -165,10 +169,10 @@ After deployment, update your GitHub OAuth app:
 1. Go to https://github.com/settings/developers
 2. Select your OAuth app
 3. Update **Authorization callback URL** to:
-   ```
-   https://<your-app-fqdn>/callback.html
-   ```
-   Get FQDN from: `azd env get-values | grep SERVICE_WEB_URI`
+    ```
+    https://<your-app-fqdn>/callback.html
+    ```
+    Get FQDN from: `azd env get-values | grep SERVICE_WEB_URI`
 
 ## Common Operations
 
@@ -216,9 +220,10 @@ az cosmosdb keys list \
 ### Connect with MongoDB Compass
 
 1. Get connection string:
-   ```bash
-   azd env get-values | grep MONGODB_URI
-   ```
+
+    ```bash
+    azd env get-values | grep MONGODB_URI
+    ```
 
 2. Open MongoDB Compass and paste the connection string
 3. Database: `template-doctor`
@@ -231,6 +236,7 @@ az cosmosdb keys list \
 Logs are sent to Log Analytics workspace automatically.
 
 **Query logs:**
+
 ```bash
 az monitor log-analytics query \
   --workspace <workspace-id> \
@@ -240,14 +246,16 @@ az monitor log-analytics query \
 ### Cosmos DB Metrics
 
 **View in Azure Portal:**
+
 1. Navigate to Cosmos DB account
 2. Monitoring → Metrics
 3. Key metrics:
-   - Total Request Units
-   - Total Requests
-   - Throttled Requests (429s)
+    - Total Request Units
+    - Total Requests
+    - Throttled Requests (429s)
 
 **Set up alerts:**
+
 ```bash
 az monitor metrics alert create \
   --name "High RU Usage" \
@@ -266,6 +274,7 @@ az monitor metrics alert create \
 - **Limits:** 1M RU/s max, 50 GB storage
 
 **Typical costs (approximate):**
+
 - 1M read operations: ~$0.40
 - 1M write operations: ~$2.00
 - Storage: ~$0.25/GB/month
@@ -273,11 +282,13 @@ az monitor metrics alert create \
 ### Container Apps
 
 **Free tier includes:**
+
 - 180,000 vCPU-seconds
 - 360,000 GiB-seconds
 - 2 million requests
 
 **Current configuration:**
+
 - CPU: 0.5 cores
 - Memory: 1 GiB
 - Min replicas: 1
@@ -287,13 +298,13 @@ az monitor metrics alert create \
 
 For low-medium traffic (~10K analyses/month):
 
-| Resource | Cost |
-|----------|------|
-| Cosmos DB (Serverless) | $5-20 |
-| Container Apps | $0-10 (within free tier) |
-| Container Registry | $5 (Basic tier) |
-| Log Analytics | $0-5 (first 5GB free) |
-| **Total** | **$10-40/month** |
+| Resource               | Cost                     |
+| ---------------------- | ------------------------ |
+| Cosmos DB (Serverless) | $5-20                    |
+| Container Apps         | $0-10 (within free tier) |
+| Container Registry     | $5 (Basic tier)          |
+| Log Analytics          | $0-5 (first 5GB free)    |
+| **Total**              | **$10-40/month**         |
 
 ## Troubleshooting
 
@@ -302,23 +313,26 @@ For low-medium traffic (~10K analyses/month):
 The first deployment uses a placeholder image. If the container fails to start:
 
 1. Check Container App logs:
-   ```bash
-   az containerapp logs show --name ca-web-<unique-id> --resource-group rg-<environment> --follow
-   ```
+
+    ```bash
+    az containerapp logs show --name ca-web-<unique-id> --resource-group rg-<environment> --follow
+    ```
 
 2. Verify image was pushed:
-   ```bash
-   az acr repository list --name cr<unique-id>
-   ```
+
+    ```bash
+    az acr repository list --name cr<unique-id>
+    ```
 
 3. Re-deploy:
-   ```bash
-   azd deploy
-   ```
+    ```bash
+    azd deploy
+    ```
 
 ### OAuth Login Fails: "Redirect URI mismatch"
 
 Update GitHub OAuth app callback URL to match your deployed app:
+
 ```
 https://<app-fqdn>/callback.html
 ```
@@ -326,14 +340,16 @@ https://<app-fqdn>/callback.html
 ### Database Connection Fails
 
 1. Verify Cosmos DB connection string:
-   ```bash
-   azd env get-values | grep MONGODB_URI
-   ```
+
+    ```bash
+    azd env get-values | grep MONGODB_URI
+    ```
 
 2. Check Container App environment variables:
-   ```bash
-   az containerapp show --name ca-web-<unique-id> --resource-group rg-<environment> --query properties.template.containers[0].env
-   ```
+
+    ```bash
+    az containerapp show --name ca-web-<unique-id> --resource-group rg-<environment> --query properties.template.containers[0].env
+    ```
 
 3. Test connection from local MongoDB Compass
 
@@ -342,13 +358,14 @@ https://<app-fqdn>/callback.html
 If you see 429 errors or unexpected costs:
 
 1. Check RU consumption:
-   - Azure Portal → Cosmos DB → Metrics → Total Request Units
+    - Azure Portal → Cosmos DB → Metrics → Total Request Units
 
 2. Add indexes:
-   ```javascript
-   db.repos.createIndex({ "latestAnalysis.scanDate": -1 })
-   db.analysis.createIndex({ repoUrl: 1, scanDate: -1 })
-   ```
+
+    ```javascript
+    db.repos.createIndex({ "latestAnalysis.scanDate": -1 });
+    db.analysis.createIndex({ repoUrl: 1, scanDate: -1 });
+    ```
 
 3. Optimize queries in application code
 
@@ -362,33 +379,33 @@ Create `.github/workflows/azure-deploy.yml`:
 name: Deploy to Azure
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+    push:
+        branches: [main]
+    workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install azd
-        uses: Azure/setup-azd@v1.0.0
-      
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
-      - name: Deploy with azd
-        run: |
-          azd env refresh -e production --no-prompt
-          azd env set GITHUB_CLIENT_ID "${{ secrets.GH_CLIENT_ID }}"
-          azd env set GITHUB_CLIENT_SECRET "${{ secrets.GH_CLIENT_SECRET }}"
-          azd deploy --no-prompt
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_LOCATION: eastus2
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install azd
+              uses: Azure/setup-azd@v1.0.0
+
+            - name: Azure Login
+              uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+            - name: Deploy with azd
+              run: |
+                  azd env refresh -e production --no-prompt
+                  azd env set GITHUB_CLIENT_ID "${{ secrets.GH_CLIENT_ID }}"
+                  azd env set GITHUB_CLIENT_SECRET "${{ secrets.GH_CLIENT_SECRET }}"
+                  azd deploy --no-prompt
+              env:
+                  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                  AZURE_LOCATION: eastus2
 ```
 
 ### Azure DevOps
@@ -396,11 +413,12 @@ jobs:
 Pipeline is available at `.azdo/pipelines/azure-dev.yml`
 
 Setup:
+
 1. Create variable group `template-doctor-secrets`
 2. Add variables:
-   - `AZURE_SUBSCRIPTION_ID`
-   - `GITHUB_CLIENT_ID`
-   - `GITHUB_CLIENT_SECRET`
+    - `AZURE_SUBSCRIPTION_ID`
+    - `GITHUB_CLIENT_ID`
+    - `GITHUB_CLIENT_SECRET`
 3. Create service connection to Azure
 4. Run pipeline
 
@@ -428,17 +446,19 @@ az containerapp delete --name ca-web-<unique-id> --resource-group rg-<environmen
 ### Custom Domain
 
 1. Add custom domain to Container App:
-   ```bash
-   az containerapp hostname add \
-     --name ca-web-<unique-id> \
-     --resource-group rg-<environment> \
-     --hostname app.yourdomain.com
-   ```
+
+    ```bash
+    az containerapp hostname add \
+      --name ca-web-<unique-id> \
+      --resource-group rg-<environment> \
+      --hostname app.yourdomain.com
+    ```
 
 2. Add DNS CNAME record:
-   ```
-   app.yourdomain.com -> <app-fqdn>
-   ```
+
+    ```
+    app.yourdomain.com -> <app-fqdn>
+    ```
 
 3. Update GitHub OAuth callback URL
 

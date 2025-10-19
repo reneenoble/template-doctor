@@ -1,6 +1,10 @@
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
-import { downloadValidationArtifact, parseAzdValidationResult, AzdValidationResult } from "../services/azd-validation.js";
+import {
+    downloadValidationArtifact,
+    parseAzdValidationResult,
+    AzdValidationResult,
+} from "../services/azd-validation.js";
 
 /**
  * Interface for AZD validation results parsed from artifact
@@ -548,17 +552,17 @@ router.get(
 
             // NEW: Fetch and parse artifact if workflow completed
             let azdValidation: AzdValidationResult | null = null;
-            if (data.status === 'completed') {
+            if (data.status === "completed") {
                 const artifactContent = await downloadValidationArtifact(
                     owner,
                     repo,
                     runIdToCheck,
-                    token
+                    token,
                 );
 
                 if (artifactContent) {
                     azdValidation = parseAzdValidationResult(artifactContent);
-                    console.log('validation-status parsed artifact', {
+                    console.log("validation-status parsed artifact", {
                         requestId,
                         overallStatus: azdValidation.overallStatus,
                         azdUpSuccess: azdValidation.azdUpSuccess,
@@ -567,7 +571,7 @@ router.get(
                         psRuleWarnings: azdValidation.psRuleWarnings,
                     });
                 } else {
-                    console.log('validation-status no artifact available yet', {
+                    console.log("validation-status no artifact available yet", {
                         requestId,
                         workflowStatus: data.status,
                         workflowConclusion: data.conclusion,

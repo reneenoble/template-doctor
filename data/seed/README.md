@@ -5,22 +5,30 @@ This directory contains sample data files for importing into MongoDB collections
 ## Collections
 
 ### 1. analyses.json
+
 Sample template analysis results with compliance scores, issues, and compliant items.
+
 - **2 sample documents**
 - Demonstrates complete analysis structure with categories, issues, and compliance data
 
 ### 2. azdtests.json
+
 Sample Azure Developer CLI deployment test results.
+
 - **3 sample documents** (2 successful, 1 failed)
 - Shows deployment duration, resources created, errors, and cost estimates
 
 ### 3. rulesets.json
+
 Analysis ruleset configurations defining validation rules.
+
 - **3 rulesets**: DoD Best Practices, Partner Best Practices, Minimal Requirements
 - Each ruleset contains multiple rules with severity levels and categories
 
 ### 4. configuration.json
+
 Application configuration key-value pairs.
+
 - **15 configuration settings**
 - Categories: features, defaults, limits, github, archive, validation, security, notifications
 
@@ -31,12 +39,12 @@ Application configuration key-value pairs.
 1. **Open MongoDB Compass** and connect to `mongodb://localhost:27017`
 2. **Select or create database**: `template_doctor`
 3. **For each collection:**
-   - Click "Create Collection" button
-   - Enter collection name (e.g., `analyses`)
-   - Click "Create Collection"
-   - Click "Add Data" → "Import JSON or CSV file"
-   - Select the corresponding `.json` file from this directory
-   - Click "Import"
+    - Click "Create Collection" button
+    - Enter collection name (e.g., `analyses`)
+    - Click "Create Collection"
+    - Click "Add Data" → "Import JSON or CSV file"
+    - Select the corresponding `.json` file from this directory
+    - Click "Import"
 
 ### Method 2: mongoimport (Command Line)
 
@@ -121,11 +129,12 @@ The database service automatically creates indexes when it connects. You can ver
 
 ```javascript
 // In mongosh
-db.analyses.getIndexes()
-db.azdtests.getIndexes()
+db.analyses.getIndexes();
+db.azdtests.getIndexes();
 ```
 
 Expected indexes for `analyses`:
+
 - `_id_` (default)
 - `repoUrl_1_scanDate_-1`
 - `scanDate_-1`
@@ -134,6 +143,7 @@ Expected indexes for `analyses`:
 - `ruleSet_1`
 
 Expected indexes for `azdtests`:
+
 - `_id_` (default)
 - `repoUrl_1_startedAt_-1`
 - `status_1_startedAt_-1`
@@ -142,20 +152,24 @@ Expected indexes for `azdtests`:
 ## Sample Data Details
 
 ### analyses.json
+
 - **Azure-Samples/todo-nodejs-mongo**: 85.5% compliance, 3 issues
 - **Azure-Samples/contoso-real-estate**: 95% compliance, 1 issue
 
 ### azdtests.json
+
 - **todo-nodejs-mongo** (Oct 9): ✅ Success, 5.5 min deployment, 7 resources
 - **contoso-real-estate** (Oct 8): ❌ Failed, Node.js version mismatch
 - **todo-nodejs-mongo** (Oct 1): ✅ Success, 4.25 min deployment, 7 resources
 
 ### rulesets.json
+
 - **dod**: 13 rules (DoD best practices)
 - **partner**: 5 rules (Partner requirements)
 - **minimal**: 3 rules (Basic validation)
 
 ### configuration.json
+
 - Feature flags: auto_save, require_auth, archive_enabled
 - Defaults: rule_set (dod), azure_region (eastus)
 - Limits: file sizes, timeouts
@@ -177,10 +191,10 @@ To remove all seed data:
 
 ```javascript
 // In mongosh
-db.analyses.deleteMany({})
-db.azdtests.deleteMany({})
-db.rulesets.deleteMany({})
-db.configuration.deleteMany({})
+db.analyses.deleteMany({});
+db.azdtests.deleteMany({});
+db.rulesets.deleteMany({});
+db.configuration.deleteMany({});
 ```
 
 Or drop the entire database:

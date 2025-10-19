@@ -9,50 +9,59 @@ The **`scripts/full-setup.sh`** script provides a comprehensive, interactive set
 The script guides you through 10 steps:
 
 ### 1. Prerequisites Check ✅
+
 - Verifies Azure CLI is installed and working
 - Verifies Azure Developer CLI (azd) is installed
 - Verifies Docker is installed and running
 - Checks for Node.js (optional but recommended)
 
 ### 2. GitHub OAuth App Setup 🔐
+
 - Provides step-by-step instructions to create a GitHub OAuth App
 - Collects Client ID and Client Secret
 - Validates format (starts with `Ov` or `Iv`)
 
 ### 3. GitHub Personal Access Token 🔑
+
 - Guides you through creating a GitHub PAT
 - Lists required scopes: `repo`, `workflow`, `read:org`
 - Validates token format (starts with `ghp_`)
 - Optionally sets up separate workflow dispatch token
 
 ### 4. MongoDB Database Setup 🗄️
+
 - Option A: Use existing MongoDB (Atlas, Cosmos DB, etc.)
 - Option B: Create new Cosmos DB during `azd provision`
 - Validates MongoDB URI format
 
 ### 5. Admin User Configuration 👤
+
 - Collects GitHub username(s) for admin access
 - Supports multiple admins (comma-separated)
 - Sets `ADMIN_GITHUB_USERS` environment variable
 
 ### 6. Azure Region Selection 🌍
+
 - Provides common region choices (swedencentral, eastus, etc.)
 - Allows custom region entry
 - Sets `AZURE_LOCATION` for deployment
 
 ### 7. Create .env File 📝
+
 - Generates `.env` file with all configuration
 - Backs up existing `.env` if present
 - Validates configuration using `scripts/validate-env.sh`
 - Sets sensible defaults for optional variables
 
 ### 8. UAMI Setup (Optional) 🔐
+
 - Sets up User Assigned Managed Identity for GitHub Actions
 - Creates federated credentials for passwordless deployment
 - Updates `.env` with `AZURE_CLIENT_ID` and `AZURE_TENANT_ID`
 - Provides GitHub Secrets to add to repository
 
 ### 9. Azure Deployment 🚀
+
 - Runs `azd auth login` to authenticate
 - Initializes `azd` environment
 - Provisions Azure resources (Container Apps, Container Registry, Log Analytics)
@@ -60,12 +69,13 @@ The script guides you through 10 steps:
 - Provides deployed URL and callback URL update instructions
 
 ### 10. Post-Deployment Verification ✔️
+
 - Tests if site is accessible
 - Provides manual verification steps:
-  - OAuth login
-  - Template analysis
-  - Database persistence
-  - Leaderboards (admin)
+    - OAuth login
+    - Template analysis
+    - Database persistence
+    - Leaderboards (admin)
 - Optionally opens deployed site in browser
 
 ## Usage
@@ -123,50 +133,52 @@ The script asks yes/no questions at each major decision point:
 
 ### Required (6)
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GITHUB_CLIENT_ID` | OAuth App Client ID | `Ov23liZPFmBPVhHPMA5U` |
-| `GITHUB_CLIENT_SECRET` | OAuth App Client Secret | `(secret)` |
-| `GITHUB_TOKEN` | GitHub PAT for operations | `ghp_...` |
-| `GH_WORKFLOW_TOKEN` | GitHub PAT for workflows | `ghp_...` |
-| `ADMIN_GITHUB_USERS` | Admin usernames | `anfibiacreativa,user2` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://...` |
+| Variable               | Description               | Example                 |
+| ---------------------- | ------------------------- | ----------------------- |
+| `GITHUB_CLIENT_ID`     | OAuth App Client ID       | `Ov23liZPFmBPVhHPMA5U`  |
+| `GITHUB_CLIENT_SECRET` | OAuth App Client Secret   | `(secret)`              |
+| `GITHUB_TOKEN`         | GitHub PAT for operations | `ghp_...`               |
+| `GH_WORKFLOW_TOKEN`    | GitHub PAT for workflows  | `ghp_...`               |
+| `ADMIN_GITHUB_USERS`   | Admin usernames           | `anfibiacreativa,user2` |
+| `MONGODB_URI`          | MongoDB connection string | `mongodb+srv://...`     |
 
 ### Optional (9 with defaults)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEFAULT_RULE_SET` | `dod` | Default ruleset for validation |
-| `REQUIRE_AUTH_FOR_RESULTS` | `true` | Require login to view results |
-| `AUTO_SAVE_RESULTS` | `false` | Auto-save results to GitHub |
-| `ARCHIVE_ENABLED` | `false` | Enable archiving feature |
-| `ARCHIVE_COLLECTION` | `aigallery` | Archive collection name |
-| `DISPATCH_TARGET_REPO` | `Template-Doctor/template-doctor` | Target for workflow dispatch |
-| `ISSUE_AI_ENABLED` | `false` | Enable AI-powered issue suggestions |
-| `AZURE_LOCATION` | (user selected) | Azure region for deployment |
+| Variable                   | Default                           | Description                         |
+| -------------------------- | --------------------------------- | ----------------------------------- |
+| `DEFAULT_RULE_SET`         | `dod`                             | Default ruleset for validation      |
+| `REQUIRE_AUTH_FOR_RESULTS` | `true`                            | Require login to view results       |
+| `AUTO_SAVE_RESULTS`        | `false`                           | Auto-save results to GitHub         |
+| `ARCHIVE_ENABLED`          | `false`                           | Enable archiving feature            |
+| `ARCHIVE_COLLECTION`       | `aigallery`                       | Archive collection name             |
+| `DISPATCH_TARGET_REPO`     | `Template-Doctor/template-doctor` | Target for workflow dispatch        |
+| `ISSUE_AI_ENABLED`         | `false`                           | Enable AI-powered issue suggestions |
+| `AZURE_LOCATION`           | (user selected)                   | Azure region for deployment         |
 
 ### UAMI Variables (if enabled)
 
-| Variable | Description |
-|----------|-------------|
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
-| `AZURE_RESOURCE_GROUP` | Resource group name |
-| `GITHUB_OWNER` | GitHub organization or user |
-| `GITHUB_REPO` | Repository name |
-| `AZURE_CLIENT_ID` | UAMI Client ID (set by setup.sh) |
-| `AZURE_TENANT_ID` | Azure Tenant ID (set by setup.sh) |
+| Variable                | Description                       |
+| ----------------------- | --------------------------------- |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID             |
+| `AZURE_RESOURCE_GROUP`  | Resource group name               |
+| `GITHUB_OWNER`          | GitHub organization or user       |
+| `GITHUB_REPO`           | Repository name                   |
+| `AZURE_CLIENT_ID`       | UAMI Client ID (set by setup.sh)  |
+| `AZURE_TENANT_ID`       | Azure Tenant ID (set by setup.sh) |
 
 ## Integration with Other Scripts
 
 The full-setup script orchestrates these existing scripts:
 
 ### `scripts/validate-env.sh`
+
 - Called after `.env` creation (Step 7)
 - Validates all required variables are set
 - Checks format of GitHub tokens and MongoDB URI
 - Detects placeholder values
 
 ### `scripts/setup.sh`
+
 - Called during UAMI setup (Step 8)
 - Creates User Assigned Managed Identity
 - Assigns Contributor role
@@ -174,6 +186,7 @@ The full-setup script orchestrates these existing scripts:
 - Updates `.env` with UAMI variables
 
 ### `scripts/deploy.sh` (planned)
+
 - Called after `azd provision` (Step 9)
 - Builds Docker image
 - Pushes to Container Registry
@@ -190,10 +203,10 @@ After the script completes:
 1. Go to https://github.com/settings/developers
 2. Select your OAuth App
 3. Update **Authorization callback URL** to:
-   ```
-   https://your-app-url/callback.html
-   ```
-   (The script displays this URL after deployment)
+    ```
+    https://your-app-url/callback.html
+    ```
+    (The script displays this URL after deployment)
 
 ### 2. Add GitHub Secrets (if UAMI enabled)
 
@@ -201,9 +214,9 @@ Add these secrets to your GitHub repository:
 
 1. Go to repository **Settings → Secrets and variables → Actions**
 2. Add:
-   - `AZURE_CLIENT_ID` - From script output
-   - `AZURE_TENANT_ID` - From script output
-   - `AZURE_SUBSCRIPTION_ID` - Your subscription ID
+    - `AZURE_CLIENT_ID` - From script output
+    - `AZURE_TENANT_ID` - From script output
+    - `AZURE_SUBSCRIPTION_ID` - Your subscription ID
 
 ### 3. Verify Deployment
 
@@ -238,7 +251,8 @@ az containerapp logs show --name <app-name> --resource-group <rg-name> --follow
 ### OAuth App Issues
 
 **Error**: Invalid client_id or redirect_uri
-**Solution**: 
+**Solution**:
+
 1. Verify `GITHUB_CLIENT_ID` in `.env` matches OAuth App
 2. Update OAuth App callback URL to `https://your-app-url/callback.html`
 3. Hard refresh browser (Cmd+Shift+R / Ctrl+Shift+R)
@@ -303,7 +317,7 @@ If not using GitHub Actions for CI/CD:
 ## Related Documentation
 
 - [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) - Manual deployment steps
-- [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md) - azd deployment guide  
+- [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md) - azd deployment guide
 - [UAMI_SETUP_INSTRUCTIONS.md](../development/UAMI_SETUP_INSTRUCTIONS.md) - UAMI details
 - [ENVIRONMENT_VARIABLES.md](../development/ENVIRONMENT_VARIABLES.md) - All env vars reference
 

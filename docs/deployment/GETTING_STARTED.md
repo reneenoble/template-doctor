@@ -15,9 +15,9 @@ Deploy Template Doctor to Azure in 5 minutes.
 1. Go to https://github.com/settings/developers
 2. Click **"New OAuth App"**
 3. Fill in:
-   - Application name: `Template Doctor`
-   - Homepage URL: `https://template-doctor.yourdomain.com` (temporary, will update later)
-   - Authorization callback URL: `https://template-doctor.yourdomain.com/callback.html`
+    - Application name: `Template Doctor`
+    - Homepage URL: `https://template-doctor.yourdomain.com` (temporary, will update later)
+    - Authorization callback URL: `https://template-doctor.yourdomain.com/callback.html`
 4. Click **"Register application"**
 5. **Save the Client ID**: `Iv1.xxxxxxxxxxxxxxxx`
 6. Click **"Generate a new client secret"**
@@ -27,12 +27,12 @@ Deploy Template Doctor to Azure in 5 minutes.
 
 1. Go to https://github.com/settings/tokens/new
 2. Fill in:
-   - Token name: `template-doctor-azure`
-   - Expiration: `90 days` (or `No expiration` for production)
+    - Token name: `template-doctor-azure`
+    - Expiration: `90 days` (or `No expiration` for production)
 3. **Select scopes**:
-   - ✅ `repo` (Full control of private repositories)
-   - ✅ `workflow` (Update GitHub Action workflows)
-   - ✅ `read:org` (Read org membership)
+    - ✅ `repo` (Full control of private repositories)
+    - ✅ `workflow` (Update GitHub Action workflows)
+    - ✅ `read:org` (Read org membership)
 4. Click **"Generate token"**
 5. **Save the token**: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
@@ -75,11 +75,13 @@ azd up
 ```
 
 You'll be prompted to:
+
 1. **Select Azure subscription**
 2. **Select Azure region** (recommend: `eastus2` or `westus2`)
 3. **Enter environment name** (e.g., `dev`, `staging`, `production`)
 
 `azd` will:
+
 - ✅ Create resource group
 - ✅ Provision Cosmos DB (MongoDB API)
 - ✅ Create Container Registry
@@ -98,6 +100,7 @@ azd show
 ```
 
 Example output:
+
 ```
 Service web:
   Endpoint: https://ca-web-abc123.azurecontainerapps.io
@@ -108,9 +111,9 @@ Now update your GitHub OAuth app:
 1. Go to https://github.com/settings/developers
 2. Click on your OAuth app
 3. Update **Authorization callback URL** to:
-   ```
-   https://ca-web-abc123.azurecontainerapps.io/callback.html
-   ```
+    ```
+    https://ca-web-abc123.azurecontainerapps.io/callback.html
+    ```
 4. Click **"Update application"**
 
 ## Step 5: Test Your Deployment
@@ -127,6 +130,7 @@ You should see the Template Doctor homepage. Click **"Login with GitHub"** to te
 ## That's It! 🎉
 
 Your Template Doctor instance is now running on Azure with:
+
 - ✅ Serverless Cosmos DB database
 - ✅ Auto-scaling container app (1-3 replicas)
 - ✅ GitHub OAuth login
@@ -137,11 +141,13 @@ Your Template Doctor instance is now running on Azure with:
 ### "GitHub credentials not found"
 
 Make sure your `.env` file has all three values set:
+
 ```bash
 cat .env | grep GITHUB
 ```
 
 Should show:
+
 ```
 GITHUB_CLIENT_ID=Iv1.xxxxxxxx
 GITHUB_CLIENT_SECRET=xxxxxxxx
@@ -155,6 +161,7 @@ Update your OAuth app callback URL (Step 4) to match your deployed app URL.
 ### "azd: command not found"
 
 Install Azure Developer CLI:
+
 ```bash
 curl -fsSL https://aka.ms/install-azd.sh | bash
 source ~/.bashrc  # or restart your terminal
@@ -172,12 +179,12 @@ source ~/.bashrc  # or restart your terminal
 
 Your deployment will cost approximately **$10-40/month** for low-medium traffic:
 
-| Resource | Monthly Cost |
-|----------|--------------|
-| Cosmos DB (Serverless) | $5-20 |
-| Container Apps | $0-10 (free tier) |
-| Container Registry | $5 |
-| **Total** | **$10-40** |
+| Resource               | Monthly Cost      |
+| ---------------------- | ----------------- |
+| Cosmos DB (Serverless) | $5-20             |
+| Container Apps         | $0-10 (free tier) |
+| Container Registry     | $5                |
+| **Total**              | **$10-40**        |
 
 ## Clean Up
 

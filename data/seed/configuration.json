@@ -1,137 +1,137 @@
 [
-  {
-    "key": "feature_flags.auto_save_results",
-    "value": "false",
-    "type": "boolean",
-    "description": "Automatically save analysis results to GitHub PRs",
-    "category": "features",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "feature_flags.require_auth_for_results",
-    "value": "true",
-    "type": "boolean",
-    "description": "Require authentication to view analysis results",
-    "category": "features",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "feature_flags.archive_enabled",
-    "value": "true",
-    "type": "boolean",
-    "description": "Enable template archiving functionality",
-    "category": "features",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "defaults.rule_set",
-    "value": "dod",
-    "type": "string",
-    "description": "Default ruleset for template analysis",
-    "category": "defaults",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "defaults.azure_region",
-    "value": "eastus",
-    "type": "string",
-    "description": "Default Azure region for deployments",
-    "category": "defaults",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "limits.max_file_size_mb",
-    "value": "10",
-    "type": "number",
-    "description": "Maximum file size for analysis (in MB)",
-    "category": "limits",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "limits.max_repo_size_mb",
-    "value": "100",
-    "type": "number",
-    "description": "Maximum repository size for analysis (in MB)",
-    "category": "limits",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "limits.analysis_timeout_seconds",
-    "value": "300",
-    "type": "number",
-    "description": "Maximum time for analysis to complete (in seconds)",
-    "category": "limits",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "github.dispatch_target_repo",
-    "value": "Template-Doctor/template-doctor",
-    "type": "string",
-    "description": "Target repository for GitHub workflow dispatch events",
-    "category": "github",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "github.workflow_file",
-    "value": "validation-template.yml",
-    "type": "string",
-    "description": "GitHub workflow file for template validation",
-    "category": "github",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "archive.collection_name",
-    "value": "gallery",
-    "type": "string",
-    "description": "Collection name for archived templates",
-    "category": "archive",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "archive.repo_slug",
-    "value": "Template-Doctor/centralized-collections-archive",
-    "type": "string",
-    "description": "Repository for archived template collections",
-    "category": "archive",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "deprecated_models",
-    "value": "gpt-3.5-turbo,model-old-x,text-davinci-003",
-    "type": "string",
-    "description": "Comma-separated list of deprecated AI models",
-    "category": "validation",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "setup.allowed_users",
-    "value": "anfibiacreativa,admin@template-doctor.com",
-    "type": "string",
-    "description": "Comma-separated list of users allowed to modify setup",
-    "category": "security",
-    "updatedBy": "admin",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  },
-  {
-    "key": "notifications.webhook_url",
-    "value": "",
-    "type": "string",
-    "description": "Webhook URL for notifications (optional)",
-    "category": "notifications",
-    "updatedBy": "system",
-    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
-  }
+    {
+        "key": "feature_flags.auto_save_results",
+        "value": "false",
+        "type": "boolean",
+        "description": "Automatically save analysis results to GitHub PRs",
+        "category": "features",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "feature_flags.require_auth_for_results",
+        "value": "true",
+        "type": "boolean",
+        "description": "Require authentication to view analysis results",
+        "category": "features",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "feature_flags.archive_enabled",
+        "value": "true",
+        "type": "boolean",
+        "description": "Enable template archiving functionality",
+        "category": "features",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "defaults.rule_set",
+        "value": "dod",
+        "type": "string",
+        "description": "Default ruleset for template analysis",
+        "category": "defaults",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "defaults.azure_region",
+        "value": "eastus",
+        "type": "string",
+        "description": "Default Azure region for deployments",
+        "category": "defaults",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "limits.max_file_size_mb",
+        "value": "10",
+        "type": "number",
+        "description": "Maximum file size for analysis (in MB)",
+        "category": "limits",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "limits.max_repo_size_mb",
+        "value": "100",
+        "type": "number",
+        "description": "Maximum repository size for analysis (in MB)",
+        "category": "limits",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "limits.analysis_timeout_seconds",
+        "value": "300",
+        "type": "number",
+        "description": "Maximum time for analysis to complete (in seconds)",
+        "category": "limits",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "github.dispatch_target_repo",
+        "value": "Template-Doctor/template-doctor",
+        "type": "string",
+        "description": "Target repository for GitHub workflow dispatch events",
+        "category": "github",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "github.workflow_file",
+        "value": "validation-template.yml",
+        "type": "string",
+        "description": "GitHub workflow file for template validation",
+        "category": "github",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "archive.collection_name",
+        "value": "gallery",
+        "type": "string",
+        "description": "Collection name for archived templates",
+        "category": "archive",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "archive.repo_slug",
+        "value": "Template-Doctor/centralized-collections-archive",
+        "type": "string",
+        "description": "Repository for archived template collections",
+        "category": "archive",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "deprecated_models",
+        "value": "gpt-3.5-turbo,model-old-x,text-davinci-003",
+        "type": "string",
+        "description": "Comma-separated list of deprecated AI models",
+        "category": "validation",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "setup.allowed_users",
+        "value": "anfibiacreativa,admin@template-doctor.com",
+        "type": "string",
+        "description": "Comma-separated list of users allowed to modify setup",
+        "category": "security",
+        "updatedBy": "admin",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    },
+    {
+        "key": "notifications.webhook_url",
+        "value": "",
+        "type": "string",
+        "description": "Webhook URL for notifications (optional)",
+        "category": "notifications",
+        "updatedBy": "system",
+        "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+    }
 ]

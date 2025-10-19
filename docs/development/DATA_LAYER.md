@@ -36,34 +36,37 @@ Stores one document per repository with the latest analysis summary.
 
 ```typescript
 interface Repo {
-  _id?: ObjectId;
-  repoUrl: string;              // Unique identifier (e.g., "https://github.com/owner/repo")
-  owner: string;                // Repository owner
-  repo: string;                 // Repository name
-  latestAnalysis?: {            // Latest analysis summary
-    scanDate: Date;
-    ruleSet: string;
-    compliancePercentage: number;
-    passed: number;
-    issues: number;
-    analysisId: ObjectId;       // Reference to full analysis document
-  };
-  latestAzdTest?: {             // Latest AZD deployment test (optional)
-    testId: string;
-    status: string;
-    timestamp: Date;
-    duration?: number;
-    result?: any;
-  };
-  tags: string[];               // Categorization tags
-  upstreamTemplate?: string;    // Canonical upstream template name
-  archiveRequested?: boolean;   // Whether to archive to central repo
-  createdAt: Date;              // First scan date
-  updatedAt: Date;              // Last update date
+    _id?: ObjectId;
+    repoUrl: string; // Unique identifier (e.g., "https://github.com/owner/repo")
+    owner: string; // Repository owner
+    repo: string; // Repository name
+    latestAnalysis?: {
+        // Latest analysis summary
+        scanDate: Date;
+        ruleSet: string;
+        compliancePercentage: number;
+        passed: number;
+        issues: number;
+        analysisId: ObjectId; // Reference to full analysis document
+    };
+    latestAzdTest?: {
+        // Latest AZD deployment test (optional)
+        testId: string;
+        status: string;
+        timestamp: Date;
+        duration?: number;
+        result?: any;
+    };
+    tags: string[]; // Categorization tags
+    upstreamTemplate?: string; // Canonical upstream template name
+    archiveRequested?: boolean; // Whether to archive to central repo
+    createdAt: Date; // First scan date
+    updatedAt: Date; // Last update date
 }
 ```
 
 **Indexes:**
+
 - `repoUrl` (unique)
 - `latestAnalysis.scanDate` (descending, for dashboard sorting)
 - `latestAnalysis.compliancePercentage` (descending, for leaderboard)
@@ -74,36 +77,42 @@ Stores full historical analysis results (up to 10 per repository).
 
 ```typescript
 interface Analysis {
-  _id?: ObjectId;
-  repoUrl: string;              // Repository URL
-  owner: string;                // Repository owner
-  repo: string;                 // Repository name
-  ruleSet: string;              // Rule set used (e.g., "dod", "partner")
-  timestamp: number;            // Unix timestamp
-  scanDate: Date;               // Analysis date
-  compliance: {                 // Compliance summary
-    percentage: number;
-    issues: number;
-    passed: number;
-  };
-  categories?: Record<string, { // Category breakdown
-    enabled: boolean;
-    issues: any[];
-    compliant: any[];
-    percentage: number;
-  }>;
-  issues: any[];                // Full issue details
-  compliant: any[];             // Full compliant check details
-  analysisResult: any;          // Complete analyzer output
-  scannedBy?: string[];         // User who initiated scan
-  upstreamTemplate?: string;    // Template name
-  archiveRequested?: boolean;   // Archive flag
-  createdAt: Date;              // Record creation date
-  updatedAt: Date;              // Record update date
+    _id?: ObjectId;
+    repoUrl: string; // Repository URL
+    owner: string; // Repository owner
+    repo: string; // Repository name
+    ruleSet: string; // Rule set used (e.g., "dod", "partner")
+    timestamp: number; // Unix timestamp
+    scanDate: Date; // Analysis date
+    compliance: {
+        // Compliance summary
+        percentage: number;
+        issues: number;
+        passed: number;
+    };
+    categories?: Record<
+        string,
+        {
+            // Category breakdown
+            enabled: boolean;
+            issues: any[];
+            compliant: any[];
+            percentage: number;
+        }
+    >;
+    issues: any[]; // Full issue details
+    compliant: any[]; // Full compliant check details
+    analysisResult: any; // Complete analyzer output
+    scannedBy?: string[]; // User who initiated scan
+    upstreamTemplate?: string; // Template name
+    archiveRequested?: boolean; // Archive flag
+    createdAt: Date; // Record creation date
+    updatedAt: Date; // Record update date
 }
 ```
 
 **Indexes:**
+
 - `repoUrl` (for historical queries)
 - `scanDate` (descending, for pruning/sorting)
 
@@ -157,59 +166,59 @@ sudo systemctl enable mongod
 
 1. **Environment Variables**
 
-   Create or update `.env` in the project root:
+    Create or update `.env` in the project root:
 
-   ```bash
-   # MongoDB Connection (Local Development)
-   MONGODB_URI=mongodb://localhost:27017
-   MONGODB_DATABASE=template_doctor
-   
-   # Or use Cosmos DB (Production)
-   # COSMOS_DB_CONNECTION_STRING=mongodb://your-cosmos-account.mongo.cosmos.azure.com:10255/?ssl=true...
-   # MONGODB_DATABASE=template_doctor
-   ```
+    ```bash
+    # MongoDB Connection (Local Development)
+    MONGODB_URI=mongodb://localhost:27017
+    MONGODB_DATABASE=template_doctor
+
+    # Or use Cosmos DB (Production)
+    # COSMOS_DB_CONNECTION_STRING=mongodb://your-cosmos-account.mongo.cosmos.azure.com:10255/?ssl=true...
+    # MONGODB_DATABASE=template_doctor
+    ```
 
 2. **Connection Priority**
 
-   The application uses this connection priority:
-   1. `COSMOS_DB_CONNECTION_STRING` (if set, uses Cosmos DB)
-   2. `MONGODB_URI` (local MongoDB)
-   3. Default: `mongodb://localhost:27017` (for local dev)
+    The application uses this connection priority:
+    1. `COSMOS_DB_CONNECTION_STRING` (if set, uses Cosmos DB)
+    2. `MONGODB_URI` (local MongoDB)
+    3. Default: `mongodb://localhost:27017` (for local dev)
 
 ### Initialize Database
 
 1. **Start MongoDB** (if not already running):
 
-   ```bash
-   # macOS
-   brew services start mongodb-community@7.0
-   
-   # Linux
-   sudo systemctl start mongod
-   
-   # Docker (alternative)
-   docker run -d -p 27017:27017 --name mongodb mongo:7.0
-   ```
+    ```bash
+    # macOS
+    brew services start mongodb-community@7.0
+
+    # Linux
+    sudo systemctl start mongod
+
+    # Docker (alternative)
+    docker run -d -p 27017:27017 --name mongodb mongo:7.0
+    ```
 
 2. **Seed Database with Sample Data**:
 
-   ```bash
-   # Seed from JSON files in data/seed/
-   npm run db:seed
-   
-   # Force re-seed (drops existing data)
-   npm run db:seed:force
-   ```
+    ```bash
+    # Seed from JSON files in data/seed/
+    npm run db:seed
+
+    # Force re-seed (drops existing data)
+    npm run db:seed:force
+    ```
 
 3. **Verify Connection**:
 
-   ```bash
-   mongosh
-   use template_doctor
-   show collections
-   db.repos.countDocuments()
-   db.analysis.countDocuments()
-   ```
+    ```bash
+    mongosh
+    use template_doctor
+    show collections
+    db.repos.countDocuments()
+    db.analysis.countDocuments()
+    ```
 
 ## Testing with MongoDB Compass
 
@@ -236,6 +245,7 @@ Download from [MongoDB Compass Downloads](https://www.mongodb.com/try/download/c
 4. **Indexes**: Verify indexes are created
 
 **Sample Query** (Filter):
+
 ```json
 { "latestAnalysis.compliancePercentage": { "$gte": 80 } }
 ```
@@ -246,6 +256,7 @@ Download from [MongoDB Compass Downloads](https://www.mongodb.com/try/download/c
 2. **Sort** by `scanDate` descending to see latest analyses
 
 **Sample Query** (Find all analyses for a repo):
+
 ```json
 { "repoUrl": "https://github.com/owner/repo" }
 ```
@@ -253,41 +264,43 @@ Download from [MongoDB Compass Downloads](https://www.mongodb.com/try/download/c
 #### Aggregation Pipeline Examples
 
 **Count analyses per repository**:
+
 ```javascript
 [
-  {
-    $group: {
-      _id: "$repoUrl",
-      count: { $sum: 1 },
-      avgCompliance: { $avg: "$compliance.percentage" }
-    }
-  },
-  { $sort: { count: -1 } }
-]
+    {
+        $group: {
+            _id: "$repoUrl",
+            count: { $sum: 1 },
+            avgCompliance: { $avg: "$compliance.percentage" },
+        },
+    },
+    { $sort: { count: -1 } },
+];
 ```
 
 **Top 10 repositories by compliance**:
+
 ```javascript
 [
-  {
-    $lookup: {
-      from: "repos",
-      localField: "repoUrl",
-      foreignField: "repoUrl",
-      as: "repo"
-    }
-  },
-  { $unwind: "$repo" },
-  { $sort: { "repo.latestAnalysis.compliancePercentage": -1 } },
-  { $limit: 10 },
-  {
-    $project: {
-      repoUrl: 1,
-      compliance: "$repo.latestAnalysis.compliancePercentage",
-      scanDate: "$repo.latestAnalysis.scanDate"
-    }
-  }
-]
+    {
+        $lookup: {
+            from: "repos",
+            localField: "repoUrl",
+            foreignField: "repoUrl",
+            as: "repo",
+        },
+    },
+    { $unwind: "$repo" },
+    { $sort: { "repo.latestAnalysis.compliancePercentage": -1 } },
+    { $limit: 10 },
+    {
+        $project: {
+            repoUrl: 1,
+            compliance: "$repo.latestAnalysis.compliancePercentage",
+            scanDate: "$repo.latestAnalysis.scanDate",
+        },
+    },
+];
 ```
 
 ### Manual Testing Scenarios
@@ -295,6 +308,7 @@ Download from [MongoDB Compass Downloads](https://www.mongodb.com/try/download/c
 #### 1. Create New Analysis
 
 Run analysis via API:
+
 ```bash
 curl -X POST http://localhost:3000/api/v4/analyze-template \
   -H "Content-Type: application/json" \
@@ -305,6 +319,7 @@ curl -X POST http://localhost:3000/api/v4/analyze-template \
 ```
 
 **Verify in Compass**:
+
 1. Check `repos` collection - new document or updated `latestAnalysis`
 2. Check `analysis` collection - new document inserted
 3. Verify `analysisId` in repos matches `_id` in analysis
@@ -312,11 +327,13 @@ curl -X POST http://localhost:3000/api/v4/analyze-template \
 #### 2. Update Existing Repository
 
 Run another analysis on the same repo:
+
 ```bash
 # Run the same curl command again
 ```
 
 **Verify in Compass**:
+
 1. `repos` collection - `updatedAt` changed, `createdAt` unchanged
 2. `analysis` collection - new document added, count incremented
 3. `latestAnalysis.analysisId` points to newest analysis
@@ -327,7 +344,7 @@ Run 11 analyses for the same repository, then check:
 
 ```javascript
 // In Compass aggregation
-db.analysis.countDocuments({ repoUrl: "https://github.com/owner/repo" })
+db.analysis.countDocuments({ repoUrl: "https://github.com/owner/repo" });
 // Should return 10 (oldest pruned)
 ```
 
@@ -338,10 +355,12 @@ curl -s "http://localhost:3000/api/v4/results/leaderboard?limit=10" | jq '.leade
 ```
 
 **Verify in Compass**:
+
 ```javascript
-db.repos.find({ "latestAnalysis": { $exists: true } })
-  .sort({ "latestAnalysis.compliancePercentage": -1 })
-  .limit(10)
+db.repos
+    .find({ latestAnalysis: { $exists: true } })
+    .sort({ "latestAnalysis.compliancePercentage": -1 })
+    .limit(10);
 ```
 
 ## API Endpoints
@@ -349,6 +368,7 @@ db.repos.find({ "latestAnalysis": { $exists: true } })
 ### Analysis Endpoints
 
 #### Create Analysis
+
 ```http
 POST /api/v4/analyze-template
 Content-Type: application/json
@@ -364,6 +384,7 @@ Content-Type: application/json
 **Response**: Full analysis result + saves to database
 
 #### Batch Analysis
+
 ```http
 POST /api/v4/analyze-template
 Content-Type: application/json
@@ -380,39 +401,43 @@ Content-Type: application/json
 ### Query Endpoints
 
 #### Get Latest Results (Dashboard)
+
 ```http
 GET /api/v4/results/latest?limit=50
 ```
 
 **Response**:
+
 ```json
 {
-  "count": 50,
-  "results": [
-    {
-      "id": "...",
-      "repoUrl": "https://github.com/owner/repo",
-      "owner": "owner",
-      "repo": "repo",
-      "latestAnalysis": {
-        "scanDate": "2025-10-15T12:30:32.532Z",
-        "ruleSet": "dod",
-        "compliancePercentage": 85,
-        "passed": 20,
-        "issues": 3
-      },
-      "tags": []
-    }
-  ]
+    "count": 50,
+    "results": [
+        {
+            "id": "...",
+            "repoUrl": "https://github.com/owner/repo",
+            "owner": "owner",
+            "repo": "repo",
+            "latestAnalysis": {
+                "scanDate": "2025-10-15T12:30:32.532Z",
+                "ruleSet": "dod",
+                "compliancePercentage": 85,
+                "passed": 20,
+                "issues": 3
+            },
+            "tags": []
+        }
+    ]
 }
 ```
 
 #### Get Repository Details with History
+
 ```http
 GET /api/v4/results/repo/:owner/:repo
 ```
 
 **Response**:
+
 ```json
 {
   "repoUrl": "https://github.com/owner/repo",
@@ -434,24 +459,26 @@ GET /api/v4/results/repo/:owner/:repo
 ```
 
 #### Get Leaderboard
+
 ```http
 GET /api/v4/results/leaderboard?limit=100
 ```
 
 **Response**:
+
 ```json
 {
-  "count": 100,
-  "leaderboard": [
-    {
-      "repoUrl": "...",
-      "owner": "...",
-      "repo": "...",
-      "compliance": 95,
-      "lastScan": "2025-10-15T12:30:32.532Z",
-      "scanCount": 8
-    }
-  ]
+    "count": 100,
+    "leaderboard": [
+        {
+            "repoUrl": "...",
+            "owner": "...",
+            "repo": "...",
+            "compliance": 95,
+            "lastScan": "2025-10-15T12:30:32.532Z",
+            "scanCount": 8
+        }
+    ]
 }
 ```
 
@@ -468,9 +495,9 @@ Azure Cosmos DB for MongoDB provides a fully managed, globally distributed datab
 3. **API**: Select **Azure Cosmos DB for MongoDB**
 4. **Account name**: `template-doctor-cosmos` (must be globally unique)
 5. **Location**: Choose your region
-6. **Capacity mode**: 
-   - **Serverless** (recommended for dev/low traffic)
-   - **Provisioned throughput** (for production with predictable load)
+6. **Capacity mode**:
+    - **Serverless** (recommended for dev/low traffic)
+    - **Provisioned throughput** (for production with predictable load)
 7. **Review + create**
 
 #### Option 2: Azure CLI
@@ -505,22 +532,22 @@ az cosmosdb keys list \
 ### Configure Application
 
 1. **Get Connection String** from Azure Portal:
-   - Navigate to your Cosmos DB account
-   - **Settings** > **Connection String**
-   - Copy **PRIMARY CONNECTION STRING**
+    - Navigate to your Cosmos DB account
+    - **Settings** > **Connection String**
+    - Copy **PRIMARY CONNECTION STRING**
 
 2. **Update Environment Variables**:
 
-   ```bash
-   # Production (.env or Azure App Settings)
-   COSMOS_DB_CONNECTION_STRING=mongodb://template-doctor-cosmos:****@template-doctor-cosmos.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@template-doctor-cosmos@
-   MONGODB_DATABASE=template_doctor
-   ```
+    ```bash
+    # Production (.env or Azure App Settings)
+    COSMOS_DB_CONNECTION_STRING=mongodb://template-doctor-cosmos:****@template-doctor-cosmos.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@template-doctor-cosmos@
+    MONGODB_DATABASE=template_doctor
+    ```
 
 3. **Connection String Format**:
-   ```
-   mongodb://<account-name>:<primary-key>@<account-name>.mongo.cosmos.azure.com:10255/<database>?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@<account-name>@
-   ```
+    ```
+    mongodb://<account-name>:<primary-key>@<account-name>.mongo.cosmos.azure.com:10255/<database>?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@<account-name>@
+    ```
 
 ### Create Database and Collections
 
@@ -557,6 +584,7 @@ Cosmos DB charges based on Request Units consumed:
 - **Provisioned**: Fixed RU/s capacity (predictable cost for production)
 
 **Typical RU Costs**:
+
 - Insert analysis document: ~10 RUs
 - Update repos document: ~5 RUs
 - Query latest 50 repos: ~20 RUs

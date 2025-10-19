@@ -1,33 +1,33 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "environmentName": {
-      "value": "${AZURE_ENV_NAME}"
-    },
-    "location": {
-      "value": "${AZURE_LOCATION=swedencentral}"
-    },
-    "principalId": {
-      "value": "${AZURE_PRINCIPAL_ID=}"
-    },
-    "githubClientId": {
-      "value": "${GITHUB_CLIENT_ID}"
-    },
-    "githubClientSecret": {
-      "value": "${GITHUB_CLIENT_SECRET}"
-    },
-    "githubToken": {
-      "value": "${GITHUB_TOKEN}"
-    },
-    "ghWorkflowToken": {
-      "value": "${GH_WORKFLOW_TOKEN}"
-    },
-    "mongodbUri": {
-      "value": "${MONGODB_URI}"
-    },
-    "adminGitHubUsers": {
-      "value": "${ADMIN_GITHUB_USERS}"
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environmentName": {
+            "value": "${AZURE_ENV_NAME}"
+        },
+        "location": {
+            "value": "${AZURE_LOCATION=swedencentral}"
+        },
+        "principalId": {
+            "value": "${AZURE_PRINCIPAL_ID=}"
+        },
+        "githubClientId": {
+            "value": "${GITHUB_CLIENT_ID}"
+        },
+        "githubClientSecret": {
+            "value": "${GITHUB_CLIENT_SECRET}"
+        },
+        "githubToken": {
+            "value": "${GITHUB_TOKEN}"
+        },
+        "ghWorkflowToken": {
+            "value": "${GH_WORKFLOW_TOKEN}"
+        },
+        "mongodbUri": {
+            "value": "${MONGODB_URI}"
+        },
+        "adminGitHubUsers": {
+            "value": "${ADMIN_GITHUB_USERS}"
+        }
     }
-  }
 }

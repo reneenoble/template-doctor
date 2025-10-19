@@ -1,6 +1,6 @@
 /**
  * E2E Tests for AZD Validation Feature
- * 
+ *
  * Tests validation UI, artifact parsing, issue creation, and GraphQL integration
  */
 
@@ -11,12 +11,15 @@ test.describe('AZD Validation UI', () => {
     // Mock auth state
     await page.addInitScript(() => {
       localStorage.setItem('githubToken', 'test-token');
-      localStorage.setItem('githubUser', JSON.stringify({
-        login: 'testuser',
-        avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4'
-      }));
+      localStorage.setItem(
+        'githubUser',
+        JSON.stringify({
+          login: 'testuser',
+          avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4',
+        }),
+      );
     });
-    
+
     await page.goto('http://localhost:3000');
   });
 
@@ -27,8 +30,8 @@ test.describe('AZD Validation UI', () => {
         json: {
           status: 'in_progress',
           conclusion: null,
-          html_url: 'https://github.com/test/repo/actions/runs/123'
-        }
+          html_url: 'https://github.com/test/repo/actions/runs/123',
+        },
       });
     });
 
@@ -38,16 +41,18 @@ test.describe('AZD Validation UI', () => {
         json: {
           runId: 'test-run-123',
           githubRunId: 123,
-          githubRunUrl: 'https://github.com/test/repo/actions/runs/123'
-        }
+          githubRunUrl: 'https://github.com/test/repo/actions/runs/123',
+        },
       });
     });
 
     // Trigger validation via custom event
     await page.evaluate(() => {
-      document.dispatchEvent(new CustomEvent('template-card-validate', {
-        detail: { template: { repoUrl: 'https://github.com/test/repo' } }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('template-card-validate', {
+          detail: { template: { repoUrl: 'https://github.com/test/repo' } },
+        }),
+      );
     });
 
     // Wait for validation UI to appear
@@ -69,7 +74,7 @@ test.describe('AZD Validation UI', () => {
 
   test('should display validation-warning with readable contrast', async ({ page }) => {
     await page.goto('http://localhost:3000');
-    
+
     // Inject test element with validation-warning class
     await page.evaluate(() => {
       const testDiv = document.createElement('div');
@@ -101,9 +106,9 @@ test.describe('AZD Validation UI', () => {
     expect(bgColor).toMatch(/rgba?\(/);
 
     // Take screenshot for visual regression
-    await page.screenshot({ 
+    await page.screenshot({
       path: 'test-results/validation-warning-contrast.png',
-      fullPage: false 
+      fullPage: false,
     });
   });
 
@@ -114,8 +119,8 @@ test.describe('AZD Validation UI', () => {
         json: {
           runId: 'test-run-123',
           githubRunId: 123,
-          githubRunUrl: 'https://github.com/test/repo/actions/runs/123'
-        }
+          githubRunUrl: 'https://github.com/test/repo/actions/runs/123',
+        },
       });
     });
 
@@ -124,16 +129,18 @@ test.describe('AZD Validation UI', () => {
         json: {
           status: 'in_progress',
           conclusion: null,
-          html_url: 'https://github.com/test/repo/actions/runs/123'
-        }
+          html_url: 'https://github.com/test/repo/actions/runs/123',
+        },
       });
     });
 
     // Trigger validation
     await page.evaluate(() => {
-      document.dispatchEvent(new CustomEvent('template-card-validate', {
-        detail: { template: { repoUrl: 'https://github.com/test/repo' } }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('template-card-validate', {
+          detail: { template: { repoUrl: 'https://github.com/test/repo' } },
+        }),
+      );
     });
 
     // Wait for troubleshooting section to appear
@@ -147,7 +154,7 @@ test.describe('AZD Validation UI', () => {
     const tip1 = page.locator('#azd-troubleshooting-tips > div').nth(0);
     await expect(tip1).toContainText('Region Availability');
     await expect(tip1).toContainText('Models are available in certain regions only');
-    
+
     const tip1Link = await tip1.locator('a').getAttribute('href');
     expect(tip1Link).toContain('trouble-shooting.md#region-availability');
 
@@ -155,7 +162,7 @@ test.describe('AZD Validation UI', () => {
     const tip2 = page.locator('#azd-troubleshooting-tips > div').nth(1);
     await expect(tip2).toContainText('UnmatchedPrincipalType Error');
     await expect(tip2).toContainText('ServicePrincipal vs User');
-    
+
     const tip2Link = await tip2.locator('a').getAttribute('href');
     expect(tip2Link).toContain('azure-openai-assistant-javascript/pull/18');
 
@@ -168,14 +175,14 @@ test.describe('AZD Validation UI', () => {
   test('should highlight UnmatchedPrincipalType tip when error detected', async ({ page }) => {
     // Mock validation with UnmatchedPrincipalType error in logs
     const errorMessage = `Error: UnmatchedPrincipalType: The PrincipalId 'abc123' has type 'ServicePrincipal', which is different from specified PrinciaplType 'User'`;
-    
+
     await page.route('**/api/v4/validation-template', (route) => {
       route.fulfill({
         json: {
           runId: 'test-run-123',
           githubRunId: 123,
-          githubRunUrl: 'https://github.com/test/repo/actions/runs/123'
-        }
+          githubRunUrl: 'https://github.com/test/repo/actions/runs/123',
+        },
       });
     });
 
@@ -195,17 +202,19 @@ test.describe('AZD Validation UI', () => {
             psRuleWarnings: 0,
             securityStatus: 'pass',
             overallStatus: 'failure',
-            resultFileContent: `Error: ${errorMessage}`
-          }
-        }
+            resultFileContent: `Error: ${errorMessage}`,
+          },
+        },
       });
     });
 
     // Trigger validation
     await page.evaluate(() => {
-      document.dispatchEvent(new CustomEvent('template-card-validate', {
-        detail: { template: { repoUrl: 'https://github.com/test/repo' } }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('template-card-validate', {
+          detail: { template: { repoUrl: 'https://github.com/test/repo' } },
+        }),
+      );
     });
 
     // Wait for completion and tips update
@@ -213,12 +222,12 @@ test.describe('AZD Validation UI', () => {
 
     // Get the UnmatchedPrincipalType tip (should be second one)
     const tip2 = page.locator('#azd-troubleshooting-tips > div').nth(1);
-    
+
     // Verify it's highlighted (orange border)
     const borderColor = await tip2.evaluate((el) => {
       return window.getComputedStyle(el).borderColor;
     });
-    
+
     // #ff9800 = rgb(255, 152, 0) - orange
     expect(borderColor).toContain('255, 152, 0');
 
@@ -226,7 +235,7 @@ test.describe('AZD Validation UI', () => {
     const bgColor = await tip2.evaluate((el) => {
       return window.getComputedStyle(el).backgroundColor;
     });
-    
+
     // Should have yellow-ish background
     expect(bgColor).toMatch(/255.*248.*225/); // #fff8e1
 
@@ -243,23 +252,23 @@ test.describe('Artifact-Based Validation Results', () => {
         json: {
           runId: 'test-run-456',
           githubRunId: 456,
-          githubRunUrl: 'https://github.com/test/repo/actions/runs/456'
-        }
+          githubRunUrl: 'https://github.com/test/repo/actions/runs/456',
+        },
       });
     });
 
     let pollCount = 0;
     await page.route('**/api/v4/validation-status*', (route) => {
       pollCount++;
-      
+
       // First few polls: in progress
       if (pollCount < 3) {
         route.fulfill({
           json: {
             status: 'in_progress',
             conclusion: null,
-            html_url: 'https://github.com/test/repo/actions/runs/456'
-          }
+            html_url: 'https://github.com/test/repo/actions/runs/456',
+          },
         });
       } else {
         // Final poll: completed with warnings
@@ -277,18 +286,21 @@ test.describe('Artifact-Based Validation Results', () => {
               psRuleWarnings: 2,
               securityStatus: 'warnings',
               overallStatus: 'warning',
-              resultFileContent: '## Validation Results\n- [x] AZD Up (45.2s)\n- [x] AZD Down (30.1s)\n:warning: Security warning 1\n:warning: Security warning 2'
-            }
-          }
+              resultFileContent:
+                '## Validation Results\n- [x] AZD Up (45.2s)\n- [x] AZD Down (30.1s)\n:warning: Security warning 1\n:warning: Security warning 2',
+            },
+          },
         });
       }
     });
 
     // Trigger validation
     await page.evaluate(() => {
-      document.dispatchEvent(new CustomEvent('template-card-validate', {
-        detail: { template: { repoUrl: 'https://github.com/test/repo' } }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('template-card-validate', {
+          detail: { template: { repoUrl: 'https://github.com/test/repo' } },
+        }),
+      );
     });
 
     // Wait for completion
@@ -302,14 +314,23 @@ test.describe('Artifact-Based Validation Results', () => {
     expect(warningMessage).toContain('Template validation passed with warnings');
 
     // Verify AZD Up/Down times displayed
-    const azdUpStep = await page.locator('.validation-step').filter({ hasText: 'AZD Up' }).textContent();
+    const azdUpStep = await page
+      .locator('.validation-step')
+      .filter({ hasText: 'AZD Up' })
+      .textContent();
     expect(azdUpStep).toContain('45.2s');
 
-    const azdDownStep = await page.locator('.validation-step').filter({ hasText: 'AZD Down' }).textContent();
+    const azdDownStep = await page
+      .locator('.validation-step')
+      .filter({ hasText: 'AZD Down' })
+      .textContent();
     expect(azdDownStep).toContain('30.1s');
 
     // Verify security warnings count
-    const securityStep = await page.locator('.validation-step').filter({ hasText: 'Security' }).textContent();
+    const securityStep = await page
+      .locator('.validation-step')
+      .filter({ hasText: 'Security' })
+      .textContent();
     expect(securityStep).toContain('2 warnings');
 
     // Verify collapsible details panel exists
@@ -339,9 +360,10 @@ test.describe('Artifact-Based Validation Results', () => {
             psRuleWarnings: 0,
             securityStatus: 'pass',
             overallStatus: 'success',
-            resultFileContent: '## Validation Results\n- [x] AZD Up\n- [x] AZD Down\n✅ Security passed'
-          }
-        }
+            resultFileContent:
+              '## Validation Results\n- [x] AZD Up\n- [x] AZD Down\n✅ Security passed',
+          },
+        },
       });
     });
   });
@@ -352,8 +374,8 @@ test.describe('Artifact-Based Validation Results', () => {
         json: {
           runId: 'test-run-789',
           githubRunId: 789,
-          githubRunUrl: 'https://github.com/test/repo/actions/runs/789'
-        }
+          githubRunUrl: 'https://github.com/test/repo/actions/runs/789',
+        },
       });
     });
 
@@ -372,17 +394,20 @@ test.describe('Artifact-Based Validation Results', () => {
             psRuleWarnings: 0,
             securityStatus: 'pass',
             overallStatus: 'success',
-            resultFileContent: '## Validation Results\n- [x] AZD Up\n- [x] AZD Down\n✅ Security passed'
-          }
-        }
+            resultFileContent:
+              '## Validation Results\n- [x] AZD Up\n- [x] AZD Down\n✅ Security passed',
+          },
+        },
       });
     });
 
     // Trigger validation
     await page.evaluate(() => {
-      document.dispatchEvent(new CustomEvent('template-card-validate', {
-        detail: { template: { repoUrl: 'https://github.com/test/repo' } }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('template-card-validate', {
+          detail: { template: { repoUrl: 'https://github.com/test/repo' } },
+        }),
+      );
     });
 
     // Wait for validation result
@@ -401,12 +426,15 @@ test.describe('Artifact-Based Validation Results', () => {
     const bgColor = await page.locator('.validation-success').evaluate((el) => {
       return window.getComputedStyle(el).backgroundColor;
     });
-    
+
     // Should have green tint (rgba with 107, 124, 16)
     expect(bgColor).toMatch(/16.*124.*16/); // #107c10
 
     // Verify "Create Issue" button is NOT shown for success
-    const issueButton = await page.locator('button').filter({ hasText: 'Create GitHub Issue' }).count();
+    const issueButton = await page
+      .locator('button')
+      .filter({ hasText: 'Create GitHub Issue' })
+      .count();
     expect(issueButton).toBe(0);
   });
 
@@ -426,9 +454,9 @@ test.describe('Artifact-Based Validation Results', () => {
             psRuleWarnings: 1,
             securityStatus: 'errors',
             overallStatus: 'failure',
-            resultFileContent: '## Validation Results\n- [ ] :x: AZD Up failed\n❌ Security errors'
-          }
-        }
+            resultFileContent: '## Validation Results\n- [ ] :x: AZD Up failed\n❌ Security errors',
+          },
+        },
       });
     });
 
@@ -447,10 +475,10 @@ test.describe('GraphQL Issue Creation', () => {
     // Mock GraphQL API call
     await page.route('**/graphql', async (route) => {
       const postData = route.request().postDataJSON();
-      
+
       if (postData.query.includes('createIssue')) {
         issueCreated = true;
-        
+
         // Check if assigneeIds includes Copilot
         if (postData.variables.input.assigneeIds?.length > 0) {
           copilotAssigned = true;
@@ -464,11 +492,11 @@ test.describe('GraphQL Issue Creation', () => {
                   id: 'issue-123',
                   number: 42,
                   url: 'https://github.com/test/repo/issues/42',
-                  title: '[Template Doctor] Fix validation errors'
-                }
-              }
-            }
-          }
+                  title: '[Template Doctor] Fix validation errors',
+                },
+              },
+            },
+          },
         });
       } else {
         route.continue();
@@ -491,9 +519,10 @@ test.describe('GraphQL Issue Creation', () => {
             psRuleWarnings: 0,
             securityStatus: 'errors',
             overallStatus: 'failure',
-            resultFileContent: '(x) Failed: Deployment error\n## Security Requirements:\n- [ ] :x: Missing encryption'
-          }
-        }
+            resultFileContent:
+              '(x) Failed: Deployment error\n## Security Requirements:\n- [ ] :x: Missing encryption',
+          },
+        },
       });
     });
 
@@ -505,7 +534,7 @@ test.describe('GraphQL Issue Creation', () => {
     // TODO: Verify Copilot assigned (copilotAssigned = true)
     // TODO: Verify success notification shows issue #42
     // TODO: Verify new tab opens with issue URL
-    
+
     expect(issueCreated).toBe(true);
     expect(copilotAssigned).toBe(true);
   });
@@ -515,10 +544,10 @@ test.describe('GraphQL Issue Creation', () => {
 
     await page.route('**/graphql', async (route) => {
       const postData = route.request().postDataJSON();
-      
+
       if (postData.query.includes('createIssue')) {
         issueBody = postData.variables.input.body;
-        
+
         route.fulfill({
           json: {
             data: {
@@ -527,11 +556,11 @@ test.describe('GraphQL Issue Creation', () => {
                   id: 'issue-123',
                   number: 42,
                   url: 'https://github.com/test/repo/issues/42',
-                  title: '[Template Doctor] Fix validation errors'
-                }
-              }
-            }
-          }
+                  title: '[Template Doctor] Fix validation errors',
+                },
+              },
+            },
+          },
         });
       } else {
         route.continue();
@@ -553,9 +582,10 @@ test.describe('GraphQL Issue Creation', () => {
             psRuleWarnings: 0,
             securityStatus: 'errors',
             overallStatus: 'failure',
-            resultFileContent: '(x) Failed: Region not available\n## Security Requirements:\n- [ ] :x: Missing TLS'
-          }
-        }
+            resultFileContent:
+              '(x) Failed: Region not available\n## Security Requirements:\n- [ ] :x: Missing TLS',
+          },
+        },
       });
     });
 
@@ -563,7 +593,7 @@ test.describe('GraphQL Issue Creation', () => {
     // TODO: Verify issueBody contains "Region not available"
     // TODO: Verify issueBody contains "Missing TLS"
     // TODO: Verify issueBody does NOT contain workflow errors
-    
+
     expect(issueBody).toContain('Region not available');
     expect(issueBody).toContain('Missing TLS');
   });
@@ -582,9 +612,9 @@ test.describe('GraphQL Issue Creation', () => {
           html_url: 'https://github.com/test/repo/actions/runs/123',
           azdValidation: {
             overallStatus: 'failure',
-            resultFileContent: 'Error'
-          }
-        }
+            resultFileContent: 'Error',
+          },
+        },
       });
     });
 
@@ -606,11 +636,11 @@ test.describe('GraphQL Issue Creation', () => {
                 id: 'issue-123',
                 number: 42,
                 url: 'https://github.com/test/repo/issues/42',
-                title: 'Test'
-              }
-            }
-          }
-        }
+                title: 'Test',
+              },
+            },
+          },
+        },
       });
     });
 
@@ -626,7 +656,7 @@ test.describe('GraphQL Issue Creation', () => {
 test.describe('Validation CSS Styles', () => {
   test('validation-warning should have dark brown text color', async ({ page }) => {
     await page.goto('http://localhost:3000');
-    
+
     // Inject test element
     await page.evaluate(() => {
       const testDiv = document.createElement('div');
@@ -646,7 +676,7 @@ test.describe('Validation CSS Styles', () => {
 
   test('validation results should display correctly', async ({ page }) => {
     await page.goto('http://localhost:3000');
-    
+
     // Inject validation result
     await page.evaluate(() => {
       const resultDiv = document.createElement('div');
@@ -666,5 +696,5 @@ test.describe('Validation CSS Styles', () => {
 
     // Should have green tint
     expect(bg).toContain('16, 124, 16'); // #107c10
-    });
+  });
 });

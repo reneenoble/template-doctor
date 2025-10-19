@@ -45,7 +45,10 @@ function showTroubleshootingTips(container: HTMLElement, errorText: string = '')
   `;
 
   // Check for specific errors for conditional styling
-  const hasUnmatchedPrincipalError = /UnmatchedPrincipalType[\s\S]*has type[\s\S]*ServicePrincipal[\s\S]*different from[\s\S]*PrinciaplType[\s\S]*User/i.test(errorText);
+  const hasUnmatchedPrincipalError =
+    /UnmatchedPrincipalType[\s\S]*has type[\s\S]*ServicePrincipal[\s\S]*different from[\s\S]*PrinciaplType[\s\S]*User/i.test(
+      errorText,
+    );
 
   // Tip 1: Region Availability
   const tip1 = document.createElement('div');
@@ -140,55 +143,55 @@ function showTroubleshootingTips(container: HTMLElement, errorText: string = '')
  * Replaces the old log-based parsing approach
  */
 function displayAzdValidationResults(
-    container: HTMLElement,
-    azdValidation: AzdValidationResult,
-    githubRunUrl: string
+  container: HTMLElement,
+  azdValidation: AzdValidationResult,
+  githubRunUrl: string,
 ): void {
-    const statusIcon = {
-        success: '✅',
-        warning: '⚠️',
-        failure: '❌',
-    }[azdValidation.overallStatus];
+  const statusIcon = {
+    success: '✅',
+    warning: '⚠️',
+    failure: '❌',
+  }[azdValidation.overallStatus];
 
-    const statusClass = {
-        success: 'validation-success',
-        warning: 'validation-warning',
-        failure: 'validation-failure',
-    }[azdValidation.overallStatus];
+  const statusClass = {
+    success: 'validation-success',
+    warning: 'validation-warning',
+    failure: 'validation-failure',
+  }[azdValidation.overallStatus];
 
-    const statusMessage = {
-        success: 'Template validation passed',
-        warning: 'Template validation passed with warnings',
-        failure: 'Template validation failed',
-    }[azdValidation.overallStatus];
+  const statusMessage = {
+    success: 'Template validation passed',
+    warning: 'Template validation passed with warnings',
+    failure: 'Template validation failed',
+  }[azdValidation.overallStatus];
 
-    // Build details HTML
-    const azdUpIcon = azdValidation.azdUpSuccess ? '✅' : '❌';
-    const azdDownIcon = azdValidation.azdDownSuccess ? '✅' : '❌';
-    const azdUpTime = azdValidation.azdUpTime ? ` (${azdValidation.azdUpTime})` : '';
-    const azdDownTime = azdValidation.azdDownTime ? ` (${azdValidation.azdDownTime})` : '';
+  // Build details HTML
+  const azdUpIcon = azdValidation.azdUpSuccess ? '✅' : '❌';
+  const azdDownIcon = azdValidation.azdDownSuccess ? '✅' : '❌';
+  const azdUpTime = azdValidation.azdUpTime ? ` (${azdValidation.azdUpTime})` : '';
+  const azdDownTime = azdValidation.azdDownTime ? ` (${azdValidation.azdDownTime})` : '';
 
-    let securityLine = '';
-    if (azdValidation.securityStatus === 'pass') {
-        securityLine = '✅ Security Scan passed';
-    } else if (azdValidation.securityStatus === 'warnings') {
-        securityLine = `⚠️ Security Scan: ${azdValidation.psRuleWarnings} warnings`;
-    } else {
-        securityLine = `❌ Security Scan: ${azdValidation.psRuleErrors} errors`;
-    }
+  let securityLine = '';
+  if (azdValidation.securityStatus === 'pass') {
+    securityLine = '✅ Security Scan passed';
+  } else if (azdValidation.securityStatus === 'warnings') {
+    securityLine = `⚠️ Security Scan: ${azdValidation.psRuleWarnings} warnings`;
+  } else {
+    securityLine = `❌ Security Scan: ${azdValidation.psRuleErrors} errors`;
+  }
 
-    // Generate unique ID for collapsible details
-    const detailsId = `azd-details-${Date.now()}`;
-    
-    // Escape HTML in the markdown content for safe display
-    const escapedContent = (azdValidation.resultFileContent || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+  // Generate unique ID for collapsible details
+  const detailsId = `azd-details-${Date.now()}`;
 
-    container.innerHTML = `
+  // Escape HTML in the markdown content for safe display
+  const escapedContent = (azdValidation.resultFileContent || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  container.innerHTML = `
         <div class="validation-result ${statusClass}">
             <div class="validation-header">
                 <span class="validation-icon">${statusIcon}</span>
@@ -212,7 +215,9 @@ function displayAzdValidationResults(
                     View Full Logs
                 </a>
             </div>
-            ${azdValidation.resultFileContent ? `
+            ${
+              azdValidation.resultFileContent
+                ? `
                 <details class="validation-details-panel" style="margin-top: 15px;">
                     <summary style="cursor: pointer; padding: 10px; background: rgba(0, 0, 0, 0.05); border-radius: 6px; font-weight: 500; user-select: none;">
                         📋 Show Full Validation Details
@@ -221,7 +226,9 @@ function displayAzdValidationResults(
                         <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; line-height: 1.5;">${escapedContent}</pre>
                     </div>
                 </details>
-            ` : ''}
+            `
+                : ''
+            }
         </div>
     `;
 }
@@ -275,7 +282,7 @@ function createLogContainer(): HTMLPreElement {
   const existingControls = document.getElementById('azd-provision-controls');
   if (existingControls) existingControls.remove();
 
-    // Remove old status elements if they exist (they'll be recreated in controls container)
+  // Remove old status elements if they exist (they'll be recreated in controls container)
   const existingStatusBar = document.getElementById('azd-status-bar');
   if (existingStatusBar) existingStatusBar.remove();
   const existingPrincipalError = document.getElementById('azd-principal-error');
@@ -539,7 +546,7 @@ async function runValidation(templateUrl: string) {
         elapsedDiv.id = 'azd-elapsed-time';
         elapsedDiv.style.cssText =
           'display: flex; align-items: center; gap: 10px; color: #666; font-size: 14px; font-weight: 500;';
-        
+
         // Start time tracking
         const startTime = Date.now();
         (window as any).azdStartTime = startTime; // Store for final time calculation
@@ -548,16 +555,16 @@ async function runValidation(templateUrl: string) {
           const minutes = Math.floor(elapsed / 60);
           const seconds = elapsed % 60;
           const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-          
+
           elapsedDiv.innerHTML = `
             <i class="fas fa-spinner fa-spin" style="color: #0078d4;"></i>
             <span>${timeStr} elapsed</span>
           `;
         };
-        
+
         updateElapsed();
         const elapsedInterval = setInterval(updateElapsed, 1000);
-        
+
         // Store interval ID to clear it later
         (window as any).azdElapsedInterval = elapsedInterval;
 
@@ -783,7 +790,7 @@ function startStatusPolling(apiBase: string, runId: string) {
         if ((window as any).azdElapsedInterval) {
           clearInterval((window as any).azdElapsedInterval);
           (window as any).azdElapsedInterval = null;
-          
+
           // Update elapsed time one last time and remove animation
           const elapsedDiv = document.getElementById('azd-elapsed-time');
           if (elapsedDiv) {
@@ -792,7 +799,7 @@ function startStatusPolling(apiBase: string, runId: string) {
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
             const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-            
+
             // Display final time WITHOUT spinner
             elapsedDiv.innerHTML = `
               <i class="fa-regular fa-clock" style="color: #0078d4; font-size: 16px;"></i>
@@ -813,13 +820,11 @@ function startStatusPolling(apiBase: string, runId: string) {
         // Display validation results if artifact data is available
         if (azdValidation) {
           displayAzdValidationResults(controlsContainer, azdValidation, status.html_url);
-          
+
           // Save validation results to database
           try {
             const startTime = localStorage.getItem('lastValidationStartTime');
-            const duration = startTime 
-              ? Date.now() - parseInt(startTime, 10)
-              : undefined;
+            const duration = startTime ? Date.now() - parseInt(startTime, 10) : undefined;
 
             await fetch(`${apiBase}/api/v4/azd-test`, {
               method: 'POST',
@@ -868,8 +873,9 @@ function startStatusPolling(apiBase: string, runId: string) {
         }
 
         // Add "Create Issue" button if validation failed or had warnings
-        const hasIssues = !azdValidation || 
-          azdValidation.overallStatus === 'failure' || 
+        const hasIssues =
+          !azdValidation ||
+          azdValidation.overallStatus === 'failure' ||
           azdValidation.overallStatus === 'warning';
 
         if (hasIssues && currentGithubRunUrl && !document.getElementById('azd-issue-section')) {
@@ -877,7 +883,7 @@ function startStatusPolling(apiBase: string, runId: string) {
           issueSection.id = 'azd-issue-section';
           issueSection.style.cssText =
             'margin: 15px 0; padding: 15px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px;';
-          
+
           const issueButton = document.createElement('button');
           issueButton.textContent = '🐛 Create GitHub Issue';
           issueButton.style.cssText =
@@ -946,7 +952,10 @@ async function createValidationIssue(status: any, azdResults?: AzdValidationResu
   const targetRepoUrl = currentTemplateUrl || '';
 
   if (!targetRepoUrl) {
-    showError('Missing Information', 'Cannot determine target repository. Please ensure validation was started with a valid repo URL.');
+    showError(
+      'Missing Information',
+      'Cannot determine target repository. Please ensure validation was started with a valid repo URL.',
+    );
     return;
   }
 
@@ -961,41 +970,41 @@ async function createValidationIssue(status: any, azdResults?: AzdValidationResu
 
   // Extract actual validation errors from the markdown content
   let errorSummary = '';
-  
+
   if (azdResults?.resultFileContent) {
     const markdown = azdResults.resultFileContent;
-    
+
     // Extract failed deployment steps (lines with (x) Failed:)
     const failedSteps = markdown.match(/\(x\) Failed:.*$/gm) || [];
-    
+
     // Extract security scan warnings/errors (under Security Requirements section)
     const securityMatch = markdown.match(/## Security Requirements:([\s\S]*?)(?=##|$)/);
     const securitySection = securityMatch ? securityMatch[1].trim() : '';
-    
+
     // Build error summary from actual validation content
     if (failedSteps.length > 0) {
       errorSummary += `**Deployment Failures:**\n`;
-      failedSteps.forEach(step => {
+      failedSteps.forEach((step) => {
         errorSummary += `- ${step.replace('(x) Failed:', '').trim()}\n`;
       });
       errorSummary += `\n`;
     }
-    
+
     if (securitySection && (azdResults.psRuleErrors > 0 || azdResults.psRuleWarnings > 0)) {
       errorSummary += `**Security Scan Issues:**\n`;
       errorSummary += securitySection + '\n\n';
     }
   }
-  
+
   if (!errorSummary) {
     errorSummary = status.errorSummary || 'Validation failed. See workflow logs for details.';
   }
 
   // Build Copilot-friendly prompt as issue title and body
   const title = `[Template Doctor] Fix validation errors in Azure template`;
-  
+
   let body = `Please help fix the following Azure template validation errors:\n\n`;
-  
+
   body += `## Validation Report\n\n`;
   body += `**Repository:** ${targetRepoUrl}\n`;
   body += `**Validation Run:** ${status.html_url || currentGithubRunUrl || 'N/A'}\n`;
@@ -1041,10 +1050,10 @@ async function createValidationIssue(status: any, azdResults?: AzdValidationResu
 
   // Use GraphQL API to create issue and auto-assign to Copilot
   const labels = ['bug', 'azd-validation'];
-  
+
   // Get GitHub client instance
   const gh = (window as any).GitHubClient;
-  
+
   if (!gh || typeof gh.createIssueGraphQL !== 'function') {
     // Fallback: open issue form in browser
     const issueUrl =
@@ -1059,23 +1068,25 @@ async function createValidationIssue(status: any, azdResults?: AzdValidationResu
 
   try {
     // Show loading notification
-    const loadingNotification = showLoading('Creating Issue', 'Creating GitHub issue and assigning to Copilot...');
-    
+    const loadingNotification = showLoading(
+      'Creating Issue',
+      'Creating GitHub issue and assigning to Copilot...',
+    );
+
     // Create issue via GraphQL (automatically assigns to copilot-agent-swe if available)
     const createdIssue = await gh.createIssueGraphQL(owner, repo, title, body, labels);
-    
+
     // Close loading notification
     if (loadingNotification && typeof loadingNotification.close === 'function') {
       loadingNotification.close();
     }
-    
+
     // Show success and open issue in new tab
     showSuccess('Issue Created', `Issue #${createdIssue.number} created and assigned to Copilot`);
     window.open(createdIssue.url, '_blank');
-    
   } catch (error: any) {
     console.error('Failed to create issue via GraphQL:', error);
-    
+
     // Fallback: open issue form in browser
     const issueUrl =
       `https://github.com/${owner}/${repo}/issues/new?` +
@@ -1083,7 +1094,10 @@ async function createValidationIssue(status: any, azdResults?: AzdValidationResu
       `body=${encodeURIComponent(body)}&` +
       `labels=${labels.join(',')}`;
     window.open(issueUrl, '_blank');
-    showError('Issue Creation Failed', `Could not auto-create issue: ${error.message}. Opening form in browser.`);
+    showError(
+      'Issue Creation Failed',
+      `Could not auto-create issue: ${error.message}. Opening form in browser.`,
+    );
   }
 }
 

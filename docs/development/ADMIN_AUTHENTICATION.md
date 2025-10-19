@@ -9,19 +9,22 @@ Admin endpoints in Template Doctor are protected by GitHub-based authentication 
 ### Authentication Flow
 
 1. **Client includes GitHub token** in Authorization header:
-   ```
-   Authorization: Bearer <github_personal_access_token>
-   ```
+
+    ```
+    Authorization: Bearer <github_personal_access_token>
+    ```
 
 2. **Server validates token** with GitHub API:
-   ```
-   GET https://api.github.com/user
-   ```
+
+    ```
+    GET https://api.github.com/user
+    ```
 
 3. **Server checks authorization** against admin user list:
-   ```
-   ADMIN_GITHUB_USERS=username1,username2,username3
-   ```
+
+    ```
+    ADMIN_GITHUB_USERS=username1,username2,username3
+    ```
 
 4. **Access granted** if user is in admin list
 
@@ -56,7 +59,7 @@ The `docker-compose.yml` automatically passes `ADMIN_GITHUB_USERS` to containers
 
 ```yaml
 environment:
-  - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
+    - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
 ```
 
 ### Azure Deployment
@@ -85,10 +88,11 @@ curl http://localhost:3000/api/v4/admin/config
 ```
 
 **Response:**
+
 ```json
 {
-  "error": "Unauthorized",
-  "message": "Missing or invalid Authorization header. Expected: Bearer <github_token>"
+    "error": "Unauthorized",
+    "message": "Missing or invalid Authorization header. Expected: Bearer <github_token>"
 }
 ```
 
@@ -100,10 +104,11 @@ curl -H "Authorization: Bearer fake_token" \
 ```
 
 **Response:**
+
 ```json
 {
-  "error": "Unauthorized",
-  "message": "Invalid GitHub token or unable to fetch user information"
+    "error": "Unauthorized",
+    "message": "Invalid GitHub token or unable to fetch user information"
 }
 ```
 
@@ -119,19 +124,20 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 ```
 
 **Response:**
+
 ```json
 {
-  "settings": [
-    {
-      "_id": "...",
-      "key": "DEFAULT_RULE_SET",
-      "value": "dod",
-      "category": "features",
-      "updatedBy": "anfibiacreativa",
-      "createdAt": "2025-10-16T09:45:00.000Z",
-      "updatedAt": "2025-10-16T09:45:00.000Z"
-    }
-  ]
+    "settings": [
+        {
+            "_id": "...",
+            "key": "DEFAULT_RULE_SET",
+            "value": "dod",
+            "category": "features",
+            "updatedBy": "anfibiacreativa",
+            "createdAt": "2025-10-16T09:45:00.000Z",
+            "updatedAt": "2025-10-16T09:45:00.000Z"
+        }
+    ]
 }
 ```
 
@@ -146,11 +152,12 @@ curl -X PUT \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "key": "DEFAULT_RULE_SET",
-  "value": "security"
+    "success": true,
+    "key": "DEFAULT_RULE_SET",
+    "value": "security"
 }
 ```
 
@@ -171,10 +178,11 @@ curl -X POST \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "updated": 3
+    "success": true,
+    "updated": 3
 }
 ```
 
@@ -189,11 +197,12 @@ curl -H "Authorization: Bearer $OTHER_TOKEN" \
 ```
 
 **Response:**
+
 ```json
 {
-  "error": "Forbidden",
-  "message": "User 'otheruser' does not have admin privileges",
-  "hint": "Contact the system administrator to request admin access"
+    "error": "Forbidden",
+    "message": "User 'otheruser' does not have admin privileges",
+    "hint": "Contact the system administrator to request admin access"
 }
 ```
 
@@ -290,6 +299,7 @@ Admin tokens should **never** be exposed to browser clients:
 **Cause**: `ADMIN_GITHUB_USERS` environment variable not set
 
 **Fix**:
+
 ```bash
 # Add to .env
 echo "ADMIN_GITHUB_USERS=your_github_username" >> .env
@@ -304,6 +314,7 @@ docker-compose --profile combined up -d
 **Cause**: Token expired, revoked, or has insufficient scopes
 
 **Fix**:
+
 1. Create new token at https://github.com/settings/tokens
 2. Update `.env` with new token
 3. Restart services
@@ -313,6 +324,7 @@ docker-compose --profile combined up -d
 **Cause**: GitHub username not in `ADMIN_GITHUB_USERS` list
 
 **Fix**:
+
 ```bash
 # Add user to admin list
 ADMIN_GITHUB_USERS=existing_admin,new_admin_username
@@ -339,8 +351,8 @@ Should return your GitHub username. If not, token is invalid.
 
 ```typescript
 // All /api/v4/admin/* routes use this middleware chain:
-adminConfigRouter.use(requireAuth);     // 1. Validate GitHub token
-adminConfigRouter.use(requireAdmin);    // 2. Check admin privileges
+adminConfigRouter.use(requireAuth); // 1. Validate GitHub token
+adminConfigRouter.use(requireAdmin); // 2. Check admin privileges
 ```
 
 ### Authentication Middleware
@@ -349,14 +361,14 @@ Location: `packages/server/src/middleware/auth.ts`
 
 ```typescript
 export async function requireAuth(req, res, next) {
-  // Extract token from Authorization: Bearer <token>
-  // Validate with GitHub API
-  // Attach req.githubUser
+    // Extract token from Authorization: Bearer <token>
+    // Validate with GitHub API
+    // Attach req.githubUser
 }
 
 export function requireAdmin(req, res, next) {
-  // Check req.githubUser against ADMIN_GITHUB_USERS
-  // Grant or deny access
+    // Check req.githubUser against ADMIN_GITHUB_USERS
+    // Grant or deny access
 }
 ```
 

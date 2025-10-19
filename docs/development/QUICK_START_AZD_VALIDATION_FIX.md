@@ -13,6 +13,7 @@
 **Correct:** Should parse resultFile artifact (uploaded markdown)
 
 **Impact:**
+
 - ❌ False failures from unrelated workflow errors
 - ❌ Can't distinguish AZD failures from PSRule warnings
 - ❌ Wastes GitHub Actions minutes
@@ -38,6 +39,7 @@ cd packages/server
 **See:** Full code in `docs/development/AZD_VALIDATION_ARTIFACT_PARSING.md` (Phase 1)
 
 **Key Functions:**
+
 - `downloadValidationArtifact()` - Downloads artifact ZIP from GitHub
 - `parseAzdValidationResult()` - Parses markdown for AZD/PSRule status
 
@@ -95,6 +97,7 @@ docker-compose up --build
 `docs/development/AZD_VALIDATION_ARTIFACT_PARSING.md`
 
 **Contains:**
+
 - Full code samples for all phases
 - Testing strategy
 - Success criteria

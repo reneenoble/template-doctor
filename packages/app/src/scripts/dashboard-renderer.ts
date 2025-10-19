@@ -401,19 +401,19 @@ class DashboardRenderer {
   async loadAndRenderTrend(data: AdaptedData, section: HTMLElement) {
     const trendHost = section.querySelector('#trendChart') as HTMLElement | null;
     if (!trendHost) return;
-    
+
     // Extract owner/repo from repoUrl
     const match = data.repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/i);
     if (!match) return;
     const [, owner, repo] = match;
-    
+
     let history: any[] = [];
     try {
       // Load from MongoDB API instead of filesystem
       const resp = await fetch(`/api/v4/results/repo/${owner}/${repo}`, { cache: 'no-store' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const apiData = await resp.json();
-      
+
       // Transform analyses array to history format
       if (apiData.analyses && Array.isArray(apiData.analyses)) {
         history = apiData.analyses.map((a: any) => ({
@@ -427,7 +427,7 @@ class DashboardRenderer {
       console.warn(`No history found for ${owner}/${repo}:`, err.message);
       return;
     }
-    
+
     if (!Array.isArray(history) || history.length < 2) {
       return;
     }

@@ -112,9 +112,13 @@ export async function analyzeSingleRepository(
 
     // Extract user from Authorization header if present (for fork-first strategy)
     const authHeader = req.headers.authorization || "";
-    console.log(`[analyze] Authorization header present: ${!!authHeader}, length: ${authHeader.length}`);
+    console.log(
+        `[analyze] Authorization header present: ${!!authHeader}, length: ${authHeader.length}`,
+    );
     const userToken = authHeader.replace(/^Bearer\s+/i, "") || undefined;
-    console.log(`[analyze] User token extracted: ${!!userToken}, same as server token: ${userToken === token}`);
+    console.log(
+        `[analyze] User token extracted: ${!!userToken}, same as server token: ${userToken === token}`,
+    );
     let authenticatedUser: string | undefined;
 
     // Always try to get username from user token if provided
@@ -122,12 +126,18 @@ export async function analyzeSingleRepository(
         try {
             const userInfo = await gh("/user", userToken);
             authenticatedUser = userInfo.login;
-            console.log(`[analyze] ✅ Authenticated user: ${authenticatedUser}`);
+            console.log(
+                `[analyze] ✅ Authenticated user: ${authenticatedUser}`,
+            );
         } catch (e: any) {
-            console.log(`[analyze] ❌ Failed to get authenticated user: ${e?.message}`);
+            console.log(
+                `[analyze] ❌ Failed to get authenticated user: ${e?.message}`,
+            );
         }
     } else {
-        console.log(`[analyze] ⚠️  No user token provided - scannedBy will be undefined`);
+        console.log(
+            `[analyze] ⚠️  No user token provided - scannedBy will be undefined`,
+        );
     }
 
     let owner: string;
@@ -267,9 +277,13 @@ export async function analyzeSingleRepository(
                 archiveRequested: result.archiveRequested,
                 scannedBy: authenticatedUser ? [authenticatedUser] : undefined,
             });
-            console.log(`[analyze] Saved analysis to database for ${repoUrl}${authenticatedUser ? ` by ${authenticatedUser}` : ''}`);
+            console.log(
+                `[analyze] Saved analysis to database for ${repoUrl}${authenticatedUser ? ` by ${authenticatedUser}` : ""}`,
+            );
         } catch (dbError: any) {
-            console.error(`[analyze] Database save failed: ${dbError?.message}`);
+            console.error(
+                `[analyze] Database save failed: ${dbError?.message}`,
+            );
             // Don't fail the request if database save fails
         }
 

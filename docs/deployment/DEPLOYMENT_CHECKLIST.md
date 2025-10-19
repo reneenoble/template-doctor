@@ -17,9 +17,9 @@ Create a GitHub OAuth App for production:
 1. Go to https://github.com/settings/developers
 2. Click "New OAuth App"
 3. Fill in:
-   - **Application name**: Template Doctor (Production)
-   - **Homepage URL**: `https://your-app-url.azurewebsites.net` (will update after deployment)
-   - **Authorization callback URL**: `https://your-app-url.azurewebsites.net/callback.html`
+    - **Application name**: Template Doctor (Production)
+    - **Homepage URL**: `https://your-app-url.azurewebsites.net` (will update after deployment)
+    - **Authorization callback URL**: `https://your-app-url.azurewebsites.net/callback.html`
 4. Click "Register application"
 5. **Save the Client ID** (starts with `Ov23li...`)
 6. Click "Generate a new client secret"
@@ -33,9 +33,9 @@ Create a GitHub Personal Access Token:
 2. Click "Generate new token" → "Generate new token (classic)"
 3. Give it a descriptive name: "Template Doctor Azure Deployment"
 4. Select scopes:
-   - [x] `repo` (Full control of private repositories)
-   - [x] `workflow` (Update GitHub Action workflows)
-   - [x] `read:org` (Read org and team membership, read org projects)
+    - [x] `repo` (Full control of private repositories)
+    - [x] `workflow` (Update GitHub Action workflows)
+    - [x] `read:org` (Read org and team membership, read org projects)
 5. Click "Generate token"
 6. **Save the token** (starts with `ghp_...`)
 
@@ -74,30 +74,31 @@ Then update the `mongodbUri` parameter to use the output from the Cosmos module.
 ## Step 4: Environment Variables Setup
 
 1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
+
+    ```bash
+    cp .env.example .env
+    ```
 
 2. Fill in **all required values** in `.env`:
 
-   ```bash
-   # REQUIRED - From Step 1 (GitHub OAuth App)
-   GITHUB_CLIENT_ID=Ov23li...your-client-id
-   GITHUB_CLIENT_SECRET=...your-client-secret
-   
-   # REQUIRED - From Step 2 (GitHub PAT)
-   GITHUB_TOKEN=ghp_...your-github-token
-   GH_WORKFLOW_TOKEN=ghp_...your-github-token  # Can be same as GITHUB_TOKEN
-   
-   # REQUIRED - Admin user(s)
-   ADMIN_GITHUB_USERS=yourGitHubUsername  # Your GitHub username for admin access
-   
-   # REQUIRED - From Step 3 (MongoDB)
-   MONGODB_URI=mongodb+srv://...your-connection-string
-   
-   # OPTIONAL - Azure location (default: swedencentral)
-   AZURE_LOCATION=swedencentral
-   ```
+    ```bash
+    # REQUIRED - From Step 1 (GitHub OAuth App)
+    GITHUB_CLIENT_ID=Ov23li...your-client-id
+    GITHUB_CLIENT_SECRET=...your-client-secret
+
+    # REQUIRED - From Step 2 (GitHub PAT)
+    GITHUB_TOKEN=ghp_...your-github-token
+    GH_WORKFLOW_TOKEN=ghp_...your-github-token  # Can be same as GITHUB_TOKEN
+
+    # REQUIRED - Admin user(s)
+    ADMIN_GITHUB_USERS=yourGitHubUsername  # Your GitHub username for admin access
+
+    # REQUIRED - From Step 3 (MongoDB)
+    MONGODB_URI=mongodb+srv://...your-connection-string
+
+    # OPTIONAL - Azure location (default: swedencentral)
+    AZURE_LOCATION=swedencentral
+    ```
 
 3. **Verify `.env` has NO placeholders** - all values should be filled in!
 
@@ -118,6 +119,7 @@ grep -E "^(GITHUB_CLIENT_ID|GITHUB_CLIENT_SECRET|GITHUB_TOKEN|GH_WORKFLOW_TOKEN|
 ```
 
 **Expected output** (with your actual values):
+
 ```
 GITHUB_CLIENT_ID=Ov23li...
 GITHUB_CLIENT_SECRET=8b7fb...
@@ -130,69 +132,74 @@ MONGODB_URI=mongodb+srv://...
 ## Step 6: Deploy to Azure
 
 1. Login to Azure:
-   ```bash
-   azd auth login
-   ```
+
+    ```bash
+    azd auth login
+    ```
 
 2. Initialize the environment:
-   ```bash
-   azd init
-   ```
-   - Enter an environment name (e.g., `prod`, `staging`, `your-name`)
-   - This will create `.azure/<env-name>/` directory
+
+    ```bash
+    azd init
+    ```
+
+    - Enter an environment name (e.g., `prod`, `staging`, `your-name`)
+    - This will create `.azure/<env-name>/` directory
 
 3. Provision infrastructure:
-   ```bash
-   azd provision
-   ```
-   
-   This will:
-   - Create Azure resources (Container Apps, Container Registry, Log Analytics)
-   - Set up secrets in Container App
-   - Output the deployed app URL
+
+    ```bash
+    azd provision
+    ```
+
+    This will:
+    - Create Azure resources (Container Apps, Container Registry, Log Analytics)
+    - Set up secrets in Container App
+    - Output the deployed app URL
 
 4. **IMPORTANT**: Update GitHub OAuth App callback URL:
-   - Note the `SERVICE_WEB_URI` from azd provision output
-   - Go back to your GitHub OAuth App settings
-   - Update **Authorization callback URL** to: `https://<SERVICE_WEB_URI>/callback.html`
-   - Save the changes
+    - Note the `SERVICE_WEB_URI` from azd provision output
+    - Go back to your GitHub OAuth App settings
+    - Update **Authorization callback URL** to: `https://<SERVICE_WEB_URI>/callback.html`
+    - Save the changes
 
 5. Build and deploy the application:
-   ```bash
-   ./scripts/deploy.sh
-   ```
-   
-   This will:
-   - Build the Docker image in Azure Container Registry
-   - Update the Container App with the new image
-   - Set `TD_BACKEND_BASE_URL` to the deployed URL
+
+    ```bash
+    ./scripts/deploy.sh
+    ```
+
+    This will:
+    - Build the Docker image in Azure Container Registry
+    - Update the Container App with the new image
+    - Set `TD_BACKEND_BASE_URL` to the deployed URL
 
 ## Step 7: Post-Deployment Verification
 
 1. **Test OAuth Login**:
-   - Open the deployed URL (from `SERVICE_WEB_URI`)
-   - Click "Sign in with GitHub"
-   - Authorize the OAuth app
-   - Verify you're logged in
+    - Open the deployed URL (from `SERVICE_WEB_URI`)
+    - Click "Sign in with GitHub"
+    - Authorize the OAuth app
+    - Verify you're logged in
 
 2. **Test Template Analysis**:
-   - Enter a GitHub repository URL (e.g., `https://github.com/Azure-Samples/todo-nodejs-mongo`)
-   - Click "Scan Template"
-   - Wait for analysis to complete
-   - Verify results appear
+    - Enter a GitHub repository URL (e.g., `https://github.com/Azure-Samples/todo-nodejs-mongo`)
+    - Click "Scan Template"
+    - Wait for analysis to complete
+    - Verify results appear
 
 3. **Test Workflow Validation** (if GH_WORKFLOW_TOKEN is set):
-   - Click "Run AZD Validation" on a template
-   - Verify workflow dispatches successfully
-   - Check GitHub Actions tab in your repository
+    - Click "Run AZD Validation" on a template
+    - Verify workflow dispatches successfully
+    - Check GitHub Actions tab in your repository
 
 4. **Check Database**:
-   - Verify analysis results are saved to MongoDB
-   - Check that tiles show up without hard refresh
+    - Verify analysis results are saved to MongoDB
+    - Check that tiles show up without hard refresh
 
 5. **Test Leaderboards** (admin only):
-   - Navigate to `/leaderboard.html`
-   - Verify leaderboard data loads (requires ADMIN_GITHUB_USERS)
+    - Navigate to `/leaderboard.html`
+    - Verify leaderboard data loads (requires ADMIN_GITHUB_USERS)
 
 ## Common Issues & Solutions
 
@@ -212,11 +219,13 @@ azd provision
 ### Issue: No template tiles showing
 
 **Causes**:
+
 1. Frontend loading from filesystem instead of database API
 2. MongoDB connection not configured
 3. Analysis not saving to database
 
 **Solutions**:
+
 1. Clear browser cache and hard refresh (Cmd+Shift+R / Ctrl+Shift+R)
 2. Verify `MONGODB_URI` is set in Container App environment
 3. Check Container App logs: `az containerapp logs show --name <app-name> --resource-group <rg-name> --follow`
@@ -226,6 +235,7 @@ azd provision
 **Cause**: GitHub OAuth app callback URL doesn't match deployed URL.
 
 **Solution**:
+
 1. Get deployed URL: `azd env get-values | grep SERVICE_WEB_URI`
 2. Update GitHub OAuth app callback URL to match
 3. Must be exact: `https://<url>/callback.html`
@@ -235,6 +245,7 @@ azd provision
 **Cause**: Your GitHub username not in `ADMIN_GITHUB_USERS`.
 
 **Solution**:
+
 ```bash
 # Add your username (comma-separated for multiple)
 azd env set ADMIN_GITHUB_USERS "yourusername,teammate"
@@ -246,29 +257,29 @@ azd provision
 
 ### Required (Must be set before deployment)
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GITHUB_CLIENT_ID` | OAuth app client ID | `Ov23liZPFmBPVhHPMA5U` |
-| `GITHUB_CLIENT_SECRET` | OAuth app secret | `8b7fbefa...` |
-| `GITHUB_TOKEN` | GitHub PAT (repo, workflow, read:org) | `ghp_5IXqxpwvP...` |
-| `GH_WORKFLOW_TOKEN` | Workflow dispatch token | `ghp_5IXqxpwvP...` (can be same as GITHUB_TOKEN) |
-| `ADMIN_GITHUB_USERS` | Admin usernames | `youruser,teammate` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster...` |
+| Variable               | Description                           | Example                                          |
+| ---------------------- | ------------------------------------- | ------------------------------------------------ |
+| `GITHUB_CLIENT_ID`     | OAuth app client ID                   | `Ov23liZPFmBPVhHPMA5U`                           |
+| `GITHUB_CLIENT_SECRET` | OAuth app secret                      | `8b7fbefa...`                                    |
+| `GITHUB_TOKEN`         | GitHub PAT (repo, workflow, read:org) | `ghp_5IXqxpwvP...`                               |
+| `GH_WORKFLOW_TOKEN`    | Workflow dispatch token               | `ghp_5IXqxpwvP...` (can be same as GITHUB_TOKEN) |
+| `ADMIN_GITHUB_USERS`   | Admin usernames                       | `youruser,teammate`                              |
+| `MONGODB_URI`          | MongoDB connection string             | `mongodb+srv://user:pass@cluster...`             |
 
 ### Optional (Has defaults in Bicep)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AZURE_LOCATION` | `swedencentral` | Azure region |
-| `NODE_ENV` | `production` | Node environment |
-| `PORT` | `3000` | Container port |
-| `DEFAULT_RULE_SET` | `dod` | Default analysis ruleset |
-| `REQUIRE_AUTH_FOR_RESULTS` | `true` | Require auth to view results |
-| `AUTO_SAVE_RESULTS` | `false` | Auto-save to GitHub |
-| `ARCHIVE_ENABLED` | `false` | Enable archiving |
-| `ARCHIVE_COLLECTION` | `aigallery` | Archive collection name |
-| `DISPATCH_TARGET_REPO` | `Template-Doctor/template-doctor` | Workflow repo |
-| `ISSUE_AI_ENABLED` | `false` | AI issue assistance |
+| Variable                   | Default                           | Description                  |
+| -------------------------- | --------------------------------- | ---------------------------- |
+| `AZURE_LOCATION`           | `swedencentral`                   | Azure region                 |
+| `NODE_ENV`                 | `production`                      | Node environment             |
+| `PORT`                     | `3000`                            | Container port               |
+| `DEFAULT_RULE_SET`         | `dod`                             | Default analysis ruleset     |
+| `REQUIRE_AUTH_FOR_RESULTS` | `true`                            | Require auth to view results |
+| `AUTO_SAVE_RESULTS`        | `false`                           | Auto-save to GitHub          |
+| `ARCHIVE_ENABLED`          | `false`                           | Enable archiving             |
+| `ARCHIVE_COLLECTION`       | `aigallery`                       | Archive collection name      |
+| `DISPATCH_TARGET_REPO`     | `Template-Doctor/template-doctor` | Workflow repo                |
+| `ISSUE_AI_ENABLED`         | `false`                           | AI issue assistance          |
 
 ## Security Best Practices
 

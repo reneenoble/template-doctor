@@ -7,6 +7,7 @@ This document describes the **consistent input validation and error handling** i
 ## Problem Statement
 
 Previously, the individual search and batch scan modules had inconsistent validation:
+
 - No XSS detection feedback ("Oops! That's not allowed!")
 - No visual feedback (red border) for invalid input
 - Different error messages between individual and batch scans
@@ -24,18 +25,18 @@ Detects malicious input patterns:
 
 ```typescript
 export function containsXssAttempt(input: string): boolean {
-  const xssPatterns = [
-    /<script[\s>]/i,        // <script> tags
-    /<\/script>/i,          // </script> closing tags
-    /javascript:/i,         // javascript: protocol
-    /on\w+\s*=/i,          // Event handlers (onclick=, onload=, etc.)
-    /<iframe/i,            // <iframe> tags
-    /<object/i,            // <object> tags
-    /<embed/i,             // <embed> tags
-    /data:text\/html/i,    // data URI attacks
-  ];
-  
-  return xssPatterns.some(pattern => pattern.test(input));
+    const xssPatterns = [
+        /<script[\s>]/i, // <script> tags
+        /<\/script>/i, // </script> closing tags
+        /javascript:/i, // javascript: protocol
+        /on\w+\s*=/i, // Event handlers (onclick=, onload=, etc.)
+        /<iframe/i, // <iframe> tags
+        /<object/i, // <object> tags
+        /<embed/i, // <embed> tags
+        /data:text\/html/i, // data URI attacks
+    ];
+
+    return xssPatterns.some((pattern) => pattern.test(input));
 }
 ```
 
@@ -54,13 +55,13 @@ Returns: Normalized URL or null if invalid
 
 ### 3. Consistent Error Messages
 
-| Scenario | Error Title | Error Message | Visual Feedback |
-|----------|-------------|---------------|-----------------|
-| XSS Attempt | `Invalid Input` | `Oops! That's not allowed!` | Red border (2px solid #dc3545) |
-| Malformed URL | `Invalid URL` | `Not a valid GitHub repository URL` | Red border (2px solid #dc3545) |
-| Single Word | `Invalid Repository` | `GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")` | Red border (2px solid #dc3545) |
-| Empty Input | `Batch Scan` | `Enter at least one repository URL` | Red border (2px solid #dc3545) |
-| Valid Input | N/A | N/A | Border reset (removed) |
+| Scenario      | Error Title          | Error Message                                                                            | Visual Feedback                |
+| ------------- | -------------------- | ---------------------------------------------------------------------------------------- | ------------------------------ |
+| XSS Attempt   | `Invalid Input`      | `Oops! That's not allowed!`                                                              | Red border (2px solid #dc3545) |
+| Malformed URL | `Invalid URL`        | `Not a valid GitHub repository URL`                                                      | Red border (2px solid #dc3545) |
+| Single Word   | `Invalid Repository` | `GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")` | Red border (2px solid #dc3545) |
+| Empty Input   | `Batch Scan`         | `Enter at least one repository URL`                                                      | Red border (2px solid #dc3545) |
+| Valid Input   | N/A                  | N/A                                                                                      | Border reset (removed)         |
 
 ## Implementation
 
@@ -69,15 +70,22 @@ Returns: Normalized URL or null if invalid
 ```typescript
 // Check for XSS attempts first
 if (containsXssAttempt(query)) {
-  const searchInput = document.getElementById('repo-search') as HTMLInputElement | null;
-  if (searchInput) {
-    searchInput.style.border = '2px solid #dc3545';
-  }
-  if ((window as any).NotificationSystem) {
-    (window as any).NotificationSystem.showError('Invalid Input', "Oops! That's not allowed!", 5000);
-  }
-  container.innerHTML = '<div class="no-results error-message">Invalid input detected</div>';
-  return;
+    const searchInput = document.getElementById(
+        "repo-search",
+    ) as HTMLInputElement | null;
+    if (searchInput) {
+        searchInput.style.border = "2px solid #dc3545";
+    }
+    if ((window as any).NotificationSystem) {
+        (window as any).NotificationSystem.showError(
+            "Invalid Input",
+            "Oops! That's not allowed!",
+            5000,
+        );
+    }
+    container.innerHTML =
+        '<div class="no-results error-message">Invalid input detected</div>';
+    return;
 }
 
 // Check if this looks like a URL attempt (contains http, https, or ://)
@@ -85,85 +93,97 @@ const looksLikeUrlAttempt = /^https?:\/\/|:\/\//.test(q);
 
 // If it looks like a URL attempt, validate it as a GitHub URL
 if (looksLikeUrlAttempt) {
-  const validUrl = sanitizeGitHubUrl(q);
-  if (!validUrl) {
-    if (searchInput) {
-      searchInput.style.border = '2px solid #dc3545';
+    const validUrl = sanitizeGitHubUrl(q);
+    if (!validUrl) {
+        if (searchInput) {
+            searchInput.style.border = "2px solid #dc3545";
+        }
+        if ((window as any).NotificationSystem) {
+            (window as any).NotificationSystem.showError(
+                "Invalid URL",
+                `Not a valid GitHub repository URL`,
+                5000,
+            );
+        }
+        container.innerHTML =
+            '<div class="no-results error-message">Invalid GitHub repository URL</div>';
+        return;
     }
-    if ((window as any).NotificationSystem) {
-      (window as any).NotificationSystem.showError('Invalid URL', `Not a valid GitHub repository URL`, 5000);
-    }
-    container.innerHTML = '<div class="no-results error-message">Invalid GitHub repository URL</div>';
-    return;
-  }
 }
 
 // At end of search when no results found:
 // Check if this might be an invalid repository format
-const hasSlash = q.includes('/');
-const firstPart = q.split('/')[0] || '';
+const hasSlash = q.includes("/");
+const firstPart = q.split("/")[0] || "";
 const looksLikeRepoAttempt = hasSlash || /^[a-zA-Z0-9_-]+$/.test(firstPart);
 
 // If it looks like they're trying to enter a repo but it's invalid format
 if (looksLikeRepoAttempt && !hasSlash) {
-  if (searchInput) {
-    searchInput.style.border = '2px solid #dc3545';
-  }
-  if ((window as any).NotificationSystem) {
-    (window as any).NotificationSystem.showError(
-      'Invalid Repository', 
-      'GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")', 
-      6000
-    );
-  }
-  container.innerHTML = '<div class="no-results error-message">Use "owner/repo" format for GitHub repositories</div>';
+    if (searchInput) {
+        searchInput.style.border = "2px solid #dc3545";
+    }
+    if ((window as any).NotificationSystem) {
+        (window as any).NotificationSystem.showError(
+            "Invalid Repository",
+            'GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")',
+            6000,
+        );
+    }
+    container.innerHTML =
+        '<div class="no-results error-message">Use "owner/repo" format for GitHub repositories</div>';
 } else {
-  container.innerHTML = '<div class="no-results">No matching templates found</div>';
+    container.innerHTML =
+        '<div class="no-results">No matching templates found</div>';
 }
 ```
 
 ### Batch Scan (`packages/app/src/scripts/batch-scan.ts`)
 
 ```typescript
-btn.addEventListener('click', () => {
-  const ta = document.getElementById('batch-urls') as HTMLTextAreaElement | null;
-  if (!ta) return;
-  
-  // Reset border
-  ta.style.border = '';
-  
-  const lines = ta.value.split(/\n|,/).map((s) => s.trim()).filter(Boolean);
-  
-  // Check for XSS attempts first
-  const hasXss = lines.some(line => containsXssAttempt(line));
-  if (hasXss) {
-    ta.style.border = '2px solid #dc3545';
-    showError('Invalid Input', "Oops! That's not allowed!");
-    return;
-  }
-  
-  // Validate URLs
-  const repos = lines
-    .map((url) => {
-      const sanitized = sanitizeGitHubUrl(url);
-      if (!sanitized) {
-        ta.style.border = '2px solid #dc3545';
-        showError('Invalid URL', `Invalid URL: ${sanitizeHtml(url)}`);
-        return null;
-      }
-      return sanitized;
-    })
-    .filter((url): url is string => url !== null);
-    
-  if (!repos.length) {
-    ta.style.border = '2px solid #dc3545';
-    showError('Batch Scan', 'No valid repository URLs found');
-    return;
-  }
-  
-  // Reset border on success
-  ta.style.border = '';
-  startBatch(repos);
+btn.addEventListener("click", () => {
+    const ta = document.getElementById(
+        "batch-urls",
+    ) as HTMLTextAreaElement | null;
+    if (!ta) return;
+
+    // Reset border
+    ta.style.border = "";
+
+    const lines = ta.value
+        .split(/\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    // Check for XSS attempts first
+    const hasXss = lines.some((line) => containsXssAttempt(line));
+    if (hasXss) {
+        ta.style.border = "2px solid #dc3545";
+        showError("Invalid Input", "Oops! That's not allowed!");
+        return;
+    }
+
+    // Validate URLs
+    const repos = lines
+        .map((url) => {
+            const sanitized = sanitizeGitHubUrl(url);
+            if (!sanitized) {
+                ta.style.border = "2px solid #dc3545";
+                showError("Invalid URL", `Invalid URL: ${sanitizeHtml(url)}`);
+                return null;
+            }
+            return sanitized;
+        })
+        .filter((url): url is string => url !== null);
+
+    if (!repos.length) {
+        ta.style.border = "2px solid #dc3545";
+        showError("Batch Scan", "No valid repository URLs found");
+        return;
+    }
+
+    // Reset border on success
+    ta.style.border = "";
+    startBatch(repos);
 });
 ```
 
@@ -172,14 +192,14 @@ btn.addEventListener('click', () => {
 ```css
 /* Search and Input Validation Styles */
 .no-results {
-  padding: 20px;
-  text-align: center;
-  color: var(--text-secondary);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
 }
 
 .no-results.error-message {
-  color: #dc3545;
-  font-weight: 500;
+    color: #dc3545;
+    font-weight: 500;
 }
 
 /* Input error state */
@@ -187,8 +207,8 @@ input.error,
 textarea.error,
 input[style*="border: 2px solid #dc3545"],
 textarea[style*="border: 2px solid #dc3545"] {
-  border-color: #dc3545 !important;
-  background-color: #fff5f5 !important;
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
 }
 ```
 
@@ -199,6 +219,7 @@ textarea[style*="border: 2px solid #dc3545"] {
 **26 comprehensive tests** covering:
 
 ### XSS Detection (6 tests)
+
 - ✅ Script tags (`<script>`, `</script>`)
 - ✅ Event handlers (`onclick=`, `onload=`, etc.)
 - ✅ JavaScript protocol (`javascript:alert(1)`)
@@ -207,6 +228,7 @@ textarea[style*="border: 2px solid #dc3545"] {
 - ✅ Safe input validation
 
 ### URL Validation (6 tests)
+
 - ✅ Valid GitHub URLs (https, .git, owner/repo)
 - ✅ XSS rejection in URLs
 - ✅ Invalid URL pattern rejection
@@ -215,17 +237,20 @@ textarea[style*="border: 2px solid #dc3545"] {
 - ✅ Dangerous character rejection
 
 ### Error Message Consistency (3 tests)
+
 - ✅ "Oops! That's not allowed!" for XSS
 - ✅ "Invalid URL" for malformed URL attempts
 - ✅ Format guidance for single words
 
 ### Visual Feedback (4 tests)
+
 - ✅ Red border determination for XSS
 - ✅ Red border determination for invalid URLs
 - ✅ Border reset for valid input
 - ✅ Batch scan mixed input handling
 
 ### Edge Cases (7 tests)
+
 - ✅ Empty input handling
 - ✅ Whitespace-only input
 - ✅ Mixed valid/invalid URLs in batch
@@ -305,37 +330,37 @@ textarea[style*="border: 2px solid #dc3545"] {
 1. User types in search box
 2. User clicks "Search" button or presses Enter
 3. **XSS Check**: If malicious pattern detected:
-   - Show notification: "Invalid Input - Oops! That's not allowed!"
-   - Add red border to search input
-   - Display error message in results area
-   - Stop processing
+    - Show notification: "Invalid Input - Oops! That's not allowed!"
+    - Add red border to search input
+    - Display error message in results area
+    - Stop processing
 4. **URL Validation**: If invalid GitHub URL:
-   - Border already reset if XSS passed
-   - Allow search to proceed (might be repo name search)
+    - Border already reset if XSS passed
+    - Allow search to proceed (might be repo name search)
 5. **Valid Input**:
-   - Reset any previous red border
-   - Proceed with search
+    - Reset any previous red border
+    - Proceed with search
 
 ### Batch Scan
 
 1. User enters multiple URLs (comma or newline separated)
 2. User clicks "Start Batch Scan"
 3. **XSS Check**: If ANY line contains malicious pattern:
-   - Show notification: "Invalid Input - Oops! That's not allowed!"
-   - Add red border to textarea
-   - Stop processing (don't process any URLs)
+    - Show notification: "Invalid Input - Oops! That's not allowed!"
+    - Add red border to textarea
+    - Stop processing (don't process any URLs)
 4. **URL Validation**: For each line:
-   - If invalid GitHub URL:
-     - Show notification: "Invalid URL: <url>"
-     - Add red border to textarea
-     - Skip that URL but continue checking others
+    - If invalid GitHub URL:
+        - Show notification: "Invalid URL: <url>"
+        - Add red border to textarea
+        - Skip that URL but continue checking others
 5. **Empty Result**: If no valid URLs remain:
-   - Show notification: "No valid repository URLs found"
-   - Keep red border
-   - Stop processing
+    - Show notification: "No valid repository URLs found"
+    - Keep red border
+    - Stop processing
 6. **Valid URLs Found**:
-   - Reset red border
-   - Proceed with batch scan
+    - Reset red border
+    - Proceed with batch scan
 
 ## Security Benefits
 
@@ -353,8 +378,8 @@ Update `containsXssAttempt()` in `packages/app/src/shared/sanitize.ts`:
 
 ```typescript
 const xssPatterns = [
-  // ... existing patterns ...
-  /new-dangerous-pattern/i,  // Add description
+    // ... existing patterns ...
+    /new-dangerous-pattern/i, // Add description
 ];
 ```
 
@@ -363,7 +388,8 @@ const xssPatterns = [
 Update `sanitizeGitHubUrl()` in `packages/app/src/shared/sanitize.ts`:
 
 ```typescript
-const githubUrlPattern = /^(?:https?:\/\/github\.com\/)?([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?$/;
+const githubUrlPattern =
+    /^(?:https?:\/\/github\.com\/)?([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?$/;
 ```
 
 ### Testing New Patterns
@@ -371,8 +397,8 @@ const githubUrlPattern = /^(?:https?:\/\/github\.com\/)?([a-zA-Z0-9_-]+)\/([a-zA
 Add test cases to `tests/unit/input-validation-ux.spec.ts`:
 
 ```typescript
-it('should detect new XSS pattern', () => {
-  expect(containsXssAttempt('new-attack-vector')).toBe(true);
+it("should detect new XSS pattern", () => {
+    expect(containsXssAttempt("new-attack-vector")).toBe(true);
 });
 ```
 

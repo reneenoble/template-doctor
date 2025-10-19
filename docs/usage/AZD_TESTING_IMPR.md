@@ -7,32 +7,36 @@ This PR enhances the AZD validation feature with artifact-based parsing, compreh
 ## What Changed
 
 ### 🎯 Core Features
+
 - **Artifact Parsing Service**: New `azd-validation.ts` service for downloading and parsing GitHub Actions validation artifacts
 - **Structured Validation Results**: Three-state validation (success/warning/failure) based on parsed markdown
 - **Config Deduplication**: Fixed duplicate key handling in setup endpoint (last write wins)
 - **Testable Server**: Exported `app` and `startServer` for integration testing
 
 ### 🧪 Test Infrastructure
+
 - **Playwright Browser Guard**: Fail-fast script prevents CI failures from missing browser binaries
-  - Detects `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` misconfigurations
-  - Provides actionable remediation steps
-  - Supports `PLAYWRIGHT_ALLOW_MISSING` override for unit-only pipelines
+    - Detects `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` misconfigurations
+    - Provides actionable remediation steps
+    - Supports `PLAYWRIGHT_ALLOW_MISSING` override for unit-only pipelines
 - **Expanded Test Coverage**: Vitest now includes server tests alongside root unit tests
 - **Server Test Config**: Added `tsconfig.test.json` for server-side test compilation
 
 ### ✅ Test Coverage Added
+
 - **E2E Tests** (Playwright):
-  - Validation UI (spinner, contrast, troubleshooting tips)
-  - Artifact-based results display
-  - GraphQL issue creation flow
-  - Error detection and highlighting
+    - Validation UI (spinner, contrast, troubleshooting tips)
+    - Artifact-based results display
+    - GraphQL issue creation flow
+    - Error detection and highlighting
 - **Unit Tests** (Vitest):
-  - Artifact download and ZIP extraction
-  - Markdown parsing (AZD Up/Down, PSRule errors/warnings, security status)
-  - Error pattern matching (UnmatchedPrincipalType detection)
-  - Issue body generation from artifacts
+    - Artifact download and ZIP extraction
+    - Markdown parsing (AZD Up/Down, PSRule errors/warnings, security status)
+    - Error pattern matching (UnmatchedPrincipalType detection)
+    - Issue body generation from artifacts
 
 ### 📚 Documentation
+
 - **AZD_VALIDATION_IMPROVEMENTS_SUMMARY.md**: Complete feature overview with technical details
 - **AZD_VALIDATION_TEST_PLAN.md**: Comprehensive test plan with manual checklist
 - **README.md**: Playwright Browser Guard section with CI examples
@@ -48,12 +52,14 @@ This PR enhances the AZD validation feature with artifact-based parsing, compreh
 ## Files Changed
 
 ### Production Code (4 files)
+
 - `packages/server/src/services/azd-validation.ts` ✨ NEW
 - `packages/server/src/routes/validation.ts` 🔧 REFACTORED
 - `packages/server/src/routes/misc.ts` 🐛 FIX
 - `packages/server/src/index.ts` 🔧 EXPORTS
 
 ### Test Infrastructure (5 files)
+
 - `scripts/verify-playwright-browsers.js` ✨ NEW
 - `package.json` - pretest hook
 - `vitest.config.mjs` - server test inclusion
@@ -61,12 +67,14 @@ This PR enhances the AZD validation feature with artifact-based parsing, compreh
 - `packages/server/tests/setup-endpoint.spec.ts` - lifecycle fixes
 
 ### Test Files (4 files)
+
 - `packages/app/tests/azd-validation-e2e.spec.js` ✨ NEW
 - `packages/app/tests/azd-validation.spec.js` ✨ NEW
 - `packages/server/tests/validation-artifact-parsing.test.ts` ✨ NEW
 - `tests/unit/azd-validation-error-detection.spec.ts` ✨ NEW
 
 ### Documentation (4 files)
+
 - `docs/development/AZD_VALIDATION_IMPROVEMENTS_SUMMARY.md` ✨ NEW
 - `docs/development/AZD_VALIDATION_TEST_PLAN.md` ✨ NEW
 - `README.md` - browser guard section
@@ -75,6 +83,7 @@ This PR enhances the AZD validation feature with artifact-based parsing, compreh
 ## Testing
 
 ✅ All tests passing:
+
 ```bash
 npm test                          # All tests (with browser verification)
 npm run test -- azd-validation   # Focused E2E tests
@@ -83,6 +92,7 @@ npm run test:unit                # Unit tests only
 ```
 
 **Browser Guard in Action:**
+
 ```bash
 # Prevents this CI failure scenario:
 # ❌ Error: Executable doesn't exist at /ms-playwright/chromium-1181/chrome-linux/chrome
@@ -111,6 +121,7 @@ npm run test:unit                # Unit tests only
 ## Next Steps (Post-Merge)
 
 See **TODO.md** for 16-category optimization roadmap including:
+
 - Artifact retry logic with exponential backoff
 - Telemetry and structured logging
 - Security categorization (encryption, identity, networking)
@@ -120,6 +131,7 @@ See **TODO.md** for 16-category optimization roadmap including:
 ## Release Impact
 
 🎉 This PR will trigger **release-please** to create a **1.1.0** release:
+
 - ✨ `feat:` commit → minor version bump
 - 📦 Includes changelog generation
 - 🏷️ Auto-tags release when PR merged

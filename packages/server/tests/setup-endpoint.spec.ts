@@ -7,34 +7,49 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "fs/promises";
 import path from "path";
 import type http from "http";
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import {
+    describe,
+    it,
+    expect,
+    beforeAll,
+    afterAll,
+    beforeEach,
+    vi,
+} from "vitest";
 // IMPORTANT: set test env flags BEFORE importing server module (dynamic import later)
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = "test";
 
 // Mock Octokit used inside misc route for Gist persistence
 let gistContent: string | null = null; // null => simulate 404 on first GET
-vi.mock('@octokit/rest', () => {
+vi.mock("@octokit/rest", () => {
     class OctokitMock {
         gists = {
             get: async ({ gist_id }: any) => {
                 if (!gistContent) {
-                    const err: any = new Error('Not Found');
-                        err.status = 404;
-                        throw err;
+                    const err: any = new Error("Not Found");
+                    err.status = 404;
+                    throw err;
                 }
                 return {
                     data: {
                         files: {
-                            'template-doctor-config.csv': { content: gistContent }
-                        }
-                    }
+                            "template-doctor-config.csv": {
+                                content: gistContent,
+                            },
+                        },
+                    },
                 };
             },
             update: async ({ files, description }: any) => {
-                const file = files['template-doctor-config.csv'];
+                const file = files["template-doctor-config.csv"];
                 gistContent = file.content;
-                return { data: { html_url: `https://gist.github.com/mock/${process.env.CONFIG_GIST_ID}`, description } };
-            }
+                return {
+                    data: {
+                        html_url: `https://gist.github.com/mock/${process.env.CONFIG_GIST_ID}`,
+                        description,
+                    },
+                };
+            },
         };
     }
     return { Octokit: OctokitMock };
@@ -48,9 +63,9 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
 
     beforeAll(async () => {
         process.env.PORT = String(testPort);
-        process.env.CONFIG_GIST_ID = 'GIST123';
-        process.env.GITHUB_TOKEN = 'dummy-token';
-        const mod = await import('../src/index');
+        process.env.CONFIG_GIST_ID = "GIST123";
+        process.env.GITHUB_TOKEN = "dummy-token";
+        const mod = await import("../src/index");
         server = await mod.startServer(testPort);
     });
 
@@ -72,7 +87,9 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
     });
 
     it("should return empty overrides when CSV does not exist (GET)", async () => {
-        const response = await fetch(`http://localhost:${testPort}/api/v4/setup`);
+        const response = await fetch(
+            `http://localhost:${testPort}/api/v4/setup`,
+        );
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -82,14 +99,17 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
     });
 
     it("should reject unauthorized users (POST)", async () => {
-        const response = await fetch(`http://localhost:${testPort}/api/v4/setup`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                user: "unauthorized-user",
-                overrides: { testKey: "testValue" },
-            }),
-        });
+        const response = await fetch(
+            `http://localhost:${testPort}/api/v4/setup`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user: "unauthorized-user",
+                    overrides: { testKey: "testValue" },
+                }),
+            },
+        );
 
         expect(response.status).toBe(403);
         const data = await response.json();
@@ -173,7 +193,9 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
             });
 
             // Verify final state
-            const response = await fetch(`http://localhost:${testPort}/api/v4/setup`);
+            const response = await fetch(
+                `http://localhost:${testPort}/api/v4/setup`,
+            );
             const data = await response.json();
 
             expect(data.overrides.key1).toBe("updated-value1");
@@ -214,7 +236,9 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
             });
 
             // Verify deletion
-            const response = await fetch(`http://localhost:${testPort}/api/v4/setup`);
+            const response = await fetch(
+                `http://localhost:${testPort}/api/v4/setup`,
+            );
             const data = await response.json();
 
             expect(data.overrides.key1).toBe("value1");
@@ -243,7 +267,9 @@ describe("Setup Endpoint - Git CSV Persistence", () => {
                 }),
             });
 
-            const response = await fetch(`http://localhost:${testPort}/api/v4/setup`);
+            const response = await fetch(
+                `http://localhost:${testPort}/api/v4/setup`,
+            );
             const data = await response.json();
 
             expect(data.overrides.description).toBe("This value has, commas");

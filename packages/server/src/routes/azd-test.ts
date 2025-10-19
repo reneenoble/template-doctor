@@ -47,7 +47,10 @@ router.post("/azd-test", async (req: Request, res: Response) => {
             });
         }
 
-        if (!status || !["pending", "running", "success", "failed"].includes(status)) {
+        if (
+            !status ||
+            !["pending", "running", "success", "failed"].includes(status)
+        ) {
             return res.status(400).json({
                 success: false,
                 error: "Missing or invalid status (must be: pending, running, success, or failed)",
@@ -92,32 +95,35 @@ router.post("/azd-test", async (req: Request, res: Response) => {
  * GET /api/v4/azd-test/latest/:owner/:repo
  * Get the latest AZD test result for a repository
  */
-router.get("/azd-test/latest/:owner/:repo", async (req: Request, res: Response) => {
-    try {
-        const { owner, repo } = req.params;
-        const repoUrl = `https://github.com/${owner}/${repo}`;
+router.get(
+    "/azd-test/latest/:owner/:repo",
+    async (req: Request, res: Response) => {
+        try {
+            const { owner, repo } = req.params;
+            const repoUrl = `https://github.com/${owner}/${repo}`;
 
-        const latestTest = await azdTestStorage.getLatestAzdTest(repoUrl);
+            const latestTest = await azdTestStorage.getLatestAzdTest(repoUrl);
 
-        if (!latestTest) {
-            return res.status(404).json({
+            if (!latestTest) {
+                return res.status(404).json({
+                    success: false,
+                    error: "No AZD test found for this repository",
+                });
+            }
+
+            res.json({
+                success: true,
+                test: latestTest,
+            });
+        } catch (err: any) {
+            console.error("[azd-test] ❌ Failed to get latest test:", err);
+            res.status(500).json({
                 success: false,
-                error: "No AZD test found for this repository",
+                error: err.message || "Failed to retrieve AZD test",
             });
         }
-
-        res.json({
-            success: true,
-            test: latestTest,
-        });
-    } catch (err: any) {
-        console.error("[azd-test] ❌ Failed to get latest test:", err);
-        res.status(500).json({
-            success: false,
-            error: err.message || "Failed to retrieve AZD test",
-        });
-    }
-});
+    },
+);
 
 /**
  * GET /api/v4/azd-test/:testId

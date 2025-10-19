@@ -4,15 +4,17 @@ Template Doctor requires **two separate GitHub credentials** for different purpo
 
 ## Overview
 
-| Credential | Purpose | When Used | Required? |
-|------------|---------|-----------|-----------|
-| **OAuth App** | User authentication | When users click "Login with GitHub" | ✅ Yes |
-| **Personal Access Token** | Repository operations | Analysis, PR creation, workflow triggers | ✅ Yes |
+| Credential                | Purpose               | When Used                                | Required? |
+| ------------------------- | --------------------- | ---------------------------------------- | --------- |
+| **OAuth App**             | User authentication   | When users click "Login with GitHub"     | ✅ Yes    |
+| **Personal Access Token** | Repository operations | Analysis, PR creation, workflow triggers | ✅ Yes    |
 
 ## 1. GitHub OAuth App (User Authentication)
 
 ### Purpose
+
 Allows users to log in with their GitHub account to:
+
 - View their repositories
 - Trigger analyses on repos they have access to
 - See analysis results for their templates
@@ -20,26 +22,27 @@ Allows users to log in with their GitHub account to:
 ### Setup Steps
 
 1. **Create OAuth App**:
-   - Go to: https://github.com/settings/developers
-   - Click "New OAuth App"
+    - Go to: https://github.com/settings/developers
+    - Click "New OAuth App"
 
 2. **Configure App**:
-   ```
-   Application name: Template Doctor
-   Homepage URL: https://template-doctor.yourdomain.com
-   Authorization callback URL: https://template-doctor.yourdomain.com/callback.html
-   ```
+
+    ```
+    Application name: Template Doctor
+    Homepage URL: https://template-doctor.yourdomain.com
+    Authorization callback URL: https://template-doctor.yourdomain.com/callback.html
+    ```
 
 3. **Get Credentials**:
-   - After creating, note down:
-     - **Client ID**: `Iv1.xxxxxxxxxxxx`
-     - **Client Secret**: Click "Generate a new client secret"
+    - After creating, note down:
+        - **Client ID**: `Iv1.xxxxxxxxxxxx`
+        - **Client Secret**: Click "Generate a new client secret"
 
 4. **Set in Azure**:
-   ```bash
-   azd env set GITHUB_CLIENT_ID "Iv1.xxxxxxxxxxxx"
-   azd env set GITHUB_CLIENT_SECRET "your-secret-here"
-   ```
+    ```bash
+    azd env set GITHUB_CLIENT_ID "Iv1.xxxxxxxxxxxx"
+    azd env set GITHUB_CLIENT_SECRET "your-secret-here"
+    ```
 
 ### Update Callback URL After Deployment
 
@@ -56,7 +59,9 @@ Then update at https://github.com/settings/developers
 ## 2. GitHub Personal Access Token (Repository Operations)
 
 ### Purpose
+
 Enables the backend to perform operations on behalf of the service:
+
 - 🔍 **Clone repositories** for analysis (public and private)
 - 💾 **Create pull requests** to save analysis results back to the repo
 - 🚀 **Trigger workflow runs** for automated testing
@@ -68,57 +73,64 @@ Enables the backend to perform operations on behalf of the service:
 When creating the token at https://github.com/settings/tokens/new, select:
 
 ✅ **repo** - Full control of private repositories
-  - Includes: read/write code, commits, PRs, issues
-  - Needed for: cloning repos, creating PRs, reading files
+
+- Includes: read/write code, commits, PRs, issues
+- Needed for: cloning repos, creating PRs, reading files
 
 ✅ **workflow** - Update GitHub Action workflows
-  - Needed for: triggering workflow runs, updating workflow files
+
+- Needed for: triggering workflow runs, updating workflow files
 
 ✅ **read:org** - Read org membership
-  - Needed for: accessing org repos, handling SAML/SSO
+
+- Needed for: accessing org repos, handling SAML/SSO
 
 ### Setup Steps
 
 1. **Create Fine-Grained or Classic Token**:
-   - Go to: https://github.com/settings/tokens/new
-   - Choose token type:
-     - **Classic Token** (easier, works across all orgs)
-     - **Fine-Grained Token** (more secure, org-specific)
+    - Go to: https://github.com/settings/tokens/new
+    - Choose token type:
+        - **Classic Token** (easier, works across all orgs)
+        - **Fine-Grained Token** (more secure, org-specific)
 
 2. **Configure Token**:
-   ```
-   Token name: template-doctor-production
-   Expiration: 90 days (or No expiration for production)
-   
-   Scopes:
-   ✅ repo
-   ✅ workflow
-   ✅ read:org
-   ```
+
+    ```
+    Token name: template-doctor-production
+    Expiration: 90 days (or No expiration for production)
+
+    Scopes:
+    ✅ repo
+    ✅ workflow
+    ✅ read:org
+    ```
 
 3. **Save Token**:
-   - Copy the token (you won't see it again!)
-   - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+    - Copy the token (you won't see it again!)
+    - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 4. **Set in Azure**:
-   ```bash
-   azd env set GITHUB_TOKEN "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-   ```
+    ```bash
+    azd env set GITHUB_TOKEN "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ```
 
 ### Token Best Practices
 
 **Security:**
+
 - 🔒 Use fine-grained tokens with minimum necessary permissions
 - ⏰ Set expiration dates (30-90 days) for development
 - 🔄 Rotate tokens regularly
 - 📝 Use Azure Key Vault for production (coming soon)
 
 **Organization Access:**
+
 - If using fine-grained tokens, grant access to specific organizations
 - For Azure Samples, grant access to: `Azure-Samples`, `Azure`, `microsoft`
 - Test with a single repo first before granting broad access
 
 **Monitoring:**
+
 - GitHub logs all token usage in Settings → Developer settings → Personal access tokens
 - Review "Last used" date regularly
 - Revoke unused tokens
@@ -147,6 +159,7 @@ GH_WORKFLOW_TOKEN=${GITHUB_TOKEN}
 4. Should redirect to GitHub → Authorize → Redirect back
 
 **Troubleshooting:**
+
 - ❌ "Redirect URI mismatch" → Update OAuth app callback URL
 - ❌ "Application suspended" → Check OAuth app status
 - ❌ "Bad credentials" → Verify CLIENT_ID and CLIENT_SECRET
@@ -167,19 +180,20 @@ curl -H "Authorization: token ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
 
 1. Trigger an analysis on a repository
 2. Check Container App logs:
-   ```bash
-   az containerapp logs show \
-     --name ca-web-<id> \
-     --resource-group rg-<env> \
-     --follow
-   ```
+    ```bash
+    az containerapp logs show \
+      --name ca-web-<id> \
+      --resource-group rg-<env> \
+      --follow
+    ```
 3. Look for successful GitHub API calls:
-   ```
-   ✅ Cloned repository: Azure-Samples/todo-nodejs-mongo
-   ✅ Created PR #123: Update analysis results
-   ```
+    ```
+    ✅ Cloned repository: Azure-Samples/todo-nodejs-mongo
+    ✅ Created PR #123: Update analysis results
+    ```
 
 **Troubleshooting:**
+
 - ❌ "Bad credentials" → GITHUB_TOKEN not set or invalid
 - ❌ "Resource not accessible" → Token lacks `repo` scope
 - ❌ "Refusing to allow OAuth App" → Use PAT, not OAuth token
@@ -207,6 +221,7 @@ azd deploy
 **Cause**: GITHUB_TOKEN not set or expired
 
 **Fix**:
+
 ```bash
 # Verify token is set
 azd env get-value GITHUB_TOKEN
@@ -221,19 +236,21 @@ azd deploy
 **Cause**: Token lacks `repo` scope
 
 **Fix**:
+
 1. Go to https://github.com/settings/tokens
 2. Edit token → Add `repo` scope
 3. Update in Azure:
-   ```bash
-   azd env set GITHUB_TOKEN "ghp_NEW_TOKEN_WITH_REPO_SCOPE"
-   azd deploy
-   ```
+    ```bash
+    azd env set GITHUB_TOKEN "ghp_NEW_TOKEN_WITH_REPO_SCOPE"
+    azd deploy
+    ```
 
 ### Issue: Can't trigger workflow with "Refusing to allow OAuth App"
 
 **Cause**: Using OAuth token instead of Personal Access Token
 
 **Fix**:
+
 - OAuth tokens (from user login) can't trigger workflows
 - Use a Personal Access Token with `workflow` scope
 - Set it as GITHUB_TOKEN (not GITHUB_CLIENT_ID/SECRET)
@@ -243,6 +260,7 @@ azd deploy
 **Cause**: Token not authorized for SSO
 
 **Fix**:
+
 1. Go to https://github.com/settings/tokens
 2. Find your token
 3. Click "Configure SSO" → Authorize for organizations
@@ -266,16 +284,17 @@ Before deploying to production:
 
 GitHub enforces API rate limits:
 
-| Auth Type | Limit | Notes |
-|-----------|-------|-------|
-| **Unauthenticated** | 60/hour | Don't use this |
-| **OAuth Token** | 5,000/hour | Per user, for user actions |
-| **Personal Access Token** | 5,000/hour | For backend operations |
-| **GitHub App** | 15,000/hour | Best for production (future) |
+| Auth Type                 | Limit       | Notes                        |
+| ------------------------- | ----------- | ---------------------------- |
+| **Unauthenticated**       | 60/hour     | Don't use this               |
+| **OAuth Token**           | 5,000/hour  | Per user, for user actions   |
+| **Personal Access Token** | 5,000/hour  | For backend operations       |
+| **GitHub App**            | 15,000/hour | Best for production (future) |
 
 **Current setup**: Uses PAT (5,000 requests/hour)
 
 **Monitor rate limits**:
+
 ```bash
 curl -H "Authorization: token $GITHUB_TOKEN" \
   https://api.github.com/rate_limit
@@ -286,12 +305,14 @@ curl -H "Authorization: token $GITHUB_TOKEN" \
 For higher rate limits and better security, consider migrating to GitHub App:
 
 **Benefits:**
+
 - 15,000 requests/hour (3x more than PAT)
 - Fine-grained permissions per repository
 - Audit logs in organization settings
 - No personal token tied to individual user
 
 **Setup** (planned):
+
 1. Create GitHub App
 2. Install on organizations
 3. Use app authentication instead of PAT

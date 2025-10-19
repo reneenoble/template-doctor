@@ -74,7 +74,7 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
           ? 'Docs'
           : 'Custom';
   const gistUrl = ruleSet === 'custom' ? t.customConfig?.gistUrl : '';
-  
+
   // AZD test status badge
   const azdTest = t.latestAzdTest;
   const azdBadgeHtml = azdTest
@@ -83,7 +83,7 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
          AZD ${azdTest.status.toUpperCase()}
        </div>`
     : '';
-  
+
   const card = document.createElement('div');
   card.className = 'template-card';
   card.id = templateId;

@@ -681,12 +681,12 @@ router.post(
                 .split(",")
                 .map((u) => u.trim())
                 .filter(Boolean);
-            
+
             const adminUsers = (process.env.ADMIN_GITHUB_USERS || "")
                 .split(",")
                 .map((u) => u.trim())
                 .filter(Boolean);
-            
+
             const allowedUsers = [...new Set([...setupUsers, ...adminUsers])];
 
             if (!user || !allowedUsers.includes(user)) {
@@ -778,12 +778,12 @@ router.get("/setup/check-access", (req: Request, res: Response) => {
         .split(",")
         .map((u) => u.trim())
         .filter(Boolean);
-    
+
     const adminUsers = (process.env.ADMIN_GITHUB_USERS || "")
         .split(",")
         .map((u) => u.trim())
         .filter(Boolean);
-    
+
     const allowedUsers = [...new Set([...setupUsers, ...adminUsers])];
 
     const hasAccess = allowedUsers.includes(username);

@@ -16,7 +16,15 @@
         "azdValidation": {
             "type": ["object", "null"],
             "description": "Azure Developer CLI (azd) validation results from artifact parsing",
-            "required": ["azdUpSuccess", "azdDownSuccess", "psRuleErrors", "psRuleWarnings", "securityStatus", "overallStatus", "resultFileContent"],
+            "required": [
+                "azdUpSuccess",
+                "azdDownSuccess",
+                "psRuleErrors",
+                "psRuleWarnings",
+                "securityStatus",
+                "overallStatus",
+                "resultFileContent"
+            ],
             "properties": {
                 "azdUpSuccess": {
                     "type": "boolean",

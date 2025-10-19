@@ -92,6 +92,7 @@ cd template-doctor
 ```
 
 The wizard will:
+
 - ✅ Check prerequisites (Azure CLI, azd, Docker)
 - ✅ Guide you through GitHub OAuth App creation
 - ✅ Help you create a GitHub Personal Access Token with correct scopes
@@ -118,24 +119,28 @@ For manual setup or local development only, see sections below.
 ## Quick Start (Docker - Recommended)
 
 1. **Clone the repository**:
+
     ```bash
     git clone https://github.com/Template-Doctor/template-doctor.git
     cd template-doctor
     ```
 
 2. **Install dependencies**:
+
     ```bash
     npm ci
     ```
 
 3. **Configure environment**:
+
     ```bash
     cp .env.example .env
     ```
-    
+
     Edit `.env` with your values (see [Environment Variables](#environment-variables) below)
 
 4. **Start with Docker Compose**:
+
     ```bash
     docker-compose up
     ```
@@ -153,6 +158,7 @@ If you prefer running services without Docker:
 1. **Follow steps 1-3 from Quick Start above**
 
 2. **Build packages**:
+
     ```bash
     npm run build -w packages/server
     npm run build -w packages/app
@@ -161,12 +167,14 @@ If you prefer running services without Docker:
 3. **Start services in SEPARATE terminals**:
 
     **Terminal 1 - Express Backend (port 3001)**:
+
     ```bash
     cd packages/server
     npm run dev
     ```
 
     **Terminal 2 - Vite Dev Server (port 4000)**:
+
     ```bash
     cd packages/app
     npm run dev
@@ -183,11 +191,11 @@ If you prefer running services without Docker:
 
 ### Port Allocation
 
-| Service          | Development | Preview | Docker |
-|------------------|-------------|---------|--------|
-| Vite Dev Server  | 4000        | -       | -      |
-| Vite Preview     | -           | 3000    | 3000   |
-| Express Backend  | 3001        | 3001    | 3001   |
+| Service         | Development | Preview | Docker |
+| --------------- | ----------- | ------- | ------ |
+| Vite Dev Server | 4000        | -       | -      |
+| Vite Preview    | -           | 3000    | 3000   |
+| Express Backend | 3001        | 3001    | 3001   |
 
 ## Authentication Setup
 
@@ -211,6 +219,7 @@ If you prefer running services without Docker:
 Template Doctor uses a consolidated approach to environment variables. All variables are defined in a single `.env` file at the root of the project.
 
 1. **Copy the example file**:
+
     ```bash
     cp .env.example .env
     ```
@@ -234,11 +243,13 @@ See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIA
 ### With Docker (Recommended)
 
 1. **Install dependencies**:
+
     ```bash
     npm ci
     ```
 
 2. **Start all services**:
+
     ```bash
     docker-compose up
     ```
@@ -250,11 +261,13 @@ See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIA
 ### Manual Development (Two-Terminal Approach)
 
 1. **Install dependencies**:
+
     ```bash
     npm ci
     ```
 
 2. **Build packages**:
+
     ```bash
     npm run build:analyzer-core
     npm run build -w packages/server
@@ -262,12 +275,14 @@ See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIA
     ```
 
 3. **Terminal 1 - Start Express backend**:
+
     ```bash
     cd packages/server
     npm run dev
     ```
 
 4. **Terminal 2 - Start Vite dev server**:
+
     ```bash
     cd packages/app
     npm run dev
@@ -340,6 +355,7 @@ DRY_RUN=1 ./scripts/smoke-api.sh                 # Print commands only
 ```
 
 The smoke script verifies:
+
 - Config endpoint (`/api/v4/client-settings`)
 - Validation endpoints
 - Analysis endpoints
@@ -357,6 +373,7 @@ npm run build:all
 ```
 
 This builds packages in the correct dependency order:
+
 1. `analyzer-core` (shared library)
 2. `server` (Express backend)
 3. `app` (Vite frontend)
@@ -374,6 +391,7 @@ docker run -p 3000:3000 --env-file .env template-doctor
 ```
 
 The combined Dockerfile:
+
 - Builds all packages (analyzer-core → server → app)
 - Serves frontend and API from single Express process
 - Optimized for production deployment
@@ -416,23 +434,24 @@ Access at http://localhost:3000
 ### Common Issues
 
 - **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server
-  - Development: Frontend 4000, Backend 3001
-  - Preview/Docker: Frontend 3000, Backend 3001
+    - Development: Frontend 4000, Backend 3001
+    - Preview/Docker: Frontend 3000, Backend 3001
 
-- **Express server not starting**: 
-  - Check `.env` file exists with required variables
-  - Verify port 3001 is not in use: `lsof -i :3001`
+- **Express server not starting**:
+    - Check `.env` file exists with required variables
+    - Verify port 3001 is not in use: `lsof -i :3001`
 
 - **Docker issues**:
-  - Ensure Docker and Docker Compose are installed and running
-  - Check logs: `docker-compose logs`
+    - Ensure Docker and Docker Compose are installed and running
+    - Check logs: `docker-compose logs`
 
 - **Port conflicts**: Kill processes if needed:
-  ```bash
-  lsof -ti :3000 | xargs kill -9  # Frontend preview
-  lsof -ti :3001 | xargs kill -9  # Backend
-  lsof -ti :4000 | xargs kill -9  # Frontend dev
-  ```
+
+    ```bash
+    lsof -ti :3000 | xargs kill -9  # Frontend preview
+    lsof -ti :3001 | xargs kill -9  # Backend
+    lsof -ti :4000 | xargs kill -9  # Frontend dev
+    ```
 
 - **Configuration mismatch**: Verify `config.json` has correct `githubOAuth.clientId` matching `.env`
 
@@ -443,18 +462,18 @@ Access at http://localhost:3000
 Located in `.github/workflows/`:
 
 - **smoke-api.yml**: API smoke tests
-  - Runs on push/PR to verify Express API endpoints
-  - Builds analyzer-core → server → runs smoke tests
-  - See badge at top of README
+    - Runs on push/PR to verify Express API endpoints
+    - Builds analyzer-core → server → runs smoke tests
+    - See badge at top of README
 
 - **Nightly Deploy**: Automated deployment
-  - Runs nightly at 02:15 UTC
-  - Can be triggered manually via "Run workflow"
-  - See details: [docs/usage/DEPLOYMENT.md](docs/usage/DEPLOYMENT.md)
+    - Runs nightly at 02:15 UTC
+    - Can be triggered manually via "Run workflow"
+    - See details: [docs/usage/DEPLOYMENT.md](docs/usage/DEPLOYMENT.md)
 
 - **Submit Template Analysis**: repository_dispatch workflow
-  - Saves scan results and opens a PR using `peter-evans/create-pull-request`
-  - See setup guide: [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
+    - Saves scan results and opens a PR using `peter-evans/create-pull-request`
+    - See setup guide: [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
 
 ### Publishing Results
 

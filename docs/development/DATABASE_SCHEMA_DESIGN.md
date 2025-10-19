@@ -3,6 +3,7 @@
 ## Current Context
 
 Template-Doctor performs two types of operations on templates:
+
 1. **Static Analysis** - Code quality, best practices, security checks (runs frequently)
 2. **AZD Deployment Tests** - Actual deployment to Azure (runs less frequently, expensive)
 
@@ -11,7 +12,8 @@ Template-Doctor performs two types of operations on templates:
 ### Option 1: Separate Collections (Recommended) ✅
 
 **Structure:**
-```javascript
+
+````javascript
 ## Collections
 
 ### 1. `analysis` Collection (Template Analysis Results)
@@ -73,9 +75,10 @@ Template-Doctor performs two types of operations on templates:
   createdAt: ISODate,
   updatedAt: ISODate
 }
-```
+````
 
 **Pros:**
+
 - ✅ **Independent lifecycles** - Analysis runs every PR, tests run monthly
 - ✅ **Performance** - Queries for latest analyses don't load test data
 - ✅ **Flexibility** - Can add deployment test-specific indexes
@@ -84,10 +87,12 @@ Template-Doctor performs two types of operations on templates:
 - ✅ **Easy aggregation** - Join on `repoUrl` when needed
 
 **Cons:**
+
 - ⚠️ Requires joins to see complete picture
 - ⚠️ Slightly more complex queries for combined views
 
 **Use Cases:**
+
 1. **Dashboard tiles** - Show latest analyses (no test data needed) ✅
 2. **Leaderboard** - Sort by compliance (no test data needed) ✅
 3. **Template detail page** - Fetch analysis + separate query for tests ✅
@@ -98,13 +103,14 @@ Template-Doctor performs two types of operations on templates:
 ### Option 2: Embedded Documents (Nested)
 
 **Structure:**
+
 ```javascript
 {
   _id: ObjectId,
   repoUrl: "https://github.com/owner/repo",
   owner: "owner",
   repo: "repo",
-  
+
   // Latest analysis data (overwrites on each scan)
   latestAnalysis: {
     ruleSet: "dod",
@@ -120,7 +126,7 @@ Template-Doctor performs two types of operations on templates:
     compliant: [...],
     analysisResult: {...}
   },
-  
+
   // Historical analyses (array grows with each scan)
   analysisHistory: [
     {
@@ -130,7 +136,7 @@ Template-Doctor performs two types of operations on templates:
     },
     // ... previous scans
   ],
-  
+
   // AZD tests (array grows with each test)
   azdTests: [
     {
@@ -143,7 +149,7 @@ Template-Doctor performs two types of operations on templates:
     },
     // ... previous tests
   ],
-  
+
   // Template metadata
   scannedBy: ["user1", "user2"],
   upstreamTemplate: "...",
@@ -154,11 +160,13 @@ Template-Doctor performs two types of operations on templates:
 ```
 
 **Pros:**
+
 - ✅ Single document fetch for complete view
 - ✅ Atomic updates (all data in one transaction)
 - ✅ No joins needed
 
 **Cons:**
+
 - ❌ **Document size grows unbounded** (16MB MongoDB limit)
 - ❌ **Poor performance** - Fetching analysis always loads ALL test history
 - ❌ **Inefficient indexes** - Can't index into large arrays efficiently
@@ -173,23 +181,23 @@ Template-Doctor performs two types of operations on templates:
 ### Rationale
 
 1. **Access Pattern Analysis:**
-   - **Frequent:** Latest analyses for dashboard (1000x/day)
-   - **Rare:** Test results viewing (10x/day)
-   - **Mismatch:** Embedding tests bloats 99% of queries
+    - **Frequent:** Latest analyses for dashboard (1000x/day)
+    - **Rare:** Test results viewing (10x/day)
+    - **Mismatch:** Embedding tests bloats 99% of queries
 
 2. **Data Growth:**
-   - **Analyses:** ~1 per template per week = 52/year
-   - **Tests:** ~1 per template per month = 12/year
-   - **Result:** Separate collections scale independently
+    - **Analyses:** ~1 per template per week = 52/year
+    - **Tests:** ~1 per template per month = 12/year
+    - **Result:** Separate collections scale independently
 
 3. **Query Performance:**
-   - Dashboard: `db.analyses.find().sort({scanDate: -1}).limit(50)` - Fast, no test data
-   - Leaderboard: `db.analyses.aggregate([...])` - Aggregates compliance only
-   - Template detail: Two queries (analysis + tests) - Total <50ms
+    - Dashboard: `db.analyses.find().sort({scanDate: -1}).limit(50)` - Fast, no test data
+    - Leaderboard: `db.analyses.aggregate([...])` - Aggregates compliance only
+    - Template detail: Two queries (analysis + tests) - Total <50ms
 
 4. **Real-world Usage:**
-   - Users browse analyses frequently (compliance scores, issues)
-   - Users check test results occasionally (deployment validation)
+    - Users browse analyses frequently (compliance scores, issues)
+    - Users check test results occasionally (deployment validation)
 
 ### Collection Relationships
 
@@ -200,21 +208,22 @@ analyses ←→ azdtests
 ```
 
 **Join Query Example:**
+
 ```javascript
 // Get template with latest analysis + all test results
 db.analyses.aggregate([
-  { $match: { repoUrl: "https://github.com/owner/repo" }},
-  { $sort: { scanDate: -1 }},
-  { $limit: 1 },
-  {
-    $lookup: {
-      from: "azdtests",
-      localField: "repoUrl",
-      foreignField: "repoUrl",
-      as: "deploymentTests"
-    }
-  }
-])
+    { $match: { repoUrl: "https://github.com/owner/repo" } },
+    { $sort: { scanDate: -1 } },
+    { $limit: 1 },
+    {
+        $lookup: {
+            from: "azdtests",
+            localField: "repoUrl",
+            foreignField: "repoUrl",
+            as: "deploymentTests",
+        },
+    },
+]);
 ```
 
 ---
@@ -222,7 +231,9 @@ db.analyses.aggregate([
 ## Additional Collections
 
 ### `rulesets` Collection
+
 Stores analysis ruleset configurations:
+
 ```javascript
 {
   _id: ObjectId,
@@ -244,7 +255,9 @@ Stores analysis ruleset configurations:
 ```
 
 ### `configuration` Collection
+
 Application-wide settings:
+
 ```javascript
 {
   _id: ObjectId,
@@ -262,19 +275,21 @@ Application-wide settings:
 ## Indexes Strategy
 
 ### analyses Collection
+
 ```javascript
-db.analyses.createIndex({ repoUrl: 1, scanDate: -1 })  // Template history
-db.analyses.createIndex({ scanDate: -1 })               // Latest scans
-db.analyses.createIndex({ "compliance.percentage": -1 }) // Leaderboard
-db.analyses.createIndex({ owner: 1, repo: 1 })          // Lookup by owner/repo
-db.analyses.createIndex({ ruleSet: 1 })                 // Filter by ruleset
+db.analyses.createIndex({ repoUrl: 1, scanDate: -1 }); // Template history
+db.analyses.createIndex({ scanDate: -1 }); // Latest scans
+db.analyses.createIndex({ "compliance.percentage": -1 }); // Leaderboard
+db.analyses.createIndex({ owner: 1, repo: 1 }); // Lookup by owner/repo
+db.analyses.createIndex({ ruleSet: 1 }); // Filter by ruleset
 ```
 
 ### azdtests Collection
+
 ```javascript
-db.azdtests.createIndex({ repoUrl: 1, startedAt: -1 }) // Template test history
-db.azdtests.createIndex({ status: 1, startedAt: -1 })  // Failed tests
-db.azdtests.createIndex({ testId: 1 }, { unique: true }) // Unique test IDs
+db.azdtests.createIndex({ repoUrl: 1, startedAt: -1 }); // Template test history
+db.azdtests.createIndex({ status: 1, startedAt: -1 }); // Failed tests
+db.azdtests.createIndex({ testId: 1 }, { unique: true }); // Unique test IDs
 ```
 
 ---
@@ -282,6 +297,7 @@ db.azdtests.createIndex({ testId: 1 }, { unique: true }) // Unique test IDs
 ## Migration Considerations
 
 Since we have 56 existing filesystem results:
+
 - All are **analyses** (no deployment tests yet)
 - Map `window.reportData` → `analyses` documents
 - Set `azdTests` collection empty initially
@@ -294,6 +310,7 @@ Since we have 56 existing filesystem results:
 **Use Option 1: Separate Collections**
 
 This provides:
+
 - ✅ Best query performance for common operations
 - ✅ Scalability as data grows
 - ✅ Flexibility for future enhancements

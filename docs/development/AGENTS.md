@@ -132,16 +132,16 @@ If you prefer running services without Docker:
 ### Database Configuration Rules
 
 1. **`.env` file** (gitignored):
-   - Local: DO NOT set `MONGODB_URI` - let docker-compose.yml default take over
-   - Production: Connection strings configured in Azure Container Apps environment variables
+    - Local: DO NOT set `MONGODB_URI` - let docker-compose.yml default take over
+    - Production: Connection strings configured in Azure Container Apps environment variables
 
 2. **Docker Compose**:
-   - Automatically uses local MongoDB container if `MONGODB_URI` not set in `.env`
-   - Fallback: `mongodb://mongodb:27017/template-doctor`
+    - Automatically uses local MongoDB container if `MONGODB_URI` not set in `.env`
+    - Fallback: `mongodb://mongodb:27017/template-doctor`
 
 3. **Azure Container Apps**:
-   - Uses Cosmos DB connection string from environment variables
-   - Database name: `template-doctor` (set via `MONGODB_DATABASE`)
+    - Uses Cosmos DB connection string from environment variables
+    - Database name: `template-doctor` (set via `MONGODB_DATABASE`)
 
 ### Database Troubleshooting
 

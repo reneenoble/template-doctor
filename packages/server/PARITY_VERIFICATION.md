@@ -118,12 +118,10 @@ authRouter.post("/github-oauth-token", async (req: Request, res: Response) => {
         const clientId = process.env.GITHUB_CLIENT_ID;
         const clientSecret = process.env.GITHUB_CLIENT_SECRET;
         if (!clientId || !clientSecret) {
-            return res
-                .status(500)
-                .json({
-                    error: "Server not configured for GitHub OAuth",
-                    requestId,
-                });
+            return res.status(500).json({
+                error: "Server not configured for GitHub OAuth",
+                requestId,
+            });
         }
         const ghRes = await fetch(
             "https://github.com/login/oauth/access_token",
@@ -147,40 +145,32 @@ authRouter.post("/github-oauth-token", async (req: Request, res: Response) => {
             hasError: !!data.error,
         });
         if (!ghRes.ok) {
-            return res
-                .status(ghRes.status)
-                .json({
-                    error:
-                        data.error_description ||
-                        data.error ||
-                        "OAuth exchange failed",
-                    requestId,
-                });
-        }
-        if (data.error) {
-            return res
-                .status(400)
-                .json({
-                    error: data.error_description || data.error,
-                    requestId,
-                });
-        }
-        if (!data.access_token) {
-            return res
-                .status(502)
-                .json({
-                    error: "No access_token in GitHub response",
-                    requestId,
-                });
-        }
-        return res
-            .status(200)
-            .json({
-                access_token: data.access_token,
-                scope: data.scope || null,
-                token_type: data.token_type || "bearer",
+            return res.status(ghRes.status).json({
+                error:
+                    data.error_description ||
+                    data.error ||
+                    "OAuth exchange failed",
                 requestId,
             });
+        }
+        if (data.error) {
+            return res.status(400).json({
+                error: data.error_description || data.error,
+                requestId,
+            });
+        }
+        if (!data.access_token) {
+            return res.status(502).json({
+                error: "No access_token in GitHub response",
+                requestId,
+            });
+        }
+        return res.status(200).json({
+            access_token: data.access_token,
+            scope: data.scope || null,
+            token_type: data.token_type || "bearer",
+            requestId,
+        });
     } catch (err: any) {
         console.error("GitHub OAuth exchange exception", {
             requestId,

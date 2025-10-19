@@ -1,158 +1,158 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "metadata": {
-    "_generator": {
-      "name": "bicep",
-      "version": "0.15.31.15270",
-      "templateHash": "14945551826665999911"
-    }
-  },
-  "parameters": {
-    "location": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().location]"
-    },
-    "environmentName": {
-      "type": "string"
-    },
-    "principalId": {
-      "type": "string",
-      "defaultValue": ""
-    }
-  },
-  "variables": {
-    "resourceToken": "[toLower(uniqueString(subscription().id, parameters('environmentName'), parameters('location')))]",
-    "cosmosDataContributorRoleId": "00000000-0000-0000-0000-000000000002"
-  },
-  "resources": [
-    {
-      "type": "Microsoft.DocumentDB/databaseAccounts",
-      "apiVersion": "2024-05-15",
-      "name": "[format('cosmos-{0}', variables('resourceToken'))]",
-      "location": "[parameters('location')]",
-      "kind": "MongoDB",
-      "properties": {
-        "databaseAccountOfferType": "Standard",
-        "enableAutomaticFailover": false,
-        "enableMultipleWriteLocations": false,
-        "isVirtualNetworkFilterEnabled": false,
-        "publicNetworkAccess": "Enabled",
-        "capabilities": [
-          {
-            "name": "EnableMongo"
-          },
-          {
-            "name": "EnableServerless"
-          },
-          {
-            "name": "DisableRateLimitingResponses"
-          }
-        ],
-        "apiProperties": {
-          "serverVersion": "4.2"
-        },
-        "consistencyPolicy": {
-          "defaultConsistencyLevel": "Session"
-        },
-        "locations": [
-          {
-            "locationName": "[parameters('location')]",
-            "failoverPriority": 0,
-            "isZoneRedundant": false
-          }
-        ],
-        "backupPolicy": {
-          "type": "Continuous",
-          "continuousModeProperties": {
-            "tier": "Continuous7Days"
-          }
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "metadata": {
+        "_generator": {
+            "name": "bicep",
+            "version": "0.15.31.15270",
+            "templateHash": "14945551826665999911"
         }
-      },
-      "tags": {
-        "environment": "[parameters('environmentName')]",
-        "service": "template-doctor"
-      }
     },
-    {
-      "type": "Microsoft.DocumentDB/databaseAccounts/mongodbDatabases",
-      "apiVersion": "2024-05-15",
-      "name": "[format('{0}/{1}', format('cosmos-{0}', variables('resourceToken')), 'template-doctor')]",
-      "properties": {
-        "resource": {
-          "id": "template-doctor"
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]"
+        },
+        "environmentName": {
+            "type": "string"
+        },
+        "principalId": {
+            "type": "string",
+            "defaultValue": ""
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
-      ]
     },
-    {
-      "condition": "[not(equals(parameters('principalId'), ''))]",
-      "type": "Microsoft.DocumentDB/databaseAccounts/mongodbRoleAssignments",
-      "apiVersion": "2024-05-15",
-      "name": "[format('{0}/{1}', format('cosmos-{0}', variables('resourceToken')), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken'))), parameters('principalId'), 'mongo-contributor'))]",
-      "properties": {
-        "roleDefinitionId": "[format('{0}/mongodbRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken'))), variables('cosmosDataContributorRoleId'))]",
-        "principalId": "[parameters('principalId')]",
-        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
-      ]
+    "variables": {
+        "resourceToken": "[toLower(uniqueString(subscription().id, parameters('environmentName'), parameters('location')))]",
+        "cosmosDataContributorRoleId": "00000000-0000-0000-0000-000000000002"
     },
-    {
-      "type": "Microsoft.Insights/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
-      "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', format('cosmos-{0}', variables('resourceToken')))]",
-      "name": "cosmos-diagnostics",
-      "properties": {
-        "logs": [
-          {
-            "category": "MongoRequests",
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": 30
+    "resources": [
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2024-05-15",
+            "name": "[format('cosmos-{0}', variables('resourceToken'))]",
+            "location": "[parameters('location')]",
+            "kind": "MongoDB",
+            "properties": {
+                "databaseAccountOfferType": "Standard",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "isVirtualNetworkFilterEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "capabilities": [
+                    {
+                        "name": "EnableMongo"
+                    },
+                    {
+                        "name": "EnableServerless"
+                    },
+                    {
+                        "name": "DisableRateLimitingResponses"
+                    }
+                ],
+                "apiProperties": {
+                    "serverVersion": "4.2"
+                },
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Session"
+                },
+                "locations": [
+                    {
+                        "locationName": "[parameters('location')]",
+                        "failoverPriority": 0,
+                        "isZoneRedundant": false
+                    }
+                ],
+                "backupPolicy": {
+                    "type": "Continuous",
+                    "continuousModeProperties": {
+                        "tier": "Continuous7Days"
+                    }
+                }
+            },
+            "tags": {
+                "environment": "[parameters('environmentName')]",
+                "service": "template-doctor"
             }
-          },
-          {
-            "category": "QueryRuntimeStatistics",
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": 30
-            }
-          }
-        ],
-        "metrics": [
-          {
-            "category": "Requests",
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": 30
-            }
-          }
-        ]
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
-      ]
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/mongodbDatabases",
+            "apiVersion": "2024-05-15",
+            "name": "[format('{0}/{1}', format('cosmos-{0}', variables('resourceToken')), 'template-doctor')]",
+            "properties": {
+                "resource": {
+                    "id": "template-doctor"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
+            ]
+        },
+        {
+            "condition": "[not(equals(parameters('principalId'), ''))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/mongodbRoleAssignments",
+            "apiVersion": "2024-05-15",
+            "name": "[format('{0}/{1}', format('cosmos-{0}', variables('resourceToken')), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken'))), parameters('principalId'), 'mongo-contributor'))]",
+            "properties": {
+                "roleDefinitionId": "[format('{0}/mongodbRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken'))), variables('cosmosDataContributorRoleId'))]",
+                "principalId": "[parameters('principalId')]",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+            "apiVersion": "2021-05-01-preview",
+            "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', format('cosmos-{0}', variables('resourceToken')))]",
+            "name": "cosmos-diagnostics",
+            "properties": {
+                "logs": [
+                    {
+                        "category": "MongoRequests",
+                        "enabled": true,
+                        "retentionPolicy": {
+                            "enabled": true,
+                            "days": 30
+                        }
+                    },
+                    {
+                        "category": "QueryRuntimeStatistics",
+                        "enabled": true,
+                        "retentionPolicy": {
+                            "enabled": true,
+                            "days": 30
+                        }
+                    }
+                ],
+                "metrics": [
+                    {
+                        "category": "Requests",
+                        "enabled": true,
+                        "retentionPolicy": {
+                            "enabled": true,
+                            "days": 30
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "cosmosAccountName": {
+            "type": "string",
+            "value": "[format('cosmos-{0}', variables('resourceToken'))]"
+        },
+        "cosmosDatabaseName": {
+            "type": "string",
+            "value": "template-doctor"
+        },
+        "cosmosAccountId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
+        }
     }
-  ],
-  "outputs": {
-    "cosmosAccountName": {
-      "type": "string",
-      "value": "[format('cosmos-{0}', variables('resourceToken'))]"
-    },
-    "cosmosDatabaseName": {
-      "type": "string",
-      "value": "template-doctor"
-    },
-    "cosmosAccountId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('cosmos-{0}', variables('resourceToken')))]"
-    }
-  }
 }

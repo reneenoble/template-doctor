@@ -44,6 +44,7 @@ docker-compose --profile dev down
 ```
 
 **Access**:
+
 - Frontend: http://localhost:4000
 - Backend API: http://localhost:3001
 
@@ -60,11 +61,13 @@ docker-compose --profile dev up server app mongodb
 ```
 
 **MongoDB Connection**:
+
 - Host: localhost:27017
 - Database: template-doctor
 - Connection string: `mongodb://localhost:27017/template-doctor`
 
 Add to `.env`:
+
 ```bash
 MONGODB_URI=mongodb://mongodb:27017/template-doctor
 ```
@@ -94,11 +97,11 @@ COSMOS_DATABASE_NAME=template-doctor
 
 Docker Compose uses profiles to organize services:
 
-| Profile | Services | Use Case |
-|---------|----------|----------|
-| `combined` | combined, mongodb (optional) | **Production-like single container** |
-| `dev` | server, app, mongodb (optional) | Development with separate containers |
-| (none) | Explicit service names only | Manual service selection |
+| Profile    | Services                        | Use Case                             |
+| ---------- | ------------------------------- | ------------------------------------ |
+| `combined` | combined, mongodb (optional)    | **Production-like single container** |
+| `dev`      | server, app, mongodb (optional) | Development with separate containers |
+| (none)     | Explicit service names only     | Manual service selection             |
 
 ## Common Commands
 
@@ -141,6 +144,7 @@ docker inspect template-doctor-combined | grep -A 10 Health
 ```
 
 Health check endpoints:
+
 - Combined: http://localhost:3000/api/health
 - Server: http://localhost:3001/api/health
 
@@ -173,6 +177,7 @@ docker-compose down -v
 ## Troubleshooting
 
 ### Port Conflicts
+
 ```bash
 # Check if ports are in use
 lsof -ti :3000 | xargs kill -9  # Combined
@@ -182,6 +187,7 @@ lsof -ti :27017 | xargs kill -9 # MongoDB
 ```
 
 ### Container Won't Start
+
 ```bash
 # View detailed logs
 docker-compose logs combined
@@ -196,6 +202,7 @@ docker-compose --profile combined up
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Test MongoDB connection
 docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
@@ -208,6 +215,7 @@ docker-compose exec combined printenv | grep MONGODB
 ```
 
 ### OAuth Redirect Errors
+
 - **Combined (port 3000)**: Callback URL must be `http://localhost:3000/callback.html`
 - **Dev (port 4000)**: Callback URL must be `http://localhost:4000/callback.html`
 
@@ -229,6 +237,7 @@ docker-compose logs -f combined
 ```
 
 **Production checklist**:
+
 - [ ] Set `NODE_ENV=production` in .env
 - [ ] Configure Cosmos DB connection (not local MongoDB)
 - [ ] Set strong `GITHUB_CLIENT_SECRET`
@@ -242,18 +251,18 @@ docker-compose logs -f combined
 If migrating from Azure Functions:
 
 1. **Ports changed**:
-   - Azure Functions: 7071
-   - Express: 3000 (combined) or 3001 (dev)
+    - Azure Functions: 7071
+    - Express: 3000 (combined) or 3001 (dev)
 
 2. **Update .env**:
-   - Remove `FUNCTIONS_*` variables
-   - Ensure `PORT=3000` (combined) or `PORT=3001` (server)
+    - Remove `FUNCTIONS_*` variables
+    - Ensure `PORT=3000` (combined) or `PORT=3001` (server)
 
 3. **OAuth callback**:
-   - Change from `:7071/api/...` to `:3000/...`
+    - Change from `:7071/api/...` to `:3000/...`
 
 4. **Database**:
-   - Add `MONGODB_URI` or `COSMOS_ENDPOINT`
+    - Add `MONGODB_URI` or `COSMOS_ENDPOINT`
 
 ## Next Steps
 

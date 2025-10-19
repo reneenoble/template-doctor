@@ -24,18 +24,21 @@ This directory contains deployment guides and configuration documentation for Te
 Uses `azd` for automated infrastructure provisioning and deployment.
 
 **Pros:**
+
 - ✅ One command to provision and deploy
 - ✅ Handles all Azure resources automatically
 - ✅ Environment management built-in
 - ✅ Works with CI/CD pipelines
 
 **Cons:**
+
 - ❌ Requires `azd` CLI installation
 - ❌ Less control over individual resources
 
 **Guide**: [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md)
 
 **Quick Deploy**:
+
 ```bash
 azd auth login
 azd init
@@ -50,11 +53,13 @@ azd up
 Create resources manually through Azure Portal.
 
 **Pros:**
+
 - ✅ Visual interface
 - ✅ Fine-grained control
 - ✅ No CLI tools required
 
 **Cons:**
+
 - ❌ Time-consuming
 - ❌ Harder to replicate
 - ❌ Manual configuration prone to errors
@@ -66,11 +71,13 @@ Create resources manually through Azure Portal.
 Use Azure CLI with Bicep templates for infrastructure as code.
 
 **Pros:**
+
 - ✅ Full control over resources
 - ✅ Scriptable and repeatable
 - ✅ Works in any CI/CD system
 
 **Cons:**
+
 - ❌ More manual steps
 - ❌ Requires Bicep knowledge
 
@@ -104,12 +111,12 @@ Template Doctor deploys the following Azure resources:
 
 ## Architecture Components
 
-| Component | Purpose | Pricing Tier |
-|-----------|---------|--------------|
-| **Cosmos DB** | Database (MongoDB API) | Serverless |
-| **Container Registry** | Docker image storage | Basic |
-| **Container App** | Application hosting | Consumption |
-| **Log Analytics** | Monitoring and logs | Pay-per-GB |
+| Component              | Purpose                | Pricing Tier |
+| ---------------------- | ---------------------- | ------------ |
+| **Cosmos DB**          | Database (MongoDB API) | Serverless   |
+| **Container Registry** | Docker image storage   | Basic        |
+| **Container App**      | Application hosting    | Consumption  |
+| **Log Analytics**      | Monitoring and logs    | Pay-per-GB   |
 
 ## Environment Configuration
 
@@ -118,7 +125,7 @@ Template Doctor deploys the following Azure resources:
 All deployments require these GitHub credentials:
 
 1. **GITHUB_CLIENT_ID** - OAuth app client ID
-2. **GITHUB_CLIENT_SECRET** - OAuth app client secret  
+2. **GITHUB_CLIENT_SECRET** - OAuth app client secret
 3. **GITHUB_TOKEN** - Personal access token (scopes: repo, workflow, read:org)
 
 **Setup Guide**: [GITHUB_TOKEN_SETUP.md](./GITHUB_TOKEN_SETUP.md)
@@ -155,21 +162,23 @@ az containerapp logs show \
 ### Metrics
 
 **Azure Portal**:
+
 1. Navigate to Container App
 2. Monitoring → Metrics
 3. Key metrics:
-   - HTTP requests
-   - CPU usage
-   - Memory usage
-   - Active replicas
+    - HTTP requests
+    - CPU usage
+    - Memory usage
+    - Active replicas
 
 **Cosmos DB**:
+
 1. Navigate to Cosmos DB account
 2. Monitoring → Metrics
 3. Key metrics:
-   - Request Units consumed
-   - Total requests
-   - Throttled requests (429s)
+    - Request Units consumed
+    - Total requests
+    - Throttled requests (429s)
 
 ## Cost Optimization
 
@@ -197,16 +206,19 @@ az containerapp logs show \
 ### Backup Strategy
 
 **Cosmos DB**:
+
 - Continuous backup enabled (7-day PITR)
 - Export to Blob Storage monthly
 - Test restore quarterly
 
 **Container Images**:
+
 - ACR stores all image versions
 - Tag images with build number and git SHA
 - Keep last 10 versions per environment
 
 **Configuration**:
+
 - Store `azd` environment files in secure location
 - Document all environment variables
 - Use Azure Key Vault for production secrets (planned)
@@ -214,20 +226,23 @@ az containerapp logs show \
 ### Recovery Procedures
 
 **Database Failure**:
+
 1. Use Point-in-Time Restore in Azure Portal
 2. Restore to new Cosmos DB account
 3. Update Container App environment variable
 4. Redeploy: `azd deploy`
 
 **Application Failure**:
+
 1. Check Container App logs
 2. Roll back to previous image:
-   ```bash
-   az containerapp revision list --name ca-web-<id> -g rg-<env>
-   az containerapp revision activate --revision <previous-revision>
-   ```
+    ```bash
+    az containerapp revision list --name ca-web-<id> -g rg-<env>
+    az containerapp revision activate --revision <previous-revision>
+    ```
 
 **Complete Environment Failure**:
+
 1. Restore `.azure/<env>/.env` from backup
 2. Run `azd provision` to recreate infrastructure
 3. Restore Cosmos DB from backup
@@ -242,22 +257,22 @@ Example workflow in `.github/workflows/deploy.yml`:
 ```yaml
 name: Deploy to Azure
 on:
-  push:
-    branches: [main]
+    push:
+        branches: [main]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Azure/setup-azd@v1
-      - uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - run: |
-          azd env refresh -e production
-          azd env set GITHUB_TOKEN "${{ secrets.GH_TOKEN }}"
-          azd deploy --no-prompt
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: Azure/setup-azd@v1
+            - uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
+            - run: |
+                  azd env refresh -e production
+                  azd env set GITHUB_TOKEN "${{ secrets.GH_TOKEN }}"
+                  azd deploy --no-prompt
 ```
 
 ### Azure DevOps
@@ -268,13 +283,13 @@ Pipeline template in `.azdo/pipelines/azure-dev.yml` (already created)
 
 ### Common Issues
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Deployment fails: "Image not found" | First deployment uses placeholder | Run `azd deploy` again |
-| OAuth error: "Redirect URI mismatch" | Callback URL not updated | Update GitHub OAuth app settings |
-| Database connection error | Connection string not set | Check `azd env get-values | grep MONGODB` |
-| Analysis fails: "Bad credentials" | GitHub token not set or invalid | Verify `GITHUB_TOKEN` with `curl` test |
-| High costs | Runaway RU consumption | Check Cosmos DB metrics, add indexes |
+| Issue                                | Cause                             | Solution                               |
+| ------------------------------------ | --------------------------------- | -------------------------------------- | ------------- |
+| Deployment fails: "Image not found"  | First deployment uses placeholder | Run `azd deploy` again                 |
+| OAuth error: "Redirect URI mismatch" | Callback URL not updated          | Update GitHub OAuth app settings       |
+| Database connection error            | Connection string not set         | Check `azd env get-values              | grep MONGODB` |
+| Analysis fails: "Bad credentials"    | GitHub token not set or invalid   | Verify `GITHUB_TOKEN` with `curl` test |
+| High costs                           | Runaway RU consumption            | Check Cosmos DB metrics, add indexes   |
 
 ### Debug Mode
 
@@ -354,14 +369,14 @@ After successful deployment:
 
 ## Documentation Index
 
-| Document | Description |
-|----------|-------------|
-| [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) | One-page deployment quick start |
-| [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md) | Complete azd deployment guide |
-| [GITHUB_TOKEN_SETUP.md](./GITHUB_TOKEN_SETUP.md) | GitHub credentials configuration |
-| [../development/DATA_LAYER.md](../development/DATA_LAYER.md) | Database setup and migration |
-| [../development/ENVIRONMENT_VARIABLES.md](../development/ENVIRONMENT_VARIABLES.md) | Environment variable reference |
-| [COSMOS_DB_PORTAL_SETUP.md](./COSMOS_DB_PORTAL_SETUP.md) | Manual Cosmos DB setup |
+| Document                                                                           | Description                      |
+| ---------------------------------------------------------------------------------- | -------------------------------- |
+| [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)                                         | One-page deployment quick start  |
+| [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md)                                           | Complete azd deployment guide    |
+| [GITHUB_TOKEN_SETUP.md](./GITHUB_TOKEN_SETUP.md)                                   | GitHub credentials configuration |
+| [../development/DATA_LAYER.md](../development/DATA_LAYER.md)                       | Database setup and migration     |
+| [../development/ENVIRONMENT_VARIABLES.md](../development/ENVIRONMENT_VARIABLES.md) | Environment variable reference   |
+| [COSMOS_DB_PORTAL_SETUP.md](./COSMOS_DB_PORTAL_SETUP.md)                           | Manual Cosmos DB setup           |
 
 ## Support
 

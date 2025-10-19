@@ -1,6 +1,11 @@
 /* Batch scan with backend + cancel/resume support */
 import { ApiClient } from './api-client';
-import { sanitizeHtml, sanitizeAttribute, sanitizeGitHubUrl, containsXssAttempt } from '../shared/sanitize';
+import {
+  sanitizeHtml,
+  sanitizeAttribute,
+  sanitizeGitHubUrl,
+  containsXssAttempt,
+} from '../shared/sanitize';
 
 interface BatchProgressEntry {
   id: string;
@@ -113,29 +118,29 @@ function wireUI() {
     btn.addEventListener('click', () => {
       const ta = document.getElementById('batch-urls') as HTMLTextAreaElement | null;
       if (!ta) return;
-      
+
       // Reset border
       ta.style.border = '';
-      
+
       const lines = ta.value
         .split(/\n|,/)
         .map((s) => s.trim())
         .filter(Boolean);
-      
+
       if (!lines.length) {
         ta.style.border = '2px solid #dc3545';
         showError('Batch Scan', 'Enter at least one repository URL');
         return;
       }
-      
+
       // Check for XSS attempts first
-      const hasXss = lines.some(line => containsXssAttempt(line));
+      const hasXss = lines.some((line) => containsXssAttempt(line));
       if (hasXss) {
         ta.style.border = '2px solid #dc3545';
         showError('Invalid Input', "Oops! That's not allowed!");
         return;
       }
-      
+
       // Validate and sanitize GitHub URLs
       const repos = lines
         .map((url) => {
@@ -148,13 +153,13 @@ function wireUI() {
           return sanitized;
         })
         .filter((url): url is string => url !== null);
-        
+
       if (!repos.length) {
         ta.style.border = '2px solid #dc3545';
         showError('Batch Scan', 'No valid repository URLs found');
         return;
       }
-      
+
       // Reset border on success
       ta.style.border = '';
       startBatch(repos);
@@ -233,7 +238,7 @@ export async function startBatch(repos: string[]) {
                 onCancel: () => {
                   clearProgress().finally(() => resolve());
                 },
-              }
+              },
             );
           });
         } else {
@@ -483,7 +488,7 @@ function displayResult(result: any) {
   const repoName = result.repoUrl?.split('github.com/')[1] || result.repoUrl || 'Repository';
   const safeRepoName = sanitizeHtml(repoName);
   const safeRepoUrl = sanitizeHtml(result.repoUrl || '');
-  
+
   const rnEl = document.getElementById('repo-name');
   if (rnEl) rnEl.textContent = safeRepoName;
   const ruEl = document.getElementById('repo-url');

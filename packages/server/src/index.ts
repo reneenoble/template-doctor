@@ -34,7 +34,7 @@ app.use(express.static(staticPath));
 app.get("/api/health", async (req: Request, res: Response) => {
     const { database } = await import("./services/database.js");
     const dbHealth = await database.healthCheck();
-    
+
     res.json({
         status: "ok",
         timestamp: new Date().toISOString(),
@@ -45,8 +45,8 @@ app.get("/api/health", async (req: Request, res: Response) => {
             hasAnalyzerToken: !!process.env.GITHUB_TOKEN_ANALYZER,
             hasMongoDbUri: !!process.env.MONGODB_URI,
             hasCosmosEndpoint: !!process.env.COSMOS_ENDPOINT,
-            BUILD_TAG: process.env.BUILD_TAG || 'unknown',
-            BUILD_TIMESTAMP: process.env.BUILD_TIMESTAMP || 'unknown',
+            BUILD_TAG: process.env.BUILD_TAG || "unknown",
+            BUILD_TIMESTAMP: process.env.BUILD_TIMESTAMP || "unknown",
         },
     });
 });
@@ -70,23 +70,29 @@ import { azdTestRouter } from "./routes/azd-test.js";
 import { database } from "./services/database.js";
 import { createLogger } from "./shared/logger.js";
 
-const startupLogger = createLogger('startup');
+const startupLogger = createLogger("startup");
 
 (async () => {
     try {
         // Connect to database if MongoDB URI or Cosmos endpoint is configured
         if (process.env.MONGODB_URI || process.env.COSMOS_ENDPOINT) {
-            const dbType = process.env.MONGODB_URI ? 'Local MongoDB' : 'Cosmos DB';
-            startupLogger.info({ dbType }, 'Connecting to database...');
+            const dbType = process.env.MONGODB_URI
+                ? "Local MongoDB"
+                : "Cosmos DB";
+            startupLogger.info({ dbType }, "Connecting to database...");
             await database.connect();
-            startupLogger.info('Database connected');
+            startupLogger.info("Database connected");
         } else {
-            startupLogger.warn('No database configured - database features disabled');
-            startupLogger.warn('Set MONGODB_URI (local) or COSMOS_ENDPOINT (Cosmos DB)');
+            startupLogger.warn(
+                "No database configured - database features disabled",
+            );
+            startupLogger.warn(
+                "Set MONGODB_URI (local) or COSMOS_ENDPOINT (Cosmos DB)",
+            );
         }
     } catch (error: any) {
-        startupLogger.error({ err: error }, 'Database connection failed');
-        startupLogger.error('Database features will be unavailable');
+        startupLogger.error({ err: error }, "Database connection failed");
+        startupLogger.error("Database features will be unavailable");
     }
 })();
 
@@ -125,39 +131,53 @@ app.get("*", (req: Request, res: Response) => {
     if (req.path.startsWith("/api")) {
         return res.status(404).json({ error: "API endpoint not found" });
     }
-    
+
     // If path has a file extension (e.g., .json, .js, .css), let static middleware handle it
     // by passing to next middleware (which will 404 if file doesn't exist)
     const hasFileExtension = /\.[a-zA-Z0-9]+$/.test(req.path);
     if (hasFileExtension) {
         return res.status(404).send("File not found");
     }
-    
+
     // Otherwise, serve index.html for client-side routing
     res.sendFile(path.join(staticPath, "index.html"));
 });
 
-export function startServer(port: number = Number(defaultPort)): Promise<http.Server> {
+export function startServer(
+    port: number = Number(defaultPort),
+): Promise<http.Server> {
     return new Promise((resolve) => {
         const server = app.listen(port, async () => {
-            startupLogger.info({ port }, 'Template Doctor server running');
-            startupLogger.info({ url: `http://localhost:${port}/api/health` }, 'Health check endpoint');
+            startupLogger.info({ port }, "Template Doctor server running");
             startupLogger.info(
-                { configured: !!process.env.GH_WORKFLOW_TOKEN || !!process.env.GITHUB_TOKEN },
-                'GitHub Token configured'
+                { url: `http://localhost:${port}/api/health` },
+                "Health check endpoint",
             );
-            startupLogger.info({ staticPath }, 'Serving static files');
-            
+            startupLogger.info(
+                {
+                    configured:
+                        !!process.env.GH_WORKFLOW_TOKEN ||
+                        !!process.env.GITHUB_TOKEN,
+                },
+                "GitHub Token configured",
+            );
+            startupLogger.info({ staticPath }, "Serving static files");
+
             // Initialize default configuration settings
             try {
-                startupLogger.info('Initializing configuration defaults...');
-                const { ConfigurationStorage } = await import("./services/configuration-storage.js");
+                startupLogger.info("Initializing configuration defaults...");
+                const { ConfigurationStorage } = await import(
+                    "./services/configuration-storage.js"
+                );
                 await ConfigurationStorage.initializeDefaults();
-                startupLogger.info('Configuration initialized');
+                startupLogger.info("Configuration initialized");
             } catch (error) {
-                startupLogger.error({ err: error }, 'Failed to initialize configuration');
+                startupLogger.error(
+                    { err: error },
+                    "Failed to initialize configuration",
+                );
             }
-            
+
             resolve(server);
         });
     });

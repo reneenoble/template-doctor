@@ -1,20 +1,16 @@
 # Leaderboards Implementation Guide
+
 ## Leaderboards Database Query Analysis
+
 ## Overview
-
-
 
 The leaderboards feature provides analytics and insights about template quality, community activity, and technology trends. This document describes the phased implementation approach.This document proposes MongoDB aggregation queries for each leaderboard section based on Template Doctor's V2 database schema, identifies data model gaps, and provides phased implementation recommendations.
 
-
-
 ## Implementation Status## Current Database Schema (V2)
-
-
 
 ### ✅ Phase 1: IMPLEMENTED (Current)### `repos` Collection (Latest Analysis per Repo)
 
-```javascript
+````javascript
 
 **Status**: Deployed and functional  {
 
@@ -136,125 +132,102 @@ Add to both `repos` and `analysis` collections:    compliance: { ... }
 
    - Shows number of unique collections analyzed);
 
-```
+````
 
 2. **Top Analyzers (aigallery)** (`/api/v4/leaderboards/top-analyzers-aigallery`)
+    - Needs: `collection` field### 2. GitHub API Integration
 
-   - Needs: `collection` field### 2. GitHub API Integration
+    - Ranks users by analyses in aigallery collection
 
-   - Ranks users by analyses in aigallery collection
-
-   - Shows average template score**Purpose**: Fetch real repository metadata (stars, forks, activity)
-
-
+    - Shows average template score**Purpose**: Fetch real repository metadata (stars, forks, activity)
 
 3. **Most Successful Builders** (`/api/v4/leaderboards/successful-builders`)**Implementation**:
+    - Needs: `metadata.stars`, `metadata.forks`
 
-   - Needs: `metadata.stars`, `metadata.forks`
+    - Ranks template authors by success metrics```typescript
 
-   - Ranks template authors by success metrics```typescript
-
-   - Uses stars as download proxy// packages/api/src/github-metrics/
+    - Uses stars as download proxy// packages/api/src/github-metrics/
 
 class GitHubMetricsService {
 
-4. **Healthiest Templates (Python)** (`/api/v4/leaderboards/healthiest-python`)    async getRepositoryMetrics(owner: string, repo: string) {
+4. **Healthiest Templates (Python)** (`/api/v4/leaderboards/healthiest-python`) async getRepositoryMetrics(owner: string, repo: string) {
+    - Needs: `metadata.language` // Fetch stars, forks, recent commits, contributors
 
-   - Needs: `metadata.language`        // Fetch stars, forks, recent commits, contributors
+    - Filters by language="Python" // Cache results to avoid rate limits
 
-   - Filters by language="Python"        // Cache results to avoid rate limits
+    - Ranks by compliance score }
 
-   - Ranks by compliance score    }
+5. **Healthiest Templates (JavaScript)** (`/api/v4/leaderboards/healthiest-javascript`) async getTemplateActivity(templates: string[]) {
+    - Needs: `metadata.language` // Batch fetch activity metrics for multiple templates
 
+    - Filters by language="JavaScript" // Return activity scores based on commits, PRs, issues
 
-
-5. **Healthiest Templates (JavaScript)** (`/api/v4/leaderboards/healthiest-javascript`)    async getTemplateActivity(templates: string[]) {
-
-   - Needs: `metadata.language`        // Batch fetch activity metrics for multiple templates
-
-   - Filters by language="JavaScript"        // Return activity scores based on commits, PRs, issues
-
-   - Ranks by compliance score    }
+    - Ranks by compliance score }
 
 }
 
 #### Implementation Steps```
 
-
-
 1. **Database Migration**### 3. AZD Deployment Analytics
+    - Add `collection` field to existing documents (default: "aigallery")
 
-   - Add `collection` field to existing documents (default: "aigallery")
+    - Create `metadata` object structure**Purpose**: Track successful deployments by service type
 
-   - Create `metadata` object structure**Purpose**: Track successful deployments by service type
-
-   - Update database schema documentation
+    - Update database schema documentation
 
 **Data Collection Points**:
 
 2. **GitHub Metadata Service**
+    - Create background job to fetch GitHub stats- Azure Developer CLI telemetry (if available)
 
-   - Create background job to fetch GitHub stats- Azure Developer CLI telemetry (if available)
+    - Sync stars, forks, language stats- Analysis of azd configuration files success rates
 
-   - Sync stars, forks, language stats- Analysis of azd configuration files success rates
+    - Rate limit handling (5000 requests/hour)- Deployment target detection (ACA, AKS, Azure Functions)
 
-   - Rate limit handling (5000 requests/hour)- Deployment target detection (ACA, AKS, Azure Functions)
-
-   - Cache results for 24 hours
+    - Cache results for 24 hours
 
 **Implementation**:
 
 3. **Backfill Existing Data**
+    - Script to populate metadata for existing templates```typescript
 
-   - Script to populate metadata for existing templates```typescript
+    - Bulk GitHub API calls with batching// packages/analyzer-core/src/azd-analyzer/
 
-   - Bulk GitHub API calls with batching// packages/analyzer-core/src/azd-analyzer/
-
-   - Progress tracking and error handlingclass AzdDeploymentAnalyzer {
+    - Progress tracking and error handlingclass AzdDeploymentAnalyzer {
 
     analyzeDeploymentConfig(templatePath: string) {
 
-4. **API Implementation**        // Parse azure.yaml, infra/ directory
+4. **API Implementation** // Parse azure.yaml, infra/ directory
+    - Add Phase 2 query logic to leaderboards routes // Determine deployment targets
 
-   - Add Phase 2 query logic to leaderboards routes        // Determine deployment targets
+    - Update `available: false` to `true` for these sections // Assess configuration completeness
 
-   - Update `available: false` to `true` for these sections        // Assess configuration completeness
+    - Test with real data }
 
-   - Test with real data    }
+5. **Frontend Updates** calculateDeploymentScore(template: any) {
+    - Remove "Coming Soon" placeholders // Score based on config completeness, best practices
 
+    - Wire up to Phase 2 endpoints // Return success probability
 
-
-5. **Frontend Updates**    calculateDeploymentScore(template: any) {
-
-   - Remove "Coming Soon" placeholders        // Score based on config completeness, best practices
-
-   - Wire up to Phase 2 endpoints        // Return success probability
-
-   - Add loading states    }
+    - Add loading states }
 
 }
 
 **Estimated Effort**: 1-2 weeks (1 developer)```
 
-
-
 ### ❌ Phase 3: FUTURE### 4. AI Model Success Tracking
 
+**Status**: Not planned **Purpose**: Track which AI models perform best for different languages/scenarios
 
-
-**Status**: Not planned  **Purpose**: Track which AI models perform best for different languages/scenarios
-
-**Schema Changes**: AI/tech detection  
+**Schema Changes**: AI/tech detection
 
 **Endpoints**: 3 advanced sections**Implementation**:
-
-
 
 #### Schema Additions Required```typescript
 
 // Track model usage and success rates
 
-```javascriptinterface ModelUsage {
+````javascriptinterface ModelUsage {
 
 {    model: string;
 
@@ -288,7 +261,7 @@ class GitHubMetricsService {
 
 }// packages/api/src/leaderboards/
 
-```
+````
 
 // GET /api/v4/leaderboards/top-analyzers
 
@@ -296,11 +269,11 @@ class GitHubMetricsService {
 
     req: HttpRequest,
 
-1. **Most Successful Models** - AI models ranked by template success    context: InvocationContext,
+1. **Most Successful Models** - AI models ranked by template success context: InvocationContext,
 
 2. **Model/Language Success** - Heatmap of model+language combinations) {
 
-3. **MSFT Tech Usage** - Microsoft technology adoption percentages    // Query analysis_results, group by analyzer_user
+3. **MSFT Tech Usage** - Microsoft technology adoption percentages // Query analysis_results, group by analyzer_user
 
     // Return top users by analysis count
 
@@ -314,27 +287,27 @@ class GitHubMetricsService {
 
     req: HttpRequest,
 
-**Estimated Effort**: 3-4 weeks (requires ML/NLP)    context: InvocationContext,
+**Estimated Effort**: 3-4 weeks (requires ML/NLP) context: InvocationContext,
 
 ) {
 
-### ❌ Phase 4: OPTIONAL    // Query issues, group by template
+### ❌ Phase 4: OPTIONAL // Query issues, group by template
 
     // Return templates with highest issue counts
 
-**Status**: Not planned  }
+**Status**: Not planned }
 
-**Schema Changes**: Deployment tracking  
+**Schema Changes**: Deployment tracking
 
 **Endpoints**: 1 telemetry section// GET /api/v4/leaderboards/prevalent-issues
 
 export async function getPrevalentIssues(
 
-#### Schema Additions Required    req: HttpRequest,
+#### Schema Additions Required req: HttpRequest,
 
     context: InvocationContext,
 
-```javascript) {
+````javascript) {
 
 {    // Query issues, group by category
 
@@ -378,7 +351,7 @@ export async function getPrevalentIssues(
 
 - azd CLI integration}
 
-```
+````
 
 **Estimated Effort**: 4-6 weeks (requires legal/compliance)
 
@@ -386,7 +359,7 @@ export async function getPrevalentIssues(
 
 ---
 
-```typescript
+````typescript
 
 ## API Reference// packages/app/src/scripts/leaderboards-data.ts
 
@@ -440,9 +413,9 @@ GET /api/v4/leaderboards/:section            templateIssues,
 
 ### Phase 1 Endpoints (✅ Available)}
 
-```
+````
 
-```bash
+````bash
 
 # Templates with most issues## Data Processing Pipeline
 
@@ -472,9 +445,9 @@ GET /api/v4/leaderboards/global/stats        // Update model success rates
 
 ### Phase 2 Endpoints (⏳ Coming Soon)}
 
-```
+````
 
-```bash
+````bash
 
 # Top analyzers overall### 2. Batch Processing
 
@@ -594,7 +567,7 @@ function showComingSoon(section) {### Phase 4: Advanced Features
 
 }### Database Optimization
 
-```
+````
 
 - Index on frequently queried columns (user, template, timestamp)
 
@@ -654,15 +627,9 @@ Once Phase 2 is deployed:
 
 4. Implement auto-refresh (every 5 minutes)- Rate limiting on leaderboard APIs
 
-
-
 ---## Monitoring & Analytics
 
-
-
 ## Testing### Metrics to Track
-
-
 
 ### Local Testing (Phase 1)- Leaderboard page views and engagement
 
@@ -698,7 +665,7 @@ After schema migration:
 
 - Data aggregation logic
 
-```bash- Chart rendering functions
+````bash- Chart rendering functions
 
 # Verify metadata populated- API endpoint responses
 
@@ -798,7 +765,7 @@ mongosh template_doctor --eval "db.repos.aggregate([...]).explain('executionStat
 
 # Monitor leaderboard API response times
 curl -w "@curl-format.txt" http://localhost:3001/api/v4/leaderboards/most-issues
-```
+````
 
 ---
 
@@ -817,6 +784,7 @@ curl -w "@curl-format.txt" http://localhost:3001/api/v4/leaderboards/most-issues
 **Decision**: No, deploy Phase 1 first.
 
 **Rationale**:
+
 - Phase 1 provides immediate value (3 functional sections)
 - Schema migration can be done in next sprint
 - Allows time to gather user feedback on priorities
@@ -832,6 +800,7 @@ curl -w "@curl-format.txt" http://localhost:3001/api/v4/leaderboards/most-issues
 **Decision**: Batch job (nightly).
 
 **Rationale**:
+
 - Avoids rate limit issues
 - Stars/forks change slowly
 - Reduces API costs
@@ -841,15 +810,15 @@ curl -w "@curl-format.txt" http://localhost:3001/api/v4/leaderboards/most-issues
 ## Next Steps
 
 1. **Immediate** (this sprint):
-   - Update frontend to call Phase 1 endpoints
-   - Test with real MongoDB data
-   - Deploy to Azure with azd up
+    - Update frontend to call Phase 1 endpoints
+    - Test with real MongoDB data
+    - Deploy to Azure with azd up
 
 2. **Sprint 2** (next 1-2 weeks):
-   - Design and test database migration
-   - Implement GitHub metadata sync service
-   - Deploy Phase 2 (8 working sections)
+    - Design and test database migration
+    - Implement GitHub metadata sync service
+    - Deploy Phase 2 (8 working sections)
 
 3. **Future** (if demand exists):
-   - Evaluate Phase 3 (AI/tech detection)
-   - Gather feedback on Phase 4 (deployment tracking)
+    - Evaluate Phase 3 (AI/tech detection)
+    - Gather feedback on Phase 4 (deployment tracking)

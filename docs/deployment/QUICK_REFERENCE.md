@@ -21,11 +21,11 @@ azd up
 
 ## 📋 Required GitHub Credentials
 
-| Credential | Purpose | Get From |
-|------------|---------|----------|
-| **GITHUB_CLIENT_ID** | OAuth user login | https://github.com/settings/developers |
-| **GITHUB_CLIENT_SECRET** | OAuth user login | GitHub OAuth App settings |
-| **GITHUB_TOKEN** | Repository operations | https://github.com/settings/tokens/new |
+| Credential               | Purpose               | Get From                               |
+| ------------------------ | --------------------- | -------------------------------------- |
+| **GITHUB_CLIENT_ID**     | OAuth user login      | https://github.com/settings/developers |
+| **GITHUB_CLIENT_SECRET** | OAuth user login      | GitHub OAuth App settings              |
+| **GITHUB_TOKEN**         | Repository operations | https://github.com/settings/tokens/new |
 
 **Token Scopes Required**: `repo`, `workflow`, `read:org`
 
@@ -52,13 +52,13 @@ Resource Group: rg-<environment>
 
 **Low-Medium Traffic** (~10K analyses/month):
 
-| Resource | Monthly Cost |
-|----------|--------------|
-| Cosmos DB (Serverless) | $5-20 |
-| Container Apps | $0-10 (free tier) |
-| Container Registry | $5 |
-| Log Analytics | $0-5 |
-| **Total** | **$10-40** |
+| Resource               | Monthly Cost      |
+| ---------------------- | ----------------- |
+| Cosmos DB (Serverless) | $5-20             |
+| Container Apps         | $0-10 (free tier) |
+| Container Registry     | $5                |
+| Log Analytics          | $0-5              |
+| **Total**              | **$10-40**        |
 
 ## 🔍 Common Commands
 
@@ -95,12 +95,12 @@ curl "${APP_URL}/api/v4/client-settings"
 
 ## 🔧 Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| "Image not found" | Run `azd deploy` again |
-| OAuth redirect error | Update callback URL in GitHub |
+| Issue                     | Solution                                      |
+| ------------------------- | --------------------------------------------- |
+| "Image not found"         | Run `azd deploy` again                        |
+| OAuth redirect error      | Update callback URL in GitHub                 |
 | Database connection fails | Check `MONGODB_URI` with `azd env get-values` |
-| Analysis fails | Verify `GITHUB_TOKEN` is set correctly |
+| Analysis fails            | Verify `GITHUB_TOKEN` is set correctly        |
 
 ## 📚 Full Documentation
 

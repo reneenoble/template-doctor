@@ -9,7 +9,7 @@
   // Prevent duplicate loads
   let isLoaded = false;
   let isLoading = false;
-  
+
   function log(...args: any[]) {
     try {
       console.log('[templates-loader]', ...args);
@@ -63,25 +63,25 @@
       log('Already loaded or loading, skipping duplicate load');
       return;
     }
-    
+
     isLoading = true;
     log('Loading template data from MongoDB API (auth confirmed)');
-    
+
     try {
       // Load from MongoDB-backed API instead of filesystem
       const response = await fetch('/api/v4/results/latest?limit=200', {
         cache: 'no-store',
         headers: {
-          'Accept': 'application/json',
-        }
+          Accept: 'application/json',
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error(`API returned ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Transform API response to match expected window.templatesData format
       if (data.results && Array.isArray(data.results)) {
         const templates = data.results.map((r: any) => ({
@@ -89,7 +89,9 @@
           owner: r.owner,
           repo: r.repo,
           ruleSet: r.latestAnalysis?.ruleSet || 'dod',
-          timestamp: r.latestAnalysis?.scanDate ? new Date(r.latestAnalysis.scanDate).toLocaleDateString() : 'Unknown',
+          timestamp: r.latestAnalysis?.scanDate
+            ? new Date(r.latestAnalysis.scanDate).toLocaleDateString()
+            : 'Unknown',
           relativePath: `/report.html?repo=${r.owner}/${r.repo}`, // Link to report page
           dashboardPath: `results/${r.owner}-${r.repo}/latest.json`,
           // Match the structure expected by index-data.js
@@ -100,14 +102,16 @@
           },
           tags: r.tags || [],
           // AZD test data (if available)
-          azdTest: r.latestAzdTest ? {
-            status: r.latestAzdTest.status,
-            timestamp: r.latestAzdTest.timestamp,
-            testId: r.latestAzdTest.testId,
-            duration: r.latestAzdTest.duration,
-            azdUpSuccess: r.latestAzdTest.result?.azdUpSuccess,
-            azdDownSuccess: r.latestAzdTest.result?.azdDownSuccess,
-          } : null,
+          azdTest: r.latestAzdTest
+            ? {
+                status: r.latestAzdTest.status,
+                timestamp: r.latestAzdTest.timestamp,
+                testId: r.latestAzdTest.testId,
+                duration: r.latestAzdTest.duration,
+                azdUpSuccess: r.latestAzdTest.result?.azdUpSuccess,
+                azdDownSuccess: r.latestAzdTest.result?.azdDownSuccess,
+              }
+            : null,
           // Also keep latestAnalysis for compatibility
           latestAnalysis: r.latestAnalysis,
         }));

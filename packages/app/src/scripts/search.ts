@@ -2,7 +2,13 @@
 // Provides full-featured search and template handling based on the legacy app.js implementation
 
 // Rely on the ScannedTemplateEntry interface from global.d.ts
-import { sanitizeSearchQuery, sanitizeHtml, sanitizeAttribute, sanitizeGitHubUrl, containsXssAttempt } from '../shared/sanitize.js';
+import {
+  sanitizeSearchQuery,
+  sanitizeHtml,
+  sanitizeAttribute,
+  sanitizeGitHubUrl,
+  containsXssAttempt,
+} from '../shared/sanitize.js';
 
 // Extend the global Window interface for search-specific properties
 declare global {
@@ -265,7 +271,11 @@ async function performSearch(query: string): Promise<void> {
       searchInput.style.border = '2px solid #dc3545';
     }
     if ((window as any).NotificationSystem) {
-      (window as any).NotificationSystem.showError('Invalid Input', "Oops! That's not allowed!", 5000);
+      (window as any).NotificationSystem.showError(
+        'Invalid Input',
+        "Oops! That's not allowed!",
+        5000,
+      );
     }
     container.innerHTML = '<div class="no-results error-message">Invalid input detected</div>';
     return;
@@ -274,10 +284,10 @@ async function performSearch(query: string): Promise<void> {
   // Sanitize and validate query
   const sanitized = sanitizeSearchQuery(query, 500);
   const q = sanitized.trim();
-  
+
   // Reset border on valid input
   const searchInput = document.getElementById('repo-search') as HTMLInputElement | null;
-  
+
   if (!q) {
     console.log('[Search DEBUG] Empty query, showing prompt');
     container.innerHTML = '<div class="no-results">Enter a search term</div>';
@@ -286,7 +296,7 @@ async function performSearch(query: string): Promise<void> {
 
   // Check if this looks like a URL attempt (contains http, https, or ://)
   const looksLikeUrlAttempt = /^https?:\/\/|:\/\//.test(q);
-  
+
   // If it looks like a URL attempt, validate it as a GitHub URL
   if (looksLikeUrlAttempt) {
     const validUrl = sanitizeGitHubUrl(q);
@@ -295,13 +305,18 @@ async function performSearch(query: string): Promise<void> {
         searchInput.style.border = '2px solid #dc3545';
       }
       if ((window as any).NotificationSystem) {
-        (window as any).NotificationSystem.showError('Invalid URL', `Not a valid GitHub repository URL`, 5000);
+        (window as any).NotificationSystem.showError(
+          'Invalid URL',
+          `Not a valid GitHub repository URL`,
+          5000,
+        );
       }
-      container.innerHTML = '<div class="no-results error-message">Invalid GitHub repository URL</div>';
+      container.innerHTML =
+        '<div class="no-results error-message">Invalid GitHub repository URL</div>';
       return;
     }
   }
-  
+
   // Reset border when validation passes
   if (searchInput) {
     searchInput.style.border = '';
@@ -345,8 +360,12 @@ async function performSearch(query: string): Promise<void> {
     // Sanitize all user-facing content to prevent XSS
     const safeRepoName = sanitizeHtml(repoName);
     const safeRepoNameAttr = sanitizeAttribute(repoName);
-    const safeDescription = matchedTemplate.description ? sanitizeHtml(matchedTemplate.description) : '';
-    const safeDescriptionAttr = matchedTemplate.description ? sanitizeAttribute(matchedTemplate.description) : '';
+    const safeDescription = matchedTemplate.description
+      ? sanitizeHtml(matchedTemplate.description)
+      : '';
+    const safeDescriptionAttr = matchedTemplate.description
+      ? sanitizeAttribute(matchedTemplate.description)
+      : '';
 
     // Build HTML with more details and action buttons
     let html = `
@@ -362,11 +381,11 @@ async function performSearch(query: string): Promise<void> {
     // Add metadata if available (sanitize array items)
     const metaItems = [];
     if (Array.isArray(matchedTemplate.languages) && matchedTemplate.languages.length > 0) {
-      const safeLanguages = matchedTemplate.languages.map(lang => sanitizeHtml(lang)).join(', ');
+      const safeLanguages = matchedTemplate.languages.map((lang) => sanitizeHtml(lang)).join(', ');
       metaItems.push(`<div class="repo-languages">${safeLanguages}</div>`);
     }
     if (Array.isArray(matchedTemplate.tags) && matchedTemplate.tags.length > 0) {
-      const safeTags = matchedTemplate.tags.map(tag => sanitizeHtml(tag)).join(', ');
+      const safeTags = matchedTemplate.tags.map((tag) => sanitizeHtml(tag)).join(', ');
       metaItems.push(`<div class="repo-tags">${safeTags}</div>`);
     }
 
@@ -498,7 +517,9 @@ async function performSearch(query: string): Promise<void> {
         const safeRepoName = sanitizeHtml(repoName);
         const safeRepoNameAttr = sanitizeAttribute(repoName);
         const safeDescription = template.description ? sanitizeHtml(template.description) : '';
-        const safeDescriptionAttr = template.description ? sanitizeAttribute(template.description) : '';
+        const safeDescriptionAttr = template.description
+          ? sanitizeAttribute(template.description)
+          : '';
 
         // Build HTML with more details and action buttons
         let html = `
@@ -514,11 +535,11 @@ async function performSearch(query: string): Promise<void> {
         // Add metadata if available (sanitize array items)
         const metaItems = [];
         if (Array.isArray(template.languages) && template.languages.length > 0) {
-          const safeLanguages = template.languages.map(lang => sanitizeHtml(lang)).join(', ');
+          const safeLanguages = template.languages.map((lang) => sanitizeHtml(lang)).join(', ');
           metaItems.push(`<div class="repo-languages">${safeLanguages}</div>`);
         }
         if (Array.isArray(template.tags) && template.tags.length > 0) {
-          const safeTags = template.tags.map(tag => sanitizeHtml(tag)).join(', ');
+          const safeTags = template.tags.map((tag) => sanitizeHtml(tag)).join(', ');
           metaItems.push(`<div class="repo-tags">${safeTags}</div>`);
         }
 
@@ -640,8 +661,8 @@ async function performSearch(query: string): Promise<void> {
     // Sanitize content to prevent XSS
     const safeRepoName = sanitizeHtml(repoName);
     const safeRepoNameAttr = sanitizeAttribute(repoName);
-    const authMessage = isAuthenticated 
-      ? 'Click to analyze.' 
+    const authMessage = isAuthenticated
+      ? 'Click to analyze.'
       : 'Please log in first to avoid GitHub API rate limits.';
 
     div.innerHTML = `
@@ -729,7 +750,7 @@ async function performSearch(query: string): Promise<void> {
   const hasSlash = q.includes('/');
   const firstPart = q.split('/')[0] || '';
   const looksLikeRepoAttempt = hasSlash || /^[a-zA-Z0-9_-]+$/.test(firstPart);
-  
+
   // If it looks like they're trying to enter a repo but it's invalid format
   if (looksLikeRepoAttempt && !hasSlash) {
     if (searchInput) {
@@ -737,12 +758,13 @@ async function performSearch(query: string): Promise<void> {
     }
     if ((window as any).NotificationSystem) {
       (window as any).NotificationSystem.showError(
-        'Invalid Repository', 
-        'GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")', 
-        6000
+        'Invalid Repository',
+        'GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")',
+        6000,
       );
     }
-    container.innerHTML = '<div class="no-results error-message">Use "owner/repo" format for GitHub repositories</div>';
+    container.innerHTML =
+      '<div class="no-results error-message">Use "owner/repo" format for GitHub repositories</div>';
   } else {
     container.innerHTML = '<div class="no-results">No matching templates found</div>';
   }
