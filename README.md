@@ -8,7 +8,6 @@
 [![Template Framework Documentation](https://img.shields.io/badge/TemplateFramework-008080?style=flat-square)](https://github.com/Azure-Samples/azd-template-artifacts/)
 [![Template Framework MCP](https://img.shields.io/badge/TemplateFrameworkMCP-0090FF?style=flat-square)](https://github.com/Template-Doctor/template-doctor)
 [![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)](LICENSE)
-[![API Smoke](https://github.com/Template-Doctor/template-doctor/actions/workflows/smoke-api.yml/badge.svg)](.github/workflows/smoke-api.yml)
 
 [Overview](#overview) | [Features](#features) | [Install](#installation-and-setup) | [Usage](#usage)
 
@@ -45,15 +44,16 @@ Template Doctor is a **containerized monorepo** with independently deployable pa
 
 - **packages/app**: Vite SPA (TypeScript frontend)
     - Built with Vite for fast development and optimized production builds
-    - Serves dashboard at http://localhost:3000 (preview/production)
     - Development server at http://localhost:4000 with HMR
-    - Loads scan results from `packages/app/results/`
+    - Production served by Express at http://localhost:3000
+    - Loads scan results from database via REST API
 
 - **packages/server**: Express backend (TypeScript REST API)
-    - RESTful API at http://localhost:3001
+    - RESTful API and frontend hosting at http://localhost:3000 (OAuth-compatible)
     - Handles OAuth token exchange, template validation, and GitHub integration
-    - CORS-enabled for frontend communication
+    - CORS-enabled for cross-origin development
     - Serves static frontend assets in production
+    - MongoDB/Cosmos DB for persistent storage
 
 - **packages/analyzer-core**: Core analyzer functionality (shared library)
     - Shared validation logic used by both server and legacy API
@@ -73,11 +73,11 @@ Template Doctor is a **containerized monorepo** with independently deployable pa
 
 ### Results Storage
 
-Results live under `packages/app/results/`:
+Results are stored in MongoDB/Cosmos DB and served via the Express API:
 
-- `packages/app/results/index-data.js` — Master list of scanned templates (window.templatesData)
-- `packages/app/results/<owner-repo>/<timestamp>-data.js` — Per-scan data (window.reportData)
-- `packages/app/results/<owner-repo>/<timestamp>-dashboard.html` — Per-scan dashboard
+- `/api/v4/results/latest` — Latest scan results for all templates
+- `/api/v4/results/:owner/:repo` — All results for a specific template
+- Frontend fetches data dynamically from the database instead of static files
 
 # Installation and Setup
 
@@ -142,14 +142,21 @@ For manual setup or local development only, see sections below.
 4. **Start with Docker Compose**:
 
     ```bash
-    docker-compose up
+    # Start the combined profile (frontend + backend in one container)
+    docker-compose --profile combined up
+    
+    # Or run in detached mode
+    docker-compose --profile combined up -d
+    
+    # Rebuild and start
+    docker-compose --profile combined up --build
     ```
 
 5. **Access the application**:
     - Frontend + Backend: http://localhost:3000
 
 > [!IMPORTANT]
-> **OAuth Requirement**: Both frontend and backend run on port 3000 in Docker. This matches the GitHub OAuth callback URL. The Docker setup handles this automatically - both services are accessible at http://localhost:3000.
+> **OAuth Requirement**: Both frontend and backend run on port 3000 in Docker. This matches the GitHub OAuth callback URL (`http://localhost:3000/oauth-callback`). The Docker setup handles this automatically - the Express server serves both the API and frontend assets.
 
 ## Manual Development Setup (Not Recommended for OAuth)
 
@@ -166,7 +173,7 @@ If you prefer running services without Docker:
 
 3. **Start services in SEPARATE terminals**:
 
-    **Terminal 1 - Express Backend (port 3001)**:
+    **Terminal 1 - Express Backend (port 3000)**:
 
     ```bash
     cd packages/server
@@ -183,7 +190,7 @@ If you prefer running services without Docker:
 4. **Access the application**: http://localhost:4000
 
 > [!WARNING]
-> **OAuth Limitation**: This manual setup runs frontend (port 4000) and backend (port 3001) on different ports. OAuth authentication will NOT work correctly unless you create a separate GitHub OAuth app configured for port 4000. For OAuth functionality, use the Docker Compose setup instead (port 3000 for both services).
+> **OAuth Limitation**: This manual setup runs frontend (port 4000) and backend (port 3000) on different ports. OAuth authentication will NOT work correctly unless you create a separate GitHub OAuth app configured for `http://localhost:4000/oauth-callback`. For OAuth functionality, use the Docker Compose setup instead (port 3000 for both services).
 
 > [!IMPORTANT]
 > The Express backend MUST be running before using OAuth login or analysis features.
@@ -191,11 +198,12 @@ If you prefer running services without Docker:
 
 ### Port Allocation
 
-| Service         | Development | Preview | Docker |
-| --------------- | ----------- | ------- | ------ |
-| Vite Dev Server | 4000        | -       | -      |
-| Vite Preview    | -           | 3000    | 3000   |
-| Express Backend | 3001        | 3001    | 3001   |
+| Service         | Development | Production/Docker |
+| --------------- | ----------- | ----------------- |
+| Vite Dev Server | 4000        | -                 |
+| Express Backend | 3000        | 3000              |
+
+**Note**: In production and Docker, both frontend and backend run on port 3000 for OAuth compatibility. The Express server serves both the API and static frontend assets.
 
 ## Authentication Setup
 
@@ -251,12 +259,12 @@ See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIA
 2. **Start all services**:
 
     ```bash
-    docker-compose up
+    docker-compose --profile combined up
     ```
 
 3. **Access the application**:
     - Frontend: http://localhost:3000
-    - Backend API: http://localhost:3001
+    - Backend API: http://localhost:3000/api
 
 ### Manual Development (Two-Terminal Approach)
 
@@ -399,14 +407,17 @@ The combined Dockerfile:
 #### Multi-Container Development
 
 ```bash
-# Start all services
-docker-compose up
+# Start all services with combined profile
+docker-compose --profile combined up
 
 # Rebuild and restart
-docker-compose up --build
+docker-compose --profile combined up --build
+
+# Run in detached mode
+docker-compose --profile combined up -d
 
 # Stop services
-docker-compose down
+docker-compose --profile combined down
 ```
 
 ### Preview Build Locally
@@ -424,7 +435,7 @@ Access at http://localhost:3000
 ## Requirements and Conventions
 
 - **Origin Upstream Requirement**: For provisioning templates with azd, the canonical upstream must be provided in the format `owner/repo`. This is used for `azd init -t <owner/repo>` and ensures the test/provision flow uses the correct azd template.
-- **Results Storage**: New scan PRs write to `packages/app/results/` and update `packages/app/results/index-data.js`.
+- **Database Storage**: Scan results are stored in MongoDB/Cosmos DB and served via REST API endpoints (`/api/v4/results/*`).
 - **Independent Deployment**: Each package is deployable independently via dedicated workflows.
 - **TypeScript-First**: All new code should be TypeScript with proper type definitions.
 - **No Mocks in Production**: All implementations must be complete and production-ready (see `.github/instructions/copilot-instructions.md`).
@@ -434,12 +445,12 @@ Access at http://localhost:3000
 ### Common Issues
 
 - **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server
-    - Development: Frontend 4000, Backend 3001
-    - Preview/Docker: Frontend 3000, Backend 3001
+    - Development: Frontend 4000, Backend 3000
+    - Docker/Production: Both services on port 3000
 
 - **Express server not starting**:
     - Check `.env` file exists with required variables
-    - Verify port 3001 is not in use: `lsof -i :3001`
+    - Verify port 3000 is not in use: `lsof -i :3000`
 
 - **Docker issues**:
     - Ensure Docker and Docker Compose are installed and running
@@ -448,9 +459,8 @@ Access at http://localhost:3000
 - **Port conflicts**: Kill processes if needed:
 
     ```bash
-    lsof -ti :3000 | xargs kill -9  # Frontend preview
-    lsof -ti :3001 | xargs kill -9  # Backend
-    lsof -ti :4000 | xargs kill -9  # Frontend dev
+    lsof -ti :3000 | xargs kill -9  # Express server / frontend
+    lsof -ti :4000 | xargs kill -9  # Vite dev server
     ```
 
 - **Configuration mismatch**: Verify `config.json` has correct `githubOAuth.clientId` matching `.env`
@@ -461,10 +471,9 @@ Access at http://localhost:3000
 
 Located in `.github/workflows/`:
 
-- **smoke-api.yml**: API smoke tests
-    - Runs on push/PR to verify Express API endpoints
-    - Builds analyzer-core → server → runs smoke tests
-    - See badge at top of README
+- **validate-docker-images.yml**: Docker image validation
+    - Validates Docker builds and image integrity
+    - Ensures containers can be built successfully
 
 - **Nightly Deploy**: Automated deployment
     - Runs nightly at 02:15 UTC
