@@ -25,6 +25,8 @@ local.settings.json
 **/local.settings.json
 
 __azurite*
+Azurite*
+__queue*
 
 gallery.jsonpackages/server/config/
 
@@ -36,4 +38,10 @@ gallery.jsonpackages/server/config/
 
 .azdo
 
+# Debug and test artifacts
 debug-oauth.md
+debug-auth.html
+analysis.json
+deploy.log
+smoke-test-output.log
+*.log
