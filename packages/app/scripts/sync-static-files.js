@@ -10,8 +10,8 @@ const path = require('path');
 const rootDir = __dirname.replace(/scripts$/, '');
 const publicDir = path.join(rootDir, 'public');
 
-// Create public directory structure
-const dirs = ['assets/images', 'configs', 'css', 'results'];
+// Create public directory structure (removed 'results' - now served from database)
+const dirs = ['assets/images', 'configs', 'css'];
 
 dirs.forEach((dir) => {
   const targetDir = path.join(publicDir, dir);
@@ -47,30 +47,8 @@ if (fs.existsSync(cssDir)) {
   });
 }
 
-// Copy results directory (scan results)
-const resultsDir = path.join(rootDir, 'results');
-if (fs.existsSync(resultsDir)) {
-  const copyDirRecursive = (src, dest) => {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-
-      if (entry.isDirectory()) {
-        copyDirRecursive(srcPath, destPath);
-      } else {
-        fs.copyFileSync(srcPath, destPath);
-      }
-    }
-  };
-
-  copyDirRecursive(resultsDir, path.join(publicDir, 'results'));
-  console.log('✓ Copied results/ directory');
-}
+// REMOVED: results directory copying - data now served from MongoDB database
+// Legacy static results files (results/*) are no longer bundled into the build
 
 // Execute copy operations
 copyOps.forEach(({ src, dest }) => {

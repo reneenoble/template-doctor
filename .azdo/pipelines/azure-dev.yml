@@ -1,0 +1,75 @@
+# Azure DevOps Pipeline for Azure Developer CLI (azd)
+# Provisions and deploys Template Doctor to Azure Container Apps
+
+trigger:
+  - main
+  - feat/add-database
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: template-doctor-secrets # Create this variable group in Azure DevOps
+  - name: AZURE_LOCATION
+    value: eastus2
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildAndPush
+        steps:
+          - task: Docker@2
+            displayName: Build Docker Image
+            inputs:
+              command: build
+              dockerfile: Dockerfile.combined
+              tags: |
+                $(Build.BuildId)
+                latest
+
+  - stage: Deploy
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployToAzure
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: AzureCLI@2
+                  displayName: Install azd
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      curl -fsSL https://aka.ms/install-azd.sh | bash
+                      echo "##vso[task.prependpath]$HOME/.azd/bin"
+
+                - task: AzureCLI@2
+                  displayName: Provision Infrastructure
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      azd env new production --subscription $(AZURE_SUBSCRIPTION_ID) --location $(AZURE_LOCATION)
+                      azd env set GITHUB_CLIENT_ID $(GITHUB_CLIENT_ID)
+                      azd env set GITHUB_CLIENT_SECRET $(GITHUB_CLIENT_SECRET)
+                      azd provision --no-prompt
+                  env:
+                    AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+                    GITHUB_CLIENT_ID: $(GITHUB_CLIENT_ID)
+                    GITHUB_CLIENT_SECRET: $(GITHUB_CLIENT_SECRET)
+
+                - task: AzureCLI@2
+                  displayName: Deploy Application
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      azd deploy --no-prompt

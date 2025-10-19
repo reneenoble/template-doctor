@@ -1,0 +1,226 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.15.31.15270",
+      "templateHash": "8308014676378569359"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    },
+    "containerAppsEnvironmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Container Apps Environment"
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Container Registry"
+      }
+    },
+    "env": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Environment variables for the container"
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Secrets for the container (will be merged with registry password)"
+      }
+    },
+    "githubClientId": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Client ID for OAuth"
+      }
+    },
+    "githubClientSecret": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Client Secret for OAuth"
+      }
+    },
+    "githubToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Personal Access Token"
+      }
+    },
+    "ghWorkflowToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Workflow Token for workflow dispatch"
+      }
+    },
+    "targetPort": {
+      "type": "int",
+      "defaultValue": 3000,
+      "metadata": {
+        "description": "Target port for the container"
+      }
+    },
+    "enableIngress": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable ingress"
+      }
+    },
+    "external": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "External ingress"
+      }
+    },
+    "containerCpuCoreCount": {
+      "type": "string",
+      "defaultValue": "0.5",
+      "allowedValues": [
+        "0.25",
+        "0.5",
+        "0.75",
+        "1.0",
+        "1.25",
+        "1.5",
+        "1.75",
+        "2.0"
+      ],
+      "metadata": {
+        "description": "CPU cores - Bicep requires string for decimal values (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0)"
+      }
+    },
+    "containerMemory": {
+      "type": "string",
+      "defaultValue": "1.0Gi",
+      "metadata": {
+        "description": "Memory in Gi (0.5, 1.0, 1.5, 2.0, 3.0, 3.5, 4.0)"
+      }
+    },
+    "minReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Minimum number of replicas"
+      }
+    },
+    "maxReplicas": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": {
+        "description": "Maximum number of replicas"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": "[if(parameters('enableIngress'), createObject('external', parameters('external'), 'targetPort', parameters('targetPort'), 'transport', 'auto', 'allowInsecure', false()), null())]",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-01-01-preview').loginServer]",
+              "identity": "system"
+            }
+          ],
+          "secrets": "[concat(if(not(equals(parameters('githubClientId'), '')), createArray(createObject('name', 'github-client-id', 'value', parameters('githubClientId'))), createArray()), if(not(equals(parameters('githubClientSecret'), '')), createArray(createObject('name', 'github-client-secret', 'value', parameters('githubClientSecret'))), createArray()), if(not(equals(parameters('githubToken'), '')), createArray(createObject('name', 'github-token', 'value', parameters('githubToken'))), createArray()), if(not(equals(parameters('ghWorkflowToken'), '')), createArray(createObject('name', 'gh-workflow-token', 'value', parameters('ghWorkflowToken'))), createArray()), parameters('secrets'))]"
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "main",
+              "image": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+              "resources": {
+                "cpu": "[json(parameters('containerCpuCoreCount'))]",
+                "memory": "[parameters('containerMemory')]"
+              },
+              "env": "[parameters('env')]"
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('minReplicas')]",
+            "maxReplicas": "[parameters('maxReplicas')]",
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "100"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('containerRegistryName'))]",
+      "name": "[guid(resourceId('Microsoft.App/containerApps', parameters('name')), resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), 'acrpull')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2023-05-01', 'full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('name'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.App/containerApps', parameters('name'))]"
+    },
+    "name": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "uri": {
+      "type": "string",
+      "value": "[if(parameters('enableIngress'), format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2023-05-01').configuration.ingress.fqdn), '')]"
+    },
+    "fqdn": {
+      "type": "string",
+      "value": "[if(parameters('enableIngress'), reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2023-05-01').configuration.ingress.fqdn, '')]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('name')), '2023-05-01', 'full').identity.principalId]"
+    }
+  }
+}

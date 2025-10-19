@@ -74,6 +74,16 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
           ? 'Docs'
           : 'Custom';
   const gistUrl = ruleSet === 'custom' ? t.customConfig?.gistUrl : '';
+  
+  // AZD test status badge
+  const azdTest = t.latestAzdTest;
+  const azdBadgeHtml = azdTest
+    ? `<div class="azd-badge azd-${azdTest.status}" title="AZD Deployment: ${azdTest.status}">
+         <i class="icon-${azdTest.status === 'success' ? 'check' : azdTest.status === 'failed' ? 'x' : 'clock'}"></i>
+         AZD ${azdTest.status.toUpperCase()}
+       </div>`
+    : '';
+  
   const card = document.createElement('div');
   card.className = 'template-card';
   card.id = templateId;
@@ -86,7 +96,10 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
       <span class="scan-date">Last scanned by <strong>${lastScanner}</strong> on ${new Date(t.timestamp).toLocaleDateString()}</span>
     </div>
     <div class="card-body">
-      ${gistUrl ? `<a href="${gistUrl}" target="_blank" class="ruleset-badge ${ruleSet}-badge">${ruleSetDisplay}</a>` : `<div class="ruleset-badge ${ruleSet}-badge">${ruleSetDisplay}</div>`}
+      <div class="badges">
+        ${gistUrl ? `<a href="${gistUrl}" target="_blank" class="ruleset-badge ${ruleSet}-badge">${ruleSetDisplay}</a>` : `<div class="ruleset-badge ${ruleSet}-badge">${ruleSetDisplay}</div>`}
+        ${azdBadgeHtml}
+      </div>
       <div class="compliance-bar">
         <div class="compliance-fill" style="width: ${t.compliance.percentage}%"></div>
         <span class="compliance-value">${t.compliance.percentage}%</span>
@@ -109,6 +122,7 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
     if (!target || target.tagName !== 'BUTTON') return;
     const action = target.getAttribute('data-action');
     if (action === 'view') {
+      e.stopPropagation(); // Prevent delegated handler from catching this
       document.dispatchEvent(new CustomEvent('template-card-view', { detail: { template: t } }));
     } else if (action === 'rescan') {
       console.log('[TemplateList] rescan requested', t.repoUrl);

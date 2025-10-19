@@ -11,6 +11,7 @@
         "template-doctor": "dist/cli.js"
     },
     "scripts": {
+        "pretest": "node scripts/verify-playwright-browsers.js",
         "setup:uami": "bash ./scripts/setup.sh",
         "build:all": "npm run build:analyzer-core && npm run build:api --if-present && npm run build:app",
         "build:analyzer-core": "npm run -w packages/analyzer-core build",
@@ -29,6 +30,11 @@
         "test:all": "npm run test:unit && npm test",
         "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js",
         "analyze": "node scripts/analyzer-node.js",
+        "db:seed": "node scripts/seed-database.mjs",
+        "db:seed:force": "FORCE_SEED=true node scripts/seed-database.mjs",
+        "migrate:export": "node scripts/migrate-to-database.mjs export",
+        "migrate:import": "node scripts/migrate-to-database.mjs import",
+        "migrate:v1-to-v2": "node scripts/migrate-v1-to-v2.mjs",
         "typecheck": "npm run -w packages/app typecheck && npm run -w packages/api typecheck --if-present || true"
     },
     "keywords": [
@@ -44,6 +50,7 @@
     "devDependencies": {
         "@playwright/test": "^1.54.1",
         "@types/node": "^24.0.14",
+        "jsdom": "^27.0.1",
         "vitest": "^1.0.0"
     },
     "dependencies": {

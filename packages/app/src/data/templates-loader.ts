@@ -6,6 +6,10 @@
 // (index-data.js populates window.templatesData with this shape.)
 
 (function () {
+  // Prevent duplicate loads
+  let isLoaded = false;
+  let isLoading = false;
+  
   function log(...args: any[]) {
     try {
       console.log('[templates-loader]', ...args);
@@ -13,7 +17,9 @@
   }
 
   function dispatchLoaded() {
+    // Only dispatch template-data-loaded once
     document.dispatchEvent(new CustomEvent('template-data-loaded'));
+    log('Dispatched template-data-loaded event');
   }
 
   function showTilesLoadedDebug(count: number) {
@@ -52,33 +58,75 @@
   }
 
   async function loadTemplateData() {
-    log('Loading template data (auth confirmed)');
-    const cacheBuster = '?_cb=' + Date.now();
+    // Prevent duplicate loads
+    if (isLoading || isLoaded) {
+      log('Already loaded or loading, skipping duplicate load');
+      return;
+    }
+    
+    isLoading = true;
+    log('Loading template data from MongoDB API (auth confirmed)');
+    
     try {
-      await loadScript('results/scan-meta-backfill.js' + cacheBuster).catch(() => {
-        log('scan-meta-backfill.js not found; continuing');
+      // Load from MongoDB-backed API instead of filesystem
+      const response = await fetch('/api/v4/results/latest?limit=200', {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+        }
       });
-      log('scan-meta-backfill.js processed, loading index-data.js');
-      await loadScript('results/index-data.js' + cacheBuster);
-      if (Array.isArray(window.templatesData)) {
-        log('templatesData loaded entries:', window.templatesData.length);
-        try {
-          showTilesLoadedDebug(window.templatesData.length);
-        } catch (_) {}
-      } else {
-        log('templatesData missing or invalid, initializing empty array');
-        window.templatesData = [];
-        try {
-          showTilesLoadedDebug(0);
-        } catch (_) {}
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
       }
-    } catch (e) {
-      log('Failed to load template data scripts', e);
-      if (!Array.isArray(window.templatesData)) window.templatesData = [];
-      try {
+      
+      const data = await response.json();
+      
+      // Transform API response to match expected window.templatesData format
+      if (data.results && Array.isArray(data.results)) {
+        const templates = data.results.map((r: any) => ({
+          repoUrl: r.repoUrl,
+          owner: r.owner,
+          repo: r.repo,
+          ruleSet: r.latestAnalysis?.ruleSet || 'dod',
+          timestamp: r.latestAnalysis?.scanDate ? new Date(r.latestAnalysis.scanDate).toLocaleDateString() : 'Unknown',
+          relativePath: `/report.html?repo=${r.owner}/${r.repo}`, // Link to report page
+          dashboardPath: `results/${r.owner}-${r.repo}/latest.json`,
+          // Match the structure expected by index-data.js
+          compliance: {
+            percentage: r.latestAnalysis?.compliancePercentage || 0,
+            issues: r.latestAnalysis?.issues || 0,
+            passed: r.latestAnalysis?.passed || 0,
+          },
+          tags: r.tags || [],
+          // AZD test data (if available)
+          azdTest: r.latestAzdTest ? {
+            status: r.latestAzdTest.status,
+            timestamp: r.latestAzdTest.timestamp,
+            testId: r.latestAzdTest.testId,
+            duration: r.latestAzdTest.duration,
+            azdUpSuccess: r.latestAzdTest.result?.azdUpSuccess,
+            azdDownSuccess: r.latestAzdTest.result?.azdDownSuccess,
+          } : null,
+          // Also keep latestAnalysis for compatibility
+          latestAnalysis: r.latestAnalysis,
+        }));
+        window.templatesData = templates;
+        log('Loaded from MongoDB API:', templates.length, 'templates');
+        showTilesLoadedDebug(templates.length);
+      } else {
+        log('API response missing results array');
+        window.templatesData = [];
         showTilesLoadedDebug(0);
-      } catch (_) {}
+      }
+    } catch (e: any) {
+      log('Failed to load template data from API:', e?.message || e);
+      // Fallback to empty array
+      if (!Array.isArray(window.templatesData)) window.templatesData = [];
+      showTilesLoadedDebug(0);
     } finally {
+      isLoading = false;
+      isLoaded = true;
       dispatchLoaded();
     }
   }
@@ -132,7 +180,7 @@
 
   document.addEventListener('auth-state-changed', (e: any) => {
     try {
-      if (e.detail && e.detail.authenticated) {
+      if (e.detail && e.detail.authenticated && !isLoaded && !isLoading) {
         log('Auth changed to authenticated; loading templates');
         loadTemplateData();
       }

@@ -2,6 +2,7 @@
 // Provides full-featured search and template handling based on the legacy app.js implementation
 
 // Rely on the ScannedTemplateEntry interface from global.d.ts
+import { sanitizeSearchQuery, sanitizeHtml, sanitizeAttribute, sanitizeGitHubUrl, containsXssAttempt } from '../shared/sanitize.js';
 
 // Extend the global Window interface for search-specific properties
 declare global {
@@ -257,12 +258,53 @@ async function performSearch(query: string): Promise<void> {
   // Clear previous results
   container.innerHTML = '';
 
-  // Trim and validate query
-  const q = query.trim();
+  // Check for XSS attempts first
+  if (containsXssAttempt(query)) {
+    const searchInput = document.getElementById('repo-search') as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.style.border = '2px solid #dc3545';
+    }
+    if ((window as any).NotificationSystem) {
+      (window as any).NotificationSystem.showError('Invalid Input', "Oops! That's not allowed!", 5000);
+    }
+    container.innerHTML = '<div class="no-results error-message">Invalid input detected</div>';
+    return;
+  }
+
+  // Sanitize and validate query
+  const sanitized = sanitizeSearchQuery(query, 500);
+  const q = sanitized.trim();
+  
+  // Reset border on valid input
+  const searchInput = document.getElementById('repo-search') as HTMLInputElement | null;
+  
   if (!q) {
     console.log('[Search DEBUG] Empty query, showing prompt');
     container.innerHTML = '<div class="no-results">Enter a search term</div>';
     return;
+  }
+
+  // Check if this looks like a URL attempt (contains http, https, or ://)
+  const looksLikeUrlAttempt = /^https?:\/\/|:\/\//.test(q);
+  
+  // If it looks like a URL attempt, validate it as a GitHub URL
+  if (looksLikeUrlAttempt) {
+    const validUrl = sanitizeGitHubUrl(q);
+    if (!validUrl) {
+      if (searchInput) {
+        searchInput.style.border = '2px solid #dc3545';
+      }
+      if ((window as any).NotificationSystem) {
+        (window as any).NotificationSystem.showError('Invalid URL', `Not a valid GitHub repository URL`, 5000);
+      }
+      container.innerHTML = '<div class="no-results error-message">Invalid GitHub repository URL</div>';
+      return;
+    }
+  }
+  
+  // Reset border when validation passes
+  if (searchInput) {
+    searchInput.style.border = '';
   }
 
   log('Performing search with query:', q);
@@ -300,24 +342,32 @@ async function performSearch(query: string): Promise<void> {
       ? matchedTemplate.repoUrl.split('github.com/')[1].replace(/\.git$/, '')
       : matchedTemplate.relativePath || matchedTemplate.repoUrl;
 
+    // Sanitize all user-facing content to prevent XSS
+    const safeRepoName = sanitizeHtml(repoName);
+    const safeRepoNameAttr = sanitizeAttribute(repoName);
+    const safeDescription = matchedTemplate.description ? sanitizeHtml(matchedTemplate.description) : '';
+    const safeDescriptionAttr = matchedTemplate.description ? sanitizeAttribute(matchedTemplate.description) : '';
+
     // Build HTML with more details and action buttons
     let html = `
       <div>
-        <div class="repo-name" title="${repoName}">
-          ${repoName}
+        <div class="repo-name" title="${safeRepoNameAttr}">
+          ${safeRepoName}
         </div>`;
 
     if (matchedTemplate.description) {
-      html += `<div class="repo-description" title="${matchedTemplate.description}">${matchedTemplate.description}</div>`;
+      html += `<div class="repo-description" title="${safeDescriptionAttr}">${safeDescription}</div>`;
     }
 
-    // Add metadata if available
+    // Add metadata if available (sanitize array items)
     const metaItems = [];
     if (Array.isArray(matchedTemplate.languages) && matchedTemplate.languages.length > 0) {
-      metaItems.push(`<div class="repo-languages">${matchedTemplate.languages.join(', ')}</div>`);
+      const safeLanguages = matchedTemplate.languages.map(lang => sanitizeHtml(lang)).join(', ');
+      metaItems.push(`<div class="repo-languages">${safeLanguages}</div>`);
     }
     if (Array.isArray(matchedTemplate.tags) && matchedTemplate.tags.length > 0) {
-      metaItems.push(`<div class="repo-tags">${matchedTemplate.tags.join(', ')}</div>`);
+      const safeTags = matchedTemplate.tags.map(tag => sanitizeHtml(tag)).join(', ');
+      metaItems.push(`<div class="repo-tags">${safeTags}</div>`);
     }
 
     if (metaItems.length > 0) {
@@ -388,14 +438,13 @@ async function performSearch(query: string): Promise<void> {
         e.stopPropagation(); // Prevent event bubbling
         console.log('[Search DEBUG] Validate button clicked:', matchedTemplate.repoUrl);
 
+        // Use notification system (required - no fallback to alert)
         if ((window as any).NotificationSystem) {
           (window as any).NotificationSystem.showInfo(
             'Validation',
             'Template validation feature coming soon!',
             3000,
           );
-        } else {
-          alert('Template validation feature coming soon!');
         }
       });
     }
@@ -445,24 +494,32 @@ async function performSearch(query: string): Promise<void> {
           ? template.repoUrl.split('github.com/')[1].replace(/\.git$/, '')
           : template.relativePath || template.repoUrl;
 
+        // Sanitize all user-facing content to prevent XSS
+        const safeRepoName = sanitizeHtml(repoName);
+        const safeRepoNameAttr = sanitizeAttribute(repoName);
+        const safeDescription = template.description ? sanitizeHtml(template.description) : '';
+        const safeDescriptionAttr = template.description ? sanitizeAttribute(template.description) : '';
+
         // Build HTML with more details and action buttons
         let html = `
           <div>
-            <div class="repo-name" title="${repoName}">
-              ${repoName}
+            <div class="repo-name" title="${safeRepoNameAttr}">
+              ${safeRepoName}
             </div>`;
 
         if (template.description) {
-          html += `<div class="repo-description" title="${template.description}">${template.description}</div>`;
+          html += `<div class="repo-description" title="${safeDescriptionAttr}">${safeDescription}</div>`;
         }
 
-        // Add metadata if available
+        // Add metadata if available (sanitize array items)
         const metaItems = [];
         if (Array.isArray(template.languages) && template.languages.length > 0) {
-          metaItems.push(`<div class="repo-languages">${template.languages.join(', ')}</div>`);
+          const safeLanguages = template.languages.map(lang => sanitizeHtml(lang)).join(', ');
+          metaItems.push(`<div class="repo-languages">${safeLanguages}</div>`);
         }
         if (Array.isArray(template.tags) && template.tags.length > 0) {
-          metaItems.push(`<div class="repo-tags">${template.tags.join(', ')}</div>`);
+          const safeTags = template.tags.map(tag => sanitizeHtml(tag)).join(', ');
+          metaItems.push(`<div class="repo-tags">${safeTags}</div>`);
         }
 
         if (metaItems.length > 0) {
@@ -527,14 +584,13 @@ async function performSearch(query: string): Promise<void> {
           validateBtn.addEventListener('click', (e) => {
             e.stopPropagation();
 
+            // Use notification system (required - no fallback to alert)
             if ((window as any).NotificationSystem) {
               (window as any).NotificationSystem.showInfo(
                 'Validation',
                 'Template validation feature coming soon!',
                 3000,
               );
-            } else {
-              alert('Template validation feature coming soon!');
             }
           });
         }
@@ -581,13 +637,20 @@ async function performSearch(query: string): Promise<void> {
       ? repoUrl.split('github.com/')[1].replace(/\.git$/, '')
       : repoUrl;
 
+    // Sanitize content to prevent XSS
+    const safeRepoName = sanitizeHtml(repoName);
+    const safeRepoNameAttr = sanitizeAttribute(repoName);
+    const authMessage = isAuthenticated 
+      ? 'Click to analyze.' 
+      : 'Please log in first to avoid GitHub API rate limits.';
+
     div.innerHTML = `
       <div>
-        <div class="repo-name" title="${repoName}">
-          ${repoName}
+        <div class="repo-name" title="${safeRepoNameAttr}">
+          ${safeRepoName}
         </div>
-        <div class="repo-description" title="Repository not yet scanned. ${isAuthenticated ? 'Click to analyze.' : 'Please log in first to avoid GitHub API rate limits.'}">
-          Repository not yet scanned. ${isAuthenticated ? 'Click to analyze.' : 'Please log in first to avoid GitHub API rate limits.'}
+        <div class="repo-description" title="Repository not yet scanned. ${sanitizeAttribute(authMessage)}">
+          Repository not yet scanned. ${sanitizeHtml(authMessage)}
         </div>
       </div>
       <div class="action-buttons">
@@ -638,14 +701,13 @@ async function performSearch(query: string): Promise<void> {
       validateBtn.addEventListener('click', (e) => {
         e.stopPropagation();
 
+        // Use notification system (required - no fallback to alert)
         if ((window as any).NotificationSystem) {
           (window as any).NotificationSystem.showInfo(
             'Validation',
             'Template validation feature coming soon!',
             3000,
           );
-        } else {
-          alert('Template validation feature coming soon!');
         }
       });
     }
@@ -663,7 +725,27 @@ async function performSearch(query: string): Promise<void> {
   }
 
   // No results found
-  container.innerHTML = '<div class="no-results">No matching templates found</div>';
+  // Check if this might be an invalid repository format
+  const hasSlash = q.includes('/');
+  const firstPart = q.split('/')[0] || '';
+  const looksLikeRepoAttempt = hasSlash || /^[a-zA-Z0-9_-]+$/.test(firstPart);
+  
+  // If it looks like they're trying to enter a repo but it's invalid format
+  if (looksLikeRepoAttempt && !hasSlash) {
+    if (searchInput) {
+      searchInput.style.border = '2px solid #dc3545';
+    }
+    if ((window as any).NotificationSystem) {
+      (window as any).NotificationSystem.showError(
+        'Invalid Repository', 
+        'GitHub repositories must be in "owner/repo" format (e.g., "microsoft/template-doctor")', 
+        6000
+      );
+    }
+    container.innerHTML = '<div class="no-results error-message">Use "owner/repo" format for GitHub repositories</div>';
+  } else {
+    container.innerHTML = '<div class="no-results">No matching templates found</div>';
+  }
 
   // Signal to tests that results are ready (with zero count)
   window.__lastSearchResultsCount = 0;

@@ -2,6 +2,8 @@
 // Migrated from js/notification-system.js
 // Minimal modifications: strong typing hooks + exported API while preserving global behavior.
 
+import { sanitizeHtml } from '../shared/sanitize';
+
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 export interface ConfirmOptions {
@@ -86,7 +88,9 @@ function showNotification(
   const el = document.createElement('div');
   el.id = notificationId;
   el.className = `notification ${type}`;
-  el.innerHTML = `\n    ${iconFor(type)}\n    <button class="notification-close" aria-label="Close" data-close>\n      <i class="fas fa-times"></i>\n    </button>\n    <div class="notification-content">\n      <div class="notification-title">${title}</div>\n      <p class="notification-message">${message}</p>\n    </div>\n    <div class="notification-progress">\n      <div class="notification-progress-bar"></div>\n    </div>\n  `;
+  const safeTitle = sanitizeHtml(title);
+  const safeMessage = sanitizeHtml(message);
+  el.innerHTML = `\n    ${iconFor(type)}\n    <button class="notification-close" aria-label="Close" data-close>\n      <i class="fas fa-times"></i>\n    </button>\n    <div class="notification-content">\n      <div class="notification-title">${safeTitle}</div>\n      <p class="notification-message">${safeMessage}</p>\n    </div>\n    <div class="notification-progress">\n      <div class="notification-progress-bar"></div>\n    </div>\n  `;
   parent.prepend(el);
   const closeBtn = el.querySelector('[data-close]');
   closeBtn?.addEventListener('click', () => el.remove());

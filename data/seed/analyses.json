@@ -1,0 +1,255 @@
+[
+  {
+    "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
+    "owner": "Azure-Samples",
+    "repo": "todo-nodejs-mongo",
+    "ruleSet": "dod",
+    "timestamp": 1728489600000,
+    "scanDate": { "$date": "2024-10-09T12:00:00.000Z" },
+    "compliance": {
+      "percentage": 85.5,
+      "passed": 17,
+      "issues": 3
+    },
+    "categories": {
+      "documentation": {
+        "enabled": true,
+        "percentage": 100,
+        "issues": [],
+        "compliant": [
+          {
+            "id": "readme-exists",
+            "category": "documentation",
+            "message": "README.md file exists",
+            "details": { "path": "README.md" }
+          },
+          {
+            "id": "readme-has-sections",
+            "category": "documentation",
+            "message": "README has required sections",
+            "details": { "sections": ["Features", "Getting Started", "Resources"] }
+          }
+        ]
+      },
+      "security": {
+        "enabled": true,
+        "percentage": 66.7,
+        "issues": [
+          {
+            "id": "managed-identity-recommended",
+            "severity": "warning",
+            "message": "Consider using Managed Identity for authentication",
+            "error": "Connection string authentication detected in app configuration",
+            "category": "security"
+          }
+        ],
+        "compliant": [
+          {
+            "id": "security-md-exists",
+            "category": "security",
+            "message": "SECURITY.md file exists",
+            "details": { "path": "SECURITY.md" }
+          },
+          {
+            "id": "no-secrets-in-code",
+            "category": "security",
+            "message": "No hardcoded secrets detected",
+            "details": {}
+          }
+        ]
+      },
+      "azure-developer-cli": {
+        "enabled": true,
+        "percentage": 80,
+        "issues": [
+          {
+            "id": "azd-env-example",
+            "severity": "info",
+            "message": "Missing .env.example file",
+            "error": ".env.example not found in repository",
+            "category": "azure-developer-cli"
+          }
+        ],
+        "compliant": [
+          {
+            "id": "azure-yaml-exists",
+            "category": "azure-developer-cli",
+            "message": "azure.yaml configuration exists",
+            "details": { "path": "azure.yaml" }
+          },
+          {
+            "id": "azd-hooks-configured",
+            "category": "azure-developer-cli",
+            "message": "AZD hooks are properly configured",
+            "details": { "hooks": ["preprovision", "postprovision"] }
+          }
+        ]
+      }
+    },
+    "issues": [
+      {
+        "id": "managed-identity-recommended",
+        "severity": "warning",
+        "message": "Consider using Managed Identity for authentication",
+        "error": "Connection string authentication detected in app configuration",
+        "category": "security"
+      },
+      {
+        "id": "azd-env-example",
+        "severity": "info",
+        "message": "Missing .env.example file",
+        "error": ".env.example not found in repository",
+        "category": "azure-developer-cli"
+      },
+      {
+        "id": "docker-optimization",
+        "severity": "info",
+        "message": "Dockerfile could be optimized with multi-stage builds",
+        "error": "Single-stage Dockerfile detected",
+        "category": "containerization"
+      }
+    ],
+    "compliant": [
+      {
+        "id": "readme-exists",
+        "category": "documentation",
+        "message": "README.md file exists",
+        "details": { "path": "README.md" }
+      },
+      {
+        "id": "readme-has-sections",
+        "category": "documentation",
+        "message": "README has required sections",
+        "details": { "sections": ["Features", "Getting Started", "Resources"] }
+      },
+      {
+        "id": "security-md-exists",
+        "category": "security",
+        "message": "SECURITY.md file exists",
+        "details": { "path": "SECURITY.md" }
+      },
+      {
+        "id": "no-secrets-in-code",
+        "category": "security",
+        "message": "No hardcoded secrets detected",
+        "details": {}
+      },
+      {
+        "id": "azure-yaml-exists",
+        "category": "azure-developer-cli",
+        "message": "azure.yaml configuration exists",
+        "details": { "path": "azure.yaml" }
+      },
+      {
+        "id": "azd-hooks-configured",
+        "category": "azure-developer-cli",
+        "message": "AZD hooks are properly configured",
+        "details": { "hooks": ["preprovision", "postprovision"] }
+      },
+      {
+        "id": "license-exists",
+        "category": "licensing",
+        "message": "LICENSE file exists",
+        "details": { "path": "LICENSE", "type": "MIT" }
+      },
+      {
+        "id": "gitignore-exists",
+        "category": "repository",
+        "message": ".gitignore file configured",
+        "details": { "path": ".gitignore" }
+      }
+    ],
+    "analysisResult": {
+      "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
+      "branch": "main",
+      "totalChecks": 20,
+      "passedChecks": 17,
+      "failedChecks": 3,
+      "analyzedAt": "2024-10-09T12:00:00Z"
+    },
+    "createdBy": "anfibiacreativa",
+    "scannedBy": ["user@example.com"],
+    "upstreamTemplate": null,
+    "archiveRequested": false,
+    "createdAt": { "$date": "2024-10-09T12:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-09T12:00:00.000Z" }
+  },
+  {
+    "repoUrl": "https://github.com/Azure-Samples/contoso-real-estate",
+    "owner": "Azure-Samples",
+    "repo": "contoso-real-estate",
+    "ruleSet": "dod",
+    "timestamp": 1728403200000,
+    "scanDate": { "$date": "2024-10-08T12:00:00.000Z" },
+    "compliance": {
+      "percentage": 95.0,
+      "passed": 19,
+      "issues": 1
+    },
+    "categories": {
+      "documentation": {
+        "enabled": true,
+        "percentage": 100,
+        "issues": [],
+        "compliant": [
+          {
+            "id": "readme-exists",
+            "category": "documentation",
+            "message": "README.md file exists",
+            "details": { "path": "README.md" }
+          }
+        ]
+      },
+      "security": {
+        "enabled": true,
+        "percentage": 100,
+        "issues": [],
+        "compliant": [
+          {
+            "id": "managed-identity-used",
+            "category": "security",
+            "message": "Managed Identity authentication configured",
+            "details": { "services": ["cosmos-db", "storage-account"] }
+          }
+        ]
+      }
+    },
+    "issues": [
+      {
+        "id": "test-coverage-low",
+        "severity": "warning",
+        "message": "Test coverage below 80%",
+        "error": "Current coverage: 65%",
+        "category": "testing"
+      }
+    ],
+    "compliant": [
+      {
+        "id": "readme-exists",
+        "category": "documentation",
+        "message": "README.md file exists",
+        "details": { "path": "README.md" }
+      },
+      {
+        "id": "managed-identity-used",
+        "category": "security",
+        "message": "Managed Identity authentication configured",
+        "details": { "services": ["cosmos-db", "storage-account"] }
+      }
+    ],
+    "analysisResult": {
+      "repoUrl": "https://github.com/Azure-Samples/contoso-real-estate",
+      "branch": "main",
+      "totalChecks": 20,
+      "passedChecks": 19,
+      "failedChecks": 1,
+      "analyzedAt": "2024-10-08T12:00:00Z"
+    },
+    "createdBy": "anfibiacreativa",
+    "scannedBy": ["admin@example.com"],
+    "upstreamTemplate": null,
+    "archiveRequested": false,
+    "createdAt": { "$date": "2024-10-08T12:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-08T12:00:00.000Z" }
+  }
+]

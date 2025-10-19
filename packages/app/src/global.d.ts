@@ -28,6 +28,21 @@ interface ScannedTemplateEntry {
   dataPath?: string;
   collection?: string;
   originUpstream?: string;
+  latestAzdTest?: {
+    testId: string;
+    timestamp: Date;
+    status: 'pending' | 'running' | 'success' | 'failed';
+    duration?: number;
+    result?: {
+      deploymentTime?: number;
+      resourcesCreated?: number;
+      azdUpSuccess?: boolean;
+      azdDownSuccess?: boolean;
+      errors?: string[];
+      warnings?: string[];
+      endpoints?: Array<{ name: string; url: string }>;
+    };
+  };
 }
 
 declare interface Window {

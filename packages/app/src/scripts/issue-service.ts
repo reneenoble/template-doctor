@@ -57,13 +57,14 @@ function showInfo(title: string, msg: string) {
 
 function confirmCreate(cb: () => void) {
   const n = notification();
+  // Use notification system (required - no fallback to window.confirm)
   if (n?.confirm) {
     n.confirm(
       'Create GitHub Issues',
       'This will create GitHub issues for all compliance problems. Proceed?',
       { confirmLabel: 'Create', cancelLabel: 'Cancel', onConfirm: cb },
     );
-  } else if (window.confirm('Create GitHub issues for all problems?')) cb();
+  }
 }
 
 function parseOwnerRepo(url: string) {
@@ -168,10 +169,51 @@ interface ForkContext {
 }
 
 async function resolveForkContext(owner: string, repo: string): Promise<ForkContext> {
-  console.log(`[IssueService] Using original repository: ${owner}/${repo}`);
+  const gh = (window as any).GitHubClient;
+  
+  // Get authenticated user to ensure issues are created in THEIR fork, not the org repo
+  let authenticatedUser: string | null = null;
+  try {
+    const user = await gh.getAuthenticatedUser();
+    authenticatedUser = user?.login || null;
+  } catch (e) {
+    console.warn('[IssueService] Failed to get authenticated user:', e);
+  }
 
-  // Issues are created directly in the original repo (legacy behavior)
-  // If the repo is SAML-protected, the user's token must be authorized
+  // If the owner is the authenticated user, use it directly (it's their repo)
+  if (authenticatedUser && owner === authenticatedUser) {
+    console.log(`[IssueService] Using authenticated user's repository: ${owner}/${repo}`);
+    return { owner, repo, forked: false, hasIssues: true };
+  }
+
+  // If owner is different (org repo), ensure we use the user's fork
+  if (authenticatedUser && owner !== authenticatedUser) {
+    console.log(`[IssueService] Original repo is ${owner}/${repo}, checking for ${authenticatedUser}'s fork...`);
+    
+    try {
+      // Check if user's fork exists
+      const forkExists = await gh.repositoryExists(authenticatedUser, repo);
+      
+      if (forkExists) {
+        console.log(`[IssueService] Using existing fork: ${authenticatedUser}/${repo}`);
+        return { owner: authenticatedUser, repo, forked: true, hasIssues: true };
+      } else {
+        // Fork doesn't exist, create it
+        console.log(`[IssueService] Creating fork of ${owner}/${repo} for ${authenticatedUser}...`);
+        await gh.forkRepository(owner, repo);
+        console.log(`[IssueService] Fork created: ${authenticatedUser}/${repo}`);
+        return { owner: authenticatedUser, repo, forked: true, hasIssues: true };
+      }
+    } catch (e) {
+      console.error('[IssueService] Fork operation failed:', e);
+      // Fallback to org repo (may fail with 403 if no permission)
+      console.warn(`[IssueService] Falling back to original repo: ${owner}/${repo} (may fail if no permission)`);
+      return { owner, repo, forked: false, hasIssues: true };
+    }
+  }
+
+  // Fallback: use original repo (legacy behavior for unauthenticated or edge cases)
+  console.log(`[IssueService] Using original repository (fallback): ${owner}/${repo}`);
   return { owner, repo, forked: false, hasIssues: true };
 }
 
@@ -305,15 +347,14 @@ export function wireIssueButton() {
   }
 }
 
-// Auto-wire when report loads
-if (typeof document !== 'undefined') {
+// Auto-wire when report loads (SINGLE listener only - duplicate removed at line 706)
+if (typeof document !== 'undefined' && !(window as any).__IssueServiceWired) {
+  (window as any).__IssueServiceWired = true;
   document.addEventListener('template-report-rendered', () => wireIssueButton());
 }
 
 // Expose
 (window as any).TemplateDoctorIssueService = { wireIssueButton, createIssues };
-
-document.addEventListener('issue-service-ready', () => {});
 
 // ---------------- Legacy Compatibility Shim for existing tests -----------------
 // Re-implements a subset of legacy logic (labels + body + child issues) in TS.
@@ -464,6 +505,7 @@ async function processIssueCreation(github: any) {
       // Show confirmation to proceed
       const proceed = await new Promise<boolean>((resolve) => {
         const n = (window as any).NotificationSystem || (window as any).Notifications;
+        // Use notification system (required - no fallback to window.confirm)
         if (n?.confirm) {
           n.confirm(
             'Existing Issue Found',
@@ -475,12 +517,6 @@ async function processIssueCreation(github: any) {
               onCancel: () => resolve(false),
             },
           );
-        } else if (
-          window.confirm(
-            `Existing Template Doctor issue found: #${firstIssue.number}\n\nCreate a new issue anyway?`,
-          )
-        ) {
-          resolve(true);
         } else {
           resolve(false);
         }
@@ -699,14 +735,18 @@ function createGitHubIssue() {
       hide(b);
     }
   }
-  document.addEventListener('analysis-completed', () => {
-    (window as any).__LatestScanFresh = true;
-    update();
-  });
-  document.addEventListener('template-report-rendered', () => {
-    // render event from view of saved report; do not mark fresh
-    update();
-  });
+  // Use { once: false } to allow repeated events, but guard against multiple registrations
+  if (!(window as any).__IssueUpdateListenersAdded) {
+    (window as any).__IssueUpdateListenersAdded = true;
+    document.addEventListener('analysis-completed', () => {
+      (window as any).__LatestScanFresh = true;
+      update();
+    });
+    document.addEventListener('template-report-rendered', () => {
+      // render event from view of saved report; do not mark fresh
+      update();
+    });
+  }
   // Wrap analyzeRepo (when available) to mark fresh scans
   let attempts = 0;
   function tryWrap() {

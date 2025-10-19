@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { runAnalyzer } from "../analyzer-core/index.js";
+import { analysisStorage } from "../services/analysis-storage.js";
 
 export const analyzeRouter = Router();
 
@@ -111,17 +112,22 @@ export async function analyzeSingleRepository(
 
     // Extract user from Authorization header if present (for fork-first strategy)
     const authHeader = req.headers.authorization || "";
+    console.log(`[analyze] Authorization header present: ${!!authHeader}, length: ${authHeader.length}`);
     const userToken = authHeader.replace(/^Bearer\s+/i, "") || undefined;
+    console.log(`[analyze] User token extracted: ${!!userToken}, same as server token: ${userToken === token}`);
     let authenticatedUser: string | undefined;
 
-    if (userToken && userToken !== token) {
+    // Always try to get username from user token if provided
+    if (userToken) {
         try {
             const userInfo = await gh("/user", userToken);
             authenticatedUser = userInfo.login;
-            console.log(`Authenticated user: ${authenticatedUser}`);
+            console.log(`[analyze] ✅ Authenticated user: ${authenticatedUser}`);
         } catch (e: any) {
-            console.log(`Failed to get authenticated user: ${e?.message}`);
+            console.log(`[analyze] ❌ Failed to get authenticated user: ${e?.message}`);
         }
+    } else {
+        console.log(`[analyze] ⚠️  No user token provided - scannedBy will be undefined`);
     }
 
     let owner: string;
@@ -245,6 +251,28 @@ export async function analyzeSingleRepository(
             aiDeprecationCheckEnabled: aiDeprecationCheckEnabled !== false,
         });
         if (archiveOverride === true) result.archiveRequested = true;
+
+        // Save results to database
+        try {
+            await analysisStorage.saveAnalysis({
+                repoUrl,
+                ruleSet,
+                compliance: {
+                    percentage: result.compliance?.percentage || 0,
+                    issues: result.compliance?.issues || [],
+                    compliant: result.compliance?.compliant || [],
+                },
+                categories: result.compliance?.categories,
+                analysisResult: result,
+                archiveRequested: result.archiveRequested,
+                scannedBy: authenticatedUser ? [authenticatedUser] : undefined,
+            });
+            console.log(`[analyze] Saved analysis to database for ${repoUrl}${authenticatedUser ? ` by ${authenticatedUser}` : ''}`);
+        } catch (dbError: any) {
+            console.error(`[analyze] Database save failed: ${dbError?.message}`);
+            // Don't fail the request if database save fails
+        }
+
         return { status: 200, body: result };
     } catch (e: any) {
         const msg = e?.message || String(e);

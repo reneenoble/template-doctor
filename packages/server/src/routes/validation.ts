@@ -1,5 +1,11 @@
 import { Router, Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import { downloadValidationArtifact, parseAzdValidationResult, AzdValidationResult } from "../services/azd-validation.js";
+
+/**
+ * Interface for AZD validation results parsed from artifact
+ */
+// (Parser & artifact download logic moved to services/azd-validation.ts)
 
 const router = Router();
 
@@ -540,6 +546,35 @@ router.get(
                 }
             }
 
+            // NEW: Fetch and parse artifact if workflow completed
+            let azdValidation: AzdValidationResult | null = null;
+            if (data.status === 'completed') {
+                const artifactContent = await downloadValidationArtifact(
+                    owner,
+                    repo,
+                    runIdToCheck,
+                    token
+                );
+
+                if (artifactContent) {
+                    azdValidation = parseAzdValidationResult(artifactContent);
+                    console.log('validation-status parsed artifact', {
+                        requestId,
+                        overallStatus: azdValidation.overallStatus,
+                        azdUpSuccess: azdValidation.azdUpSuccess,
+                        azdDownSuccess: azdValidation.azdDownSuccess,
+                        psRuleErrors: azdValidation.psRuleErrors,
+                        psRuleWarnings: azdValidation.psRuleWarnings,
+                    });
+                } else {
+                    console.log('validation-status no artifact available yet', {
+                        requestId,
+                        workflowStatus: data.status,
+                        workflowConclusion: data.conclusion,
+                    });
+                }
+            }
+
             res.json({
                 status: data.status,
                 conclusion: data.conclusion,
@@ -569,6 +604,7 @@ router.get(
                         })),
                 })),
                 errorSummary,
+                azdValidation,
                 requestId,
             });
         } catch (err: any) {

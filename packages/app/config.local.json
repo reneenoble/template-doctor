@@ -5,9 +5,11 @@
     "redirectUri": "http://localhost:4000/callback.html"
   },
   "backend": {
-    "baseUrl": "http://localhost:7071",
+    "baseUrl": "http://localhost:3001",
     "functionKey": ""
   },
+  "apiBase": "http://localhost:3001",
+  "preferServerSideAnalysis": true,
   "defaultRuleSet": "dod",
   "requireAuthForResults": true,
   "autoSaveResults": false,

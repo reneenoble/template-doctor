@@ -1,5 +1,6 @@
 /* Batch scan with backend + cancel/resume support */
 import { ApiClient } from './api-client';
+import { sanitizeHtml, sanitizeAttribute, sanitizeGitHubUrl, containsXssAttempt } from '../shared/sanitize';
 
 interface BatchProgressEntry {
   id: string;
@@ -112,14 +113,50 @@ function wireUI() {
     btn.addEventListener('click', () => {
       const ta = document.getElementById('batch-urls') as HTMLTextAreaElement | null;
       if (!ta) return;
-      const repos = ta.value
+      
+      // Reset border
+      ta.style.border = '';
+      
+      const lines = ta.value
         .split(/\n|,/)
         .map((s) => s.trim())
         .filter(Boolean);
-      if (!repos.length) {
+      
+      if (!lines.length) {
+        ta.style.border = '2px solid #dc3545';
         showError('Batch Scan', 'Enter at least one repository URL');
         return;
       }
+      
+      // Check for XSS attempts first
+      const hasXss = lines.some(line => containsXssAttempt(line));
+      if (hasXss) {
+        ta.style.border = '2px solid #dc3545';
+        showError('Invalid Input', "Oops! That's not allowed!");
+        return;
+      }
+      
+      // Validate and sanitize GitHub URLs
+      const repos = lines
+        .map((url) => {
+          const sanitized = sanitizeGitHubUrl(url);
+          if (!sanitized) {
+            ta.style.border = '2px solid #dc3545';
+            showError('Invalid URL', `Invalid URL: ${sanitizeHtml(url)}`);
+            return null;
+          }
+          return sanitized;
+        })
+        .filter((url): url is string => url !== null);
+        
+      if (!repos.length) {
+        ta.style.border = '2px solid #dc3545';
+        showError('Batch Scan', 'No valid repository URLs found');
+        return;
+      }
+      
+      // Reset border on success
+      ta.style.border = '';
       startBatch(repos);
     });
   }
@@ -179,13 +216,29 @@ export async function startBatch(repos: string[]) {
       const existingUrls = existing.map((p) => p.url);
       const matching = repos.filter((u) => existingUrls.includes(u));
       if (matching.length) {
-        // Ask user about resuming
-        const shouldResume = confirm(
-          `Found ${matching.length} previously scanned repositories. Resume and skip successful scans?`,
-        );
-        if (shouldResume) {
-          resumeMode = true;
+        // Ask user about resuming using notification system
+        const n = notify();
+        if (n?.confirm) {
+          await new Promise<void>((resolve) => {
+            n.confirm(
+              'Resume Batch Scan',
+              `Found ${matching.length} previously scanned repositories. Resume and skip successful scans?`,
+              {
+                confirmLabel: 'Resume',
+                cancelLabel: 'Start Fresh',
+                onConfirm: () => {
+                  resumeMode = true;
+                  resolve();
+                },
+                onCancel: () => {
+                  clearProgress().finally(() => resolve());
+                },
+              }
+            );
+          });
         } else {
+          // Fallback if notification system not available
+          resumeMode = true;
           await clearProgress();
         }
       } else {
@@ -203,6 +256,10 @@ export async function startBatch(repos: string[]) {
     if ($(progressBarId)) ($(progressBarId) as HTMLElement).style.width = '0%';
     if ($(progressTextId))
       ($(progressTextId) as HTMLElement).textContent = `0/${repos.length} Completed`;
+
+    // Show batch results container
+    const batchResults = document.getElementById('batch-results');
+    if (batchResults) batchResults.classList.add('active');
 
     // Show cancel button
     const cancelBtn = $(batchCancelId) as HTMLButtonElement | null;
@@ -264,11 +321,13 @@ function createBatchItem(url: string, index: number, existing?: BatchProgressEnt
   }
 
   const repoName = url.includes('github.com/') ? url.split('github.com/')[1] : url;
+  const safeRepoName = sanitizeHtml(repoName);
+  const safeRepoNameAttr = sanitizeAttribute(repoName);
 
   item.className = className;
   item.innerHTML = `
     <div class="batch-item-header">
-      <div class="batch-item-title">${repoName}</div>
+      <div class="batch-item-title" title="${safeRepoNameAttr}">${safeRepoName}</div>
       <div class="batch-item-status">${status}</div>
     </div>
     <div class="batch-item-message">${message}</div>
@@ -308,7 +367,7 @@ async function processOneRepo(url: string, index: number, existing?: BatchProgre
     const analyzer = (window as any).TemplateAnalyzer;
     if (!analyzer) throw new Error('Analyzer unavailable');
 
-    const result = await analyzer.analyzeTemplate(url, 'azd');
+    const result = await analyzer.analyzeTemplate(url, 'dod');
 
     // Success
     item.className = 'batch-item success';
@@ -435,10 +494,13 @@ function displayResult(result: any) {
   if (errorSection) errorSection.style.display = 'none';
 
   const repoName = result.repoUrl?.split('github.com/')[1] || result.repoUrl || 'Repository';
+  const safeRepoName = sanitizeHtml(repoName);
+  const safeRepoUrl = sanitizeHtml(result.repoUrl || '');
+  
   const rnEl = document.getElementById('repo-name');
-  if (rnEl) rnEl.textContent = repoName;
+  if (rnEl) rnEl.textContent = safeRepoName;
   const ruEl = document.getElementById('repo-url');
-  if (ruEl) ruEl.textContent = result.repoUrl;
+  if (ruEl) ruEl.textContent = safeRepoUrl;
 
   try {
     const dash = (window as any).DashboardRenderer;

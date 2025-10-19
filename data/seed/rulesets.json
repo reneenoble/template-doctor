@@ -1,0 +1,179 @@
+[
+  {
+    "name": "dod",
+    "displayName": "DoD Best Practices",
+    "description": "Department of Defense best practices for Azure templates",
+    "rules": [
+      {
+        "id": "readme-exists",
+        "severity": "error",
+        "category": "documentation",
+        "enabled": true,
+        "description": "README.md file must exist in repository root"
+      },
+      {
+        "id": "readme-has-sections",
+        "severity": "error",
+        "category": "documentation",
+        "enabled": true,
+        "description": "README must contain Features, Getting Started, and Resources sections"
+      },
+      {
+        "id": "security-md-exists",
+        "severity": "error",
+        "category": "security",
+        "enabled": true,
+        "description": "SECURITY.md file must exist for security policy"
+      },
+      {
+        "id": "managed-identity-recommended",
+        "severity": "warning",
+        "category": "security",
+        "enabled": true,
+        "description": "Managed Identity should be used instead of connection strings"
+      },
+      {
+        "id": "no-secrets-in-code",
+        "severity": "error",
+        "category": "security",
+        "enabled": true,
+        "description": "No hardcoded secrets or credentials in source code"
+      },
+      {
+        "id": "azure-yaml-exists",
+        "severity": "error",
+        "category": "azure-developer-cli",
+        "enabled": true,
+        "description": "azure.yaml configuration file must exist"
+      },
+      {
+        "id": "azd-hooks-configured",
+        "severity": "warning",
+        "category": "azure-developer-cli",
+        "enabled": true,
+        "description": "AZD lifecycle hooks should be configured"
+      },
+      {
+        "id": "azd-env-example",
+        "severity": "info",
+        "category": "azure-developer-cli",
+        "enabled": true,
+        "description": ".env.example file should document required environment variables"
+      },
+      {
+        "id": "license-exists",
+        "severity": "warning",
+        "category": "licensing",
+        "enabled": true,
+        "description": "LICENSE file should exist"
+      },
+      {
+        "id": "gitignore-exists",
+        "severity": "warning",
+        "category": "repository",
+        "enabled": true,
+        "description": ".gitignore file should be configured"
+      },
+      {
+        "id": "docker-optimization",
+        "severity": "info",
+        "category": "containerization",
+        "enabled": true,
+        "description": "Dockerfile should use multi-stage builds for optimization"
+      },
+      {
+        "id": "bicep-best-practices",
+        "severity": "warning",
+        "category": "infrastructure",
+        "enabled": true,
+        "description": "Bicep files should follow Azure best practices"
+      },
+      {
+        "id": "test-coverage-adequate",
+        "severity": "warning",
+        "category": "testing",
+        "enabled": true,
+        "description": "Test coverage should be at least 80%"
+      }
+    ],
+    "version": "1.0.0",
+    "createdAt": { "$date": "2024-01-01T00:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+  },
+  {
+    "name": "partner",
+    "displayName": "Partner Best Practices",
+    "description": "Best practices for Azure partner templates",
+    "rules": [
+      {
+        "id": "readme-exists",
+        "severity": "error",
+        "category": "documentation",
+        "enabled": true,
+        "description": "README.md file must exist"
+      },
+      {
+        "id": "azure-yaml-exists",
+        "severity": "error",
+        "category": "azure-developer-cli",
+        "enabled": true,
+        "description": "azure.yaml configuration required"
+      },
+      {
+        "id": "managed-identity-required",
+        "severity": "error",
+        "category": "security",
+        "enabled": true,
+        "description": "Managed Identity must be used for all Azure resource authentication"
+      },
+      {
+        "id": "monitoring-configured",
+        "severity": "warning",
+        "category": "observability",
+        "enabled": true,
+        "description": "Application Insights or monitoring should be configured"
+      },
+      {
+        "id": "cicd-pipeline-exists",
+        "severity": "warning",
+        "category": "deployment",
+        "enabled": true,
+        "description": "CI/CD pipeline configuration should exist"
+      }
+    ],
+    "version": "1.0.0",
+    "createdAt": { "$date": "2024-01-01T00:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+  },
+  {
+    "name": "minimal",
+    "displayName": "Minimal Requirements",
+    "description": "Minimal validation rules for basic templates",
+    "rules": [
+      {
+        "id": "readme-exists",
+        "severity": "error",
+        "category": "documentation",
+        "enabled": true,
+        "description": "README.md file must exist"
+      },
+      {
+        "id": "azure-yaml-exists",
+        "severity": "error",
+        "category": "azure-developer-cli",
+        "enabled": true,
+        "description": "azure.yaml configuration required"
+      },
+      {
+        "id": "no-secrets-in-code",
+        "severity": "error",
+        "category": "security",
+        "enabled": true,
+        "description": "No hardcoded secrets allowed"
+      }
+    ],
+    "version": "1.0.0",
+    "createdAt": { "$date": "2024-01-01T00:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-09T00:00:00.000Z" }
+  }
+]

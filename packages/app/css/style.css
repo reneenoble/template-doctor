@@ -1080,3 +1080,25 @@ main {
     gap: 12px;
   }
 }
+
+/* Search and Input Validation Styles */
+.no-results {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.no-results.error-message {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+/* Input error state */
+input.error,
+textarea.error,
+input[style*="border: 2px solid #dc3545"],
+textarea[style*="border: 2px solid #dc3545"] {
+  border-color: #dc3545 !important;
+  background-color: #fff5f5 !important;
+}
+

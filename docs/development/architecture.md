@@ -9,7 +9,7 @@ Template Doctor has migrated from Azure Functions to a containerized Express ser
 - **Express Backend** (`packages/server`): TypeScript-based REST API running on port 3001
 - **Static Frontend** (`packages/app`): Vite-built SPA running on port 3000 (preview) or 4000 (dev)
 - **Docker**: Multi-container (docker-compose) and single-container (Dockerfile.combined) deployment options
-- **Legacy Azure Functions** (`packages/api`): Maintained in a separate branch for reference
+- **Legacy Azure Functions**: Preserved in `dev/api-legacy-azure-functions` branch for historical reference
 
 ## Template Validation Flow
 
@@ -316,7 +316,7 @@ The following Azure Functions remain to be migrated to Express endpoints:
 
 ### Legacy Branch
 
-Azure Functions code is maintained in the `legacy/azure-functions` branch for reference and potential rollback scenarios.
+Azure Functions code is maintained in the `dev/api-legacy-azure-functions` branch for historical reference.
 
 ```
 

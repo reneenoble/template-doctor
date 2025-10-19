@@ -48,13 +48,9 @@ async function loadEnvironmentVariables(): Promise<EnvironmentVariablesShape> {
   try {
     const isLocalhost = window.location.hostname === 'localhost';
 
-    // Simplified for local dev: skip server endpoint, rely on config.json
-    if (isLocalhost) {
-      console.log(
-        '[config-loader] localhost - skipping client-settings endpoint, using config.json only',
-      );
-      return {} as EnvironmentVariablesShape;
-    }
+    // REMOVED: Don't skip server endpoint on localhost anymore
+    // The Docker/Express setup serves both frontend and backend on same port
+    // We need to call /api/v4/client-settings to get GITHUB_CLIENT_ID
 
     // Detect if the caller explicitly requested a Functions port (query param or global var).
     // We keep a separate flag so the mere DEFAULT value (7071) does not bias ordering when running
@@ -154,18 +150,31 @@ async function loadConfigJson(): Promise<ConfigJsonShape> {
         console.debug('[config-loader] config.json candidate not ok', url, resp.status);
         continue;
       }
+      
+      // Check content type to avoid parsing HTML as JSON
+      const contentType = resp.headers.get('content-type') || '';
       const txt = await resp.text();
+      
+      // Skip if we got HTML (404 page) instead of JSON
+      if (contentType.includes('text/html') || txt.trim().startsWith('<!doctype') || txt.trim().startsWith('<html')) {
+        console.debug('[config-loader] Skipping HTML response for', url, '(file likely does not exist)');
+        continue;
+      }
+      
       try {
         const data = JSON.parse(txt);
         console.log('[config-loader] Loaded config.json via', url, 'keys:', Object.keys(data));
         return data as ConfigJsonShape;
       } catch (e) {
-        console.warn(
-          '[config-loader] JSON parse failed for',
-          url,
-          'first 100 chars:',
-          txt.slice(0, 100),
-        );
+        // Only warn about unexpected JSON parse failures (not HTML 404 pages)
+        if (!txt.includes('<!doctype') && !txt.includes('<html>')) {
+          console.warn(
+            '[config-loader] JSON parse failed for',
+            url,
+            'first 100 chars:',
+            txt.slice(0, 100),
+          );
+        }
       }
     } catch (err) {
       console.debug('[config-loader] fetch error for candidate', url, err?.message || err);

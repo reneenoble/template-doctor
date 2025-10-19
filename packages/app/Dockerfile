@@ -29,11 +29,11 @@ COPY --from=builder /app/config.json ./dist/config.json
 COPY --from=builder /app/results ./dist/results
 
 # Expose port
-EXPOSE 4000
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:4000/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
 
 # Serve the static files
-CMD ["serve", "-s", "dist", "-l", "4000"]
+CMD ["serve", "-s", "dist", "-l", "3000"]

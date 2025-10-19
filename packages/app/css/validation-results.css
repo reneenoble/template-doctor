@@ -1,0 +1,114 @@
+/**
+ * AZD Validation Results Styles
+ * 
+ * Styles for displaying Azure Developer CLI (azd) validation results
+ * from artifact parsing with three-state status (success/warning/failure).
+ */
+
+.validation-result {
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 2px solid;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.validation-success {
+    background-color: rgba(16, 124, 16, 0.15);
+    border-color: #107c10;
+    color: #107c10;
+}
+
+.validation-warning {
+    background-color: rgba(255, 185, 0, 0.15);
+    border-color: #ffb900;
+    color: #4e3a16;
+}
+
+.validation-failure {
+    background-color: rgba(216, 59, 1, 0.15);
+    border-color: #d83b01;
+    color: #d83b01;
+}
+
+.validation-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.validation-icon {
+    font-size: 1.5em;
+}
+
+.validation-details {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #f3f2f1;
+    color: #000;
+    border-radius: 4px;
+}
+
+.validation-step {
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.validation-step strong {
+    min-width: 150px;
+}
+
+.validation-logs-btn {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.validation-logs-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+}
+
+.validation-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+.validation-badge-success {
+    background-color: #00ff00;
+    color: #000;
+}
+
+.validation-badge-warning {
+    background-color: #ffff00;
+    color: #000;
+}
+
+.validation-badge-failure {
+    background-color: #ff0000;
+    color: #fff;
+}
+
+/* Validation result in template tiles */
+.template-tile .validation-badge {
+    margin-top: 8px;
+    display: block;
+}

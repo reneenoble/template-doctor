@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Template Doctor - Leaderboards</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -438,6 +439,70 @@
                 padding: 30px 20px;
             }
         }
+
+        /* Toggle Switch Styles */
+        .data-source-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .toggle-label.active {
+            color: #1e293b;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            background: #cbd5e1;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #3b82f6;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #78350f;
+            padding: 12px 0;
+            text-align: center;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .demo-banner.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -454,6 +519,22 @@
             </nav>
         </div>
     </header>
+
+    <!-- Data Source Toggle -->
+    <div class="data-source-toggle">
+        <span class="toggle-label" id="demo-label">Demo Data</span>
+        <div class="toggle-switch" id="data-toggle" onclick="toggleDataSource()">
+            <div class="toggle-slider"></div>
+        </div>
+        <span class="toggle-label active" id="live-label">Live Database</span>
+    </div>
+
+    <!-- Demo Data Banner -->
+    <div class="demo-banner hidden" id="demo-banner">
+        <i class="fas fa-info-circle"></i>
+        <strong>Demo Mode:</strong> Showing sample data for all sections.
+        <span style="margin-left: 10px; font-size: 0.9em; opacity: 0.9;">Toggle to "Live Database" to see real data from your analyzed templates (3 sections available: Most Issues, Prevalent Issues, Active Templates).</span>
+    </div>
 
     <div class="container">
         <div class="dashboard-title">
@@ -597,7 +678,7 @@
     <script>
         // Check authentication - redirect to home if not logged in
         (function checkAuth() {
-            const token = localStorage.getItem('github_access_token');
+            const token = localStorage.getItem('gh_access_token');
             if (!token) {
                 console.log('Not authenticated, redirecting to home page');
                 window.location.href = '/';
@@ -605,150 +686,110 @@
             }
         })();
 
-        // Fake data
-        const data = {
-            topAnalyzersOverall: [
-                { name: "Hailey Victory", analyses: 847, collections: 23, avatar: "🚀" },
-                { name: "Marcus Chen", analyses: 723, collections: 19, avatar: "🔬" },
-                { name: "Sarah Johnson", analyses: 651, collections: 17, avatar: "⚡" },
-                { name: "Alex Rodriguez", analyses: 598, collections: 16, avatar: "🎯" },
-                { name: "Emma Wilson", analyses: 542, collections: 14, avatar: "💡" }
-            ],
+        // Data source state
+        let useDemoData = localStorage.getItem('leaderboards-use-demo') === 'true';
+
+        // Toggle data source
+        function toggleDataSource() {
+            useDemoData = !useDemoData;
+            localStorage.setItem('leaderboards-use-demo', useDemoData);
             
-            topAnalyzersAigallery: [
-                { name: "Kristen Womack", analyses: 234, score: 98.5, avatar: "🌟" },
-                { name: "David Kim", analyses: 187, score: 94.2, avatar: "🔍" },
-                { name: "Lisa Brown", analyses: 156, score: 91.8, avatar: "📈" },
-                { name: "Mike Taylor", analyses: 143, score: 89.4, avatar: "🎪" },
-                { name: "Anna Garcia", analyses: 128, score: 87.1, avatar: "🎨" }
-            ],
+            const toggle = document.getElementById('data-toggle');
+            const banner = document.getElementById('demo-banner');
+            const demoLabel = document.getElementById('demo-label');
+            const liveLabel = document.getElementById('live-label');
             
-            successfulBuilders: [
-                { name: "Pamela Fox", templates: 42, successRate: 96.8, totalDownloads: 125000, avatar: "🏗️" },
-                { name: "Wassim Chegham", templates: 38, successRate: 94.2, totalDownloads: 98000, avatar: "⚒️" },
-                { name: "John Doe", templates: 31, successRate: 91.5, totalDownloads: 76000, avatar: "🔨" },
-                { name: "Jane Smith", templates: 28, successRate: 89.7, totalDownloads: 64000, avatar: "🛠️" }
-            ],
-            
-            templatesWithIssues: [
-                { name: "azure-search-openai-demo", author: "Azure-Samples", issues: 47, severity: "high" },
-                { name: "serverless-chat-langchainjs", author: "Azure-Samples", issues: 43, severity: "high" },
-                { name: "contoso-chat", author: "Azure-Samples", issues: 39, severity: "medium" },
-                { name: "azure-search-openai-demo-csharp", author: "Azure-Samples", issues: 36, severity: "medium" },
-                { name: "rag-postgres-openai-python", author: "Azure-Samples", issues: 34, severity: "medium" },
-                { name: "openai-chat-app-quickstart", author: "Azure-Samples", issues: 31, severity: "low" },
-                { name: "azure-search-openai-demo-java", author: "Azure-Samples", issues: 29, severity: "low" },
-                { name: "llama-index-python", author: "Azure-Samples", issues: 27, severity: "low" },
-                { name: "azure-openai-chat-frontend", author: "Azure-Samples", issues: 25, severity: "low" },
-                { name: "azure-openai-assistant-javascript", author: "Azure-Samples", issues: 22, severity: "low" }
-            ],
-            
-            prevalentIssues: [
-                { category: "Security", issue: "Hardcoded API keys/secrets", count: 189 },
-                { category: "Documentation", issue: "Missing or incomplete README", count: 167 },
-                { category: "Dependencies", issue: "Outdated or vulnerable packages", count: 142 },
-                { category: "Configuration", issue: "Missing environment variables", count: 124 },
-                { category: "Deployment", issue: "Missing azd configuration", count: 98 },
-                { category: "Testing", issue: "No test coverage or CI/CD", count: 87 },
-                { category: "Performance", issue: "Unoptimized database queries", count: 73 },
-                { category: "Accessibility", issue: "Missing ARIA labels/alt text", count: 56 }
-            ],
-            
-            activeTemplates: [
-                { name: "azure-search-openai-javascript", author: "Azure-Samples", activity: 245, stars: 1200 },
-                { name: "summarization-openai-python-promptflow", author: "Azure-Samples", activity: 198, stars: 890 },
-                { name: "llama-index-javascript", author: "Azure-Samples", activity: 176, stars: 2300 },
-                { name: "phoenix-on-azure", author: "Arize-ai", activity: 165, stars: 1800 },
-                { name: "openai-chat-vision-quickstart", author: "Azure-Samples", activity: 154, stars: 980 },
-                { name: "agent-openai-java-banking-assistant", author: "Azure-Samples", activity: 143, stars: 1500 },
-                { name: "ai-chat-quickstart-csharp", author: "Azure-Samples", activity: 132, stars: 670 },
-                { name: "azure-openai-keyless-js", author: "Azure-Samples", activity: 121, stars: 1100 },
-                { name: "azure-openai-keyless-python", author: "Azure-Samples", activity: 110, stars: 750 },
-                { name: "cosmosdb-nosql-copilot", author: "AzureCosmosDB", activity: 98, stars: 1900 }
-            ],
-            
-            healthyPython: [
-                { name: "rag-postgres-openai-python", author: "Azure-Samples", health: 98, downloads: 45000 },
-                { name: "azure-openai-keyless-python", author: "Azure-Samples", health: 96, downloads: 38000 },
-                { name: "llama-index-python", author: "Azure-Samples", health: 94, downloads: 32000 },
-                { name: "azureai-basic-python", author: "Azure-Samples", health: 92, downloads: 28000 },
-                { name: "rag-neon-postgres-openai-azure-python", author: "neondatabase-labs", health: 90, downloads: 25000 }
-            ],
-            
-            healthyJS: [
-                { name: "azure-search-openai-javascript", author: "Azure-Samples", health: 97, downloads: 52000 },
-                { name: "azure-openai-assistant-javascript", author: "Azure-Samples", health: 95, downloads: 48000 },
-                { name: "llama-index-javascript", author: "Azure-Samples", health: 93, downloads: 41000 },
-                { name: "azure-openai-keyless-js", author: "Azure-Samples", health: 91, downloads: 35000 },
-                { name: "openai-secure-ui-js", author: "Azure-Samples", health: 89, downloads: 30000 }
-            ],
-            
-            successfulModels: [
-                { model: "GPT-4o", success: 96.8, templates: 189 },
-                { model: "Claude-3.5-Sonnet", success: 94.2, templates: 156 },
-                { model: "GPT-4-Turbo", success: 92.1, templates: 143 },
-                { model: "Claude-3-Haiku", success: 89.7, templates: 124 },
-                { model: "Gemini-1.5-Pro", success: 88.5, templates: 108 },
-                { model: "GPT-3.5-Turbo", success: 85.3, templates: 98 },
-                { model: "Llama-3.1-405B", success: 83.9, templates: 87 },
-                { model: "Phi-3.5-Mini", success: 81.4, templates: 76 },
-                { model: "Mistral-Large", success: 79.2, templates: 65 }
-            ],
-            
-            modelLanguageSuccess: [
-                { model: "GPT-4o", language: "Python", success: 97.5, templates: 89 },
-                { model: "GPT-4o", language: "JavaScript", success: 94.8, templates: 76 },
-                { model: "Claude-3.5-Sonnet", language: "Python", success: 96.2, templates: 83 },
-                { model: "Claude-3.5-Sonnet", language: "JavaScript", success: 92.7, templates: 67 },
-                { model: "GPT-4-Turbo", language: "Python", success: 94.1, templates: 71 },
-                { model: "GPT-4-Turbo", language: "JavaScript", success: 90.4, templates: 58 },
-                { model: "Gemini-1.5-Pro", language: "Python", success: 91.8, templates: 54 },
-                { model: "Gemini-1.5-Pro", language: "JavaScript", success: 87.3, templates: 43 },
-                { model: "Llama-3.1-405B", language: "Python", success: 89.6, templates: 48 },
-                { model: "Llama-3.1-405B", language: "JavaScript", success: 84.2, templates: 35 },
-                { model: "Phi-3.5-Mini", language: "Python", success: 86.7, templates: 41 },
-                { model: "Phi-3.5-Mini", language: "JavaScript", success: 81.9, templates: 32 }
-            ],
-            
-            successfulAzdDeployments: [
-                { name: "contoso-chat", author: "Azure-Samples", service: "ACA", deployments: 1247, successRate: 98.2 },
-                { name: "azure-search-openai-demo", author: "Azure-Samples", service: "ACA", deployments: 1156, successRate: 96.8 },
-                { name: "rag-postgres-openai-python", author: "Azure-Samples", service: "ACA", deployments: 934, successRate: 95.4 },
-                { name: "java-on-aca", author: "Azure-Samples", service: "AKS", deployments: 823, successRate: 94.1 },
-                { name: "azure-functions-openai-aisearch-node", author: "Azure-Samples", service: "AF", deployments: 756, successRate: 92.7 }
-            ],
-            
-            msftTechUsage: [
-                { tech: "Playwright", usage: 78, color: "#2e8b57", icon: "🎭" },
-                { tech: "TypeScript", usage: 59, color: "#3178c6", icon: "📘" },
-                { tech: "Semantic Kernel", usage: 45, color: "#9b59b6", icon: "🧠" },
-                { tech: "Azure AI Studio", usage: 38, color: "#0078d4", icon: "🤖" },
-                { tech: "TypeSpec", usage: 15, color: "#e67e22", icon: "📝" },
-                { tech: "ONNX Runtime", usage: 12, color: "#27ae60", icon: "⚡" }
-            ],
-            
-            globalStats: {
-                templatesCreatedWithMCP: 200,
-                totalInstallsAcrossMicrosoft: 18,
-                totalTemplatesAnalyzed: 5000
+            if (useDemoData) {
+                toggle.classList.remove('active');
+                banner.classList.remove('hidden');
+                demoLabel.classList.add('active');
+                liveLabel.classList.remove('active');
+            } else {
+                toggle.classList.add('active');
+                banner.classList.add('hidden');
+                demoLabel.classList.remove('active');
+                liveLabel.classList.add('active');
             }
-        };
+            
+            // Reload data
+            loadLeaderboards();
+        }
+
+        // Initialize toggle state
+        (function initToggle() {
+            const toggle = document.getElementById('data-toggle');
+            const banner = document.getElementById('demo-banner');
+            const demoLabel = document.getElementById('demo-label');
+            const liveLabel = document.getElementById('live-label');
+            
+            if (useDemoData) {
+                toggle.classList.remove('active');
+                banner.classList.remove('hidden');
+                demoLabel.classList.add('active');
+                liveLabel.classList.remove('active');
+            } else {
+                toggle.classList.add('active');
+                banner.classList.add('hidden');
+                demoLabel.classList.remove('active');
+                liveLabel.classList.add('active');
+            }
+        })();
+
+        // Demo data (will be loaded from JSON)
+        let demoData = null;
+        
+        // Load demo data from JSON file
+        async function loadDemoData() {
+            try {
+                const response = await fetch('/data/leaderboards-demo.json');
+                if (!response.ok) {
+                    console.error('Failed to load demo data');
+                    return null;
+                }
+                demoData = await response.json();
+                console.log('📊 Demo data loaded from JSON');
+                return demoData;
+            } catch (error) {
+                console.error('Error loading demo data:', error);
+                return null;
+            }
+        }
+
+        // Helper to show placeholder when no data
+        function showPlaceholder(containerId, message = 'No data available yet. Run analysis on templates to see live data.') {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 40px 20px; text-align: center; color: #64748b;">
+                        <i class="fas fa-database" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></i>
+                        <p style="margin: 0; font-size: 14px;">${message}</p>
+                    </div>
+                `;
+            }
+        }
 
         // Render functions
         function renderLeaderboard(containerId, items, scoreKey, detailsKey) {
             const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             container.innerHTML = items.map((item, index) => {
                 const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
+                // Safely handle undefined scores
+                const scoreValue = item[scoreKey] !== undefined && item[scoreKey] !== null ? item[scoreKey] : 0;
+                const detailsValue = item[detailsKey] !== undefined ? item[detailsKey] : '';
                 return `
                     <div class="leaderboard-item">
                         <div class="leaderboard-rank">
                             <div class="rank-number ${rankClass}">${index + 1}</div>
                             <div class="user-info">
-                                <div class="user-name">${item.avatar} ${item.name}</div>
-                                <div class="user-details">${item[detailsKey] || ''}</div>
+                                <div class="user-name">${item.avatar || ''} ${item.name || 'Unknown'}</div>
+                                <div class="user-details">${detailsValue}</div>
                             </div>
                         </div>
-                        <div class="score">${item[scoreKey]}</div>
+                        <div class="score">${scoreValue}</div>
                     </div>
                 `;
             }).join('');
@@ -756,6 +797,10 @@
 
         function renderIssuesList(containerId, items) {
             const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             container.innerHTML = items.map((item, index) => `
                 <div class="issue-item">
                     <div>
@@ -772,6 +817,10 @@
 
         function renderTemplatesList(containerId, items, showHealth = false) {
             const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             container.innerHTML = items.map((item, index) => {
                 const healthClass = item.health >= 90 ? 'health-high' : item.health >= 70 ? 'health-medium' : 'health-low';
                 return `
@@ -797,6 +846,10 @@
 
         function renderAzdDeploymentsList(containerId, items) {
             const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             container.innerHTML = items.map((item, index) => {
                 const serviceColors = {
                     'ACA': { bg: '#e0f2fe', color: '#0277bd' },
@@ -825,6 +878,10 @@
 
         function renderMsftTechUsage(containerId, items) {
             const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             container.innerHTML = items.map((item, index) => {
                 return `
                     <div class="tech-usage-item">
@@ -845,6 +902,10 @@
 
         // D3.js Charts
         function createBarChart(containerId, data, xKey, yKey, color = '#3b82f6') {
+            if (!data || data.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             const container = d3.select(`#${containerId}`);
             container.selectAll("*").remove();
 
@@ -896,6 +957,10 @@
         }
 
         function createPieChart(containerId, data, categoryKey, valueKey) {
+            if (!data || data.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             const container = d3.select(`#${containerId}`);
             container.selectAll("*").remove();
 
@@ -981,6 +1046,10 @@
         }
 
         function createHeatmap(containerId, data) {
+            if (!data || data.length === 0) {
+                showPlaceholder(containerId);
+                return;
+            }
             const container = d3.select(`#${containerId}`);
             container.selectAll("*").remove();
 
@@ -1064,35 +1133,166 @@
             }, 16);
         }
 
-        // Initialize all charts and lists
-        document.addEventListener('DOMContentLoaded', function() {
-            // Leaderboards
-            renderLeaderboard('top-analyzers-overall', data.topAnalyzersOverall, 'analyses', 'collections');
-            renderLeaderboard('top-analyzers-aigallery', data.topAnalyzersAigallery, 'analyses', 'score');
-            renderLeaderboard('successful-builders', data.successfulBuilders, 'templates', 'successRate');
+        // Load leaderboards data (demo or live)
+        async function loadLeaderboards() {
+            let leaderboardData;
+            
+            if (useDemoData) {
+                // Load demo data from JSON file
+                console.log('📊 Loading demo data from JSON...');
+                leaderboardData = await loadDemoData();
+                if (!leaderboardData) {
+                    console.error('Failed to load demo data');
+                    return;
+                }
+            } else {
+                // Load live data from database API
+                console.log('🔴 Loading live data from database...');
+                
+                // Start with empty structure
+                leaderboardData = {
+                    topAnalyzersOverall: [],
+                    topAnalyzersAigallery: [],
+                    successfulBuilders: [],
+                    templatesWithIssues: [],
+                    prevalentIssues: [],
+                    activeTemplates: [],
+                    healthyPython: [],
+                    healthyJS: [],
+                    successfulModels: [],
+                    modelLanguageSuccess: [],
+                    successfulAzdDeployments: [],
+                    msftTechUsage: [],
+                    globalStats: {
+                        totalTemplatesAnalyzed: 0,
+                        templatesCreatedWithMCP: 0,
+                        totalInstallsAcrossMicrosoft: 0
+                    }
+                };
+                
+                try {
+                    // Fetch the sections that ARE implemented in the API
+                    const [mostIssues, prevalentIssues, activeTemplates, globalStats] = await Promise.all([
+                        fetch('/api/v4/leaderboards/most-issues?limit=10').then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/prevalent-issues?limit=8').then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/active-templates?limit=10').then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/global/stats').then(r => r.ok ? r.json() : null)
+                    ]);
+                    
+                    // Update with real data where available
+                    if (mostIssues?.data && mostIssues.data.length > 0) {
+                        leaderboardData.templatesWithIssues = mostIssues.data;
+                        console.log('✅ Loaded real data: most-issues (' + mostIssues.data.length + ' items)');
+                    } else {
+                        console.log('⚠️ No data available: most-issues');
+                    }
+                    
+                    if (prevalentIssues?.data && prevalentIssues.data.length > 0) {
+                        leaderboardData.prevalentIssues = prevalentIssues.data;
+                        console.log('✅ Loaded real data: prevalent-issues (' + prevalentIssues.data.length + ' items)');
+                    } else {
+                        console.log('⚠️ No data available: prevalent-issues');
+                    }
+                    
+                    if (activeTemplates?.data && activeTemplates.data.length > 0) {
+                        leaderboardData.activeTemplates = activeTemplates.data;
+                        console.log('✅ Loaded real data: active-templates (' + activeTemplates.data.length + ' items)');
+                    } else {
+                        console.log('⚠️ No data available: active-templates');
+                    }
+                    
+                    if (globalStats) {
+                        leaderboardData.globalStats = {
+                            totalTemplatesAnalyzed: globalStats.totalTemplatesAnalyzed || 0,
+                            templatesCreatedWithMCP: globalStats.templatesCreatedWithMCP || 0,
+                            totalInstallsAcrossMicrosoft: globalStats.totalInstalls || 0
+                        };
+                        console.log('✅ Loaded global stats:', leaderboardData.globalStats);
+                    }
+                    
+                    console.log('ℹ️ Not yet implemented (will show placeholders): top-analyzers, successful-builders, healthiest-templates, models, azd-deployments, tech-usage');
+                    
+                } catch (error) {
+                    console.error('❌ Error loading live data:', error);
+                }
+            }
+            
+            // Clear existing content
+            document.querySelectorAll('.chart-container > div[id]').forEach(el => {
+                el.innerHTML = '';
+            });
+            
+            // Add badges to indicate data source
+            function addDataSourceBadge(containerId, isRealData) {
+                const container = document.getElementById(containerId)?.parentElement;
+                if (!container) return;
+                
+                // Remove existing badge
+                const existingBadge = container.querySelector('.data-source-badge');
+                if (existingBadge) existingBadge.remove();
+                
+                if (!useDemoData && isRealData) {
+                    const badge = document.createElement('span');
+                    badge.className = 'data-source-badge';
+                    badge.innerHTML = '<i class="fas fa-database"></i> Live';
+                    badge.style.cssText = 'display: inline-block; margin-left: 8px; padding: 3px 8px; background: #10b981; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;';
+                    const title = container.querySelector('.chart-title');
+                    if (title) title.appendChild(badge);
+                }
+            }
+            
+            // Leaderboards (all demo for now - Phase 2)
+            renderLeaderboard('top-analyzers-overall', leaderboardData.topAnalyzersOverall, 'analyses', 'collections');
+            renderLeaderboard('top-analyzers-aigallery', leaderboardData.topAnalyzersAigallery, 'analyses', 'score');
+            renderLeaderboard('successful-builders', leaderboardData.successfulBuilders, 'templates', 'successRate');
 
             // Issue lists
-            renderIssuesList('most-issues', data.templatesWithIssues);
+            renderIssuesList('most-issues', leaderboardData.templatesWithIssues);
+            addDataSourceBadge('most-issues', !useDemoData);
 
             // Template lists
-            renderTemplatesList('active-templates', data.activeTemplates);
-            renderTemplatesList('healthy-python', data.healthyPython, true);
-            renderTemplatesList('healthy-js', data.healthyJS, true);
-            renderAzdDeploymentsList('successful-azd-deployments', data.successfulAzdDeployments);
-            renderMsftTechUsage('msft-tech-usage', data.msftTechUsage);
+            renderTemplatesList('active-templates', leaderboardData.activeTemplates);
+            addDataSourceBadge('active-templates', !useDemoData);
+            
+            renderTemplatesList('healthy-python', leaderboardData.healthyPython, true);
+            renderTemplatesList('healthy-js', leaderboardData.healthyJS, true);
+            renderAzdDeploymentsList('successful-azd-deployments', leaderboardData.successfulAzdDeployments);
+            renderMsftTechUsage('msft-tech-usage', leaderboardData.msftTechUsage);
 
             // D3 Charts
-            createPieChart('prevalent-issues', data.prevalentIssues, 'category', 'count');
-            createBarChart('successful-models', data.successfulModels, 'model', 'success', '#10b981');
-            createHeatmap('model-language-success', data.modelLanguageSuccess);
+            createPieChart('prevalent-issues', leaderboardData.prevalentIssues, 'category', 'count');
+            addDataSourceBadge('prevalent-issues', !useDemoData);
+            
+            createBarChart('successful-models', leaderboardData.successfulModels, 'model', 'success', '#10b981');
+            createHeatmap('model-language-success', leaderboardData.modelLanguageSuccess);
 
             // Animate big statistics with delay for visual impact
             setTimeout(() => {
-                animateNumber('templates-mcp', data.globalStats.templatesCreatedWithMCP, 2500);
-                animateNumber('total-installs', data.globalStats.totalInstallsAcrossMicrosoft, 3000);
-                animateNumber('templates-analyzed', data.globalStats.totalTemplatesAnalyzed, 2000);
+                animateNumber('templates-mcp', leaderboardData.globalStats.templatesCreatedWithMCP, 2500);
+                animateNumber('total-installs', leaderboardData.globalStats.totalInstallsAcrossMicrosoft, 3000);
+                animateNumber('templates-analyzed', leaderboardData.globalStats.totalTemplatesAnalyzed, 2000);
             }, 500);
+        }
+
+        // Initialize all charts and lists
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLeaderboards();
         });
     </script>
+
+    <!-- Footer -->
+    <footer class="site-footer" style="background: #1e293b; color: #cbd5e1; padding: 30px 0; margin-top: 60px;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="margin-bottom: 10px;">©2025 - CoreAI Microsoft</div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <a href="https://aka.ms/ai-gallery/submit" target="_blank" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="fas fa-plus-circle"></i> Submit new template to gallery
+                </a>
+                <a href="https://github.com/Azure-Samples/azd-template-artifacts" target="_blank" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="fas fa-check-square"></i> Definition of Done
+                </a>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

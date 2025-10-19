@@ -13,10 +13,9 @@ Template Doctor analyzes and validates sample templates, with a focus on Azure D
 - **packages/analyzer-core**: Core analyzer functionality (shared)
 - **Docker**: Containerized deployment (multi-container and single-container options)
 
-### Architecture (Legacy - Separate Branch)
+### Legacy Azure Functions (Archived)
 
-- **packages/api**: Azure Functions (maintained in `legacy/azure-functions` branch)
-- **packages/parity-tests**: Legacy test suite
+Azure Functions code has been removed from the main branch and archived in `dev/api-legacy-azure-functions` for historical reference.
 
 ## Development Environment Setup
 
@@ -52,12 +51,12 @@ Template Doctor analyzes and validates sample templates, with a focus on Azure D
 4. Start with Docker Compose:
 
     ```bash
-    docker-compose up
+    docker-compose --profile combined up
     ```
 
 5. Access the application:
     - Frontend: http://localhost:3000
-    - Backend API: http://localhost:3001
+    - Backend API: http://localhost:3001 (same as frontend in combined mode)
 
 ### Manual Development (Two-Terminal Approach)
 
@@ -92,20 +91,64 @@ If you prefer running services without Docker:
 
 ### Port Allocation
 
-| Service                  | Development | Preview | Docker | Legacy (Functions) |
-| ------------------------ | ----------- | ------- | ------ | ------------------ |
-| Vite Dev Server          | 4000        | -       | -      | 4000               |
-| Vite Preview             | -           | 3000    | 3000   | -                  |
-| Express Backend          | 3001        | 3001    | 3001   | -                  |
-| Azure Functions (Legacy) | -           | -       | -      | 7071               |
+| Service                  | Development | Preview/Docker | Production | Legacy (Functions) |
+| ------------------------ | ----------- | -------------- | ---------- | ------------------ |
+| **Frontend + Backend**   | 3000        | 3000           | 3000       | -                  |
+| Express Backend (legacy) | 3001        | 3001           | -          | -                  |
+| Vite Dev Server (legacy) | 4000        | -              | -          | 4000               |
+| Azure Functions (Legacy) | -           | -              | -          | 7071               |
+
+**IMPORTANT**: For OAuth to work correctly, both the frontend and backend MUST run on the same port (3000) that matches your GitHub OAuth app's callback URL configuration. The combined Docker image serves both frontend and backend on port 3000.
 
 ### Critical Local Development Requirements
 
-- **Docker Compose (Recommended)**: Single command starts all services with proper networking
-- **Manual Mode**: Two separate terminals required (Express on 3001, Vite on 4000)
-- **Express Backend MUST be running** before using OAuth login or analysis features
+- **OAuth Port Requirement**: Both frontend and backend MUST run on the same port (3000) that matches your GitHub OAuth app's callback URL
+- **Docker Compose (Recommended)**: Single command starts all services with proper networking on port 3000
+- **Combined Docker Image**: Serves both frontend and backend on port 3000 for OAuth compatibility
 - **Hard refresh required** (Cmd+Shift+R / Ctrl+Shift+R) after any config changes
-- **Port conflicts**: If you see EADDRINUSE errors, kill processes: `lsof -ti :3000 | xargs kill -9` and `lsof -ti :3001 | xargs kill -9` and `lsof -ti :4000 | xargs kill -9`
+- **Port conflicts**: If you see EADDRINUSE errors, kill processes: `lsof -ti :3000 | xargs kill -9`
+
+## Database Architecture
+
+**CRITICAL: Local vs Production Database Separation**
+
+### Local Development Database
+
+- **Database**: MongoDB running at `localhost:27017`
+- **Database Name**: `template-doctor` (with hyphen)
+- **Management Tool**: MongoDB Compass
+- **Docker Setup**: `docker-compose --profile combined up` starts local MongoDB container automatically
+- **Connection**: Docker container connects to `mongodb://mongodb:27017/template-doctor`
+- **Data**: Managed locally, separate from production
+
+### Production Database
+
+- **Database**: Azure Cosmos DB (MongoDB API)
+- **Database Name**: `template-doctor` (with hyphen)
+- **Environment**: Azure Container Apps
+- **Connection**: Configured via Azure Container App environment variables
+- **Security**: Connection string stored as Azure secret, never committed to repository
+
+### Database Configuration Rules
+
+1. **`.env` file** (gitignored):
+   - Local: DO NOT set `MONGODB_URI` - let docker-compose.yml default take over
+   - Production: Connection strings configured in Azure Container Apps environment variables
+
+2. **Docker Compose**:
+   - Automatically uses local MongoDB container if `MONGODB_URI` not set in `.env`
+   - Fallback: `mongodb://mongodb:27017/template-doctor`
+
+3. **Azure Container Apps**:
+   - Uses Cosmos DB connection string from environment variables
+   - Database name: `template-doctor` (set via `MONGODB_DATABASE`)
+
+### Database Troubleshooting
+
+- **"Database not connected" errors**: Check if `MONGODB_URI` is set in `.env` (it should NOT be for Docker)
+- **500 errors on `/api/v4/results/latest`**: Database connection failed
+- **Empty results in production**: Check Azure Container App environment variables
+- **Local data not showing**: Verify MongoDB Compass connected to `localhost:27017` and database is `template-doctor`
 
 ## Configuration Architecture (Express Migration)
 
@@ -115,14 +158,14 @@ The configuration system has three layers optimized for the containerized archit
     - Required: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GH_WORKFLOW_TOKEN`
     - Copied from root `.env` during Docker build
     - Used by OAuth token exchange and API endpoints
-    - Port configured via `PORT` (default: 3001)
+    - Port configured via `PORT` (must match frontend port for OAuth - default: 3000)
 
 2. **Frontend** (`packages/app/config.json`): Client configuration
     - Required: `githubOAuth.clientId` (must match server's `GITHUB_CLIENT_ID`)
-    - Backend URLs:
-        - Local dev: `"http://localhost:3001"` (manual) or `"http://localhost:3001"` (Docker)
-        - Preview: `"http://localhost:3001"`
-        - Production: Configured via environment
+    - OAuth callback URL must match the port where both frontend and backend are served
+    - Backend URLs (deprecated - both run on same port now):
+        - Docker/Preview: Same port as frontend (port 3000)
+        - Production: Same origin
     - Three-tier override system:
         - `config.json` - Base configuration
         - `config.local.json` - Local overrides (not committed)
@@ -132,12 +175,12 @@ The configuration system has three layers optimized for the containerized archit
     - Used by build tools, Docker Compose, and copied to backend
     - Single source of truth for GitHub tokens and OAuth credentials
 
-**Local Development Flow:**
+**OAuth Flow (Port 3000):**
 
-- Frontend loads config from `/api/v4/client-settings` endpoint (served by Express)
-- OAuth calls: `http://localhost:3001/api/v4/github-oauth-token`
-- Analysis calls: `http://localhost:3001/api/v4/analyze`
-- Docker networking handles inter-container communication automatically
+- Frontend and backend both run on `http://localhost:3000`
+- OAuth callback: `http://localhost:3000/callback.html`
+- Token exchange: Same-origin request to `/api/v4/github-oauth-token`
+- Combined Docker image handles routing internally
 
 ## Testing Guidelines
 
@@ -201,6 +244,7 @@ The script exits non‑zero on the first critical failure (missing endpoint / un
 - `docs/development/ENVIRONMENT_VARIABLES.md`: Complete reference of all environment variables
 - `docs/development/OAUTH_CONFIGURATION.md`: OAuth setup details
 - `docs/development/EXPRESS_MIGRATION_MATRIX.md`: Azure Functions → Express migration tracking
+- `docs/development/AZD_VALIDATION_ARTIFACT_PARSING.md`: **CRITICAL** - Implementation plan for accurate AZD validation (ACTIVE WORK)
 - `docs/usage/GITHUB_ACTION_SETUP.md`: GitHub Action setup guide
 - `docker-compose.yml`: Multi-container development setup
 - `Dockerfile.combined`: Single-container production build
@@ -223,7 +267,7 @@ The script exits non‑zero on the first critical failure (missing endpoint / un
 
 ## Common Troubleshooting
 
-- **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server (3000 for preview/Docker, 4000 for dev, 3001 for Express API)
+- **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server. **CRITICAL**: Both frontend and backend must run on port 3000 (the OAuth callback port). Using different ports (e.g., frontend on 4000, backend on 3001) will break OAuth authentication.
 - **Express server not starting**: Check `.env` file exists and has required variables, verify port 3001 is not in use
 - **Docker issues**: Ensure Docker and Docker Compose are installed and running, check `docker-compose logs` for errors
 - **Configuration mismatch**: Verify `config.json` has correct `githubOAuth.clientId` matching `.env`

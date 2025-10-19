@@ -1,6 +1,8 @@
 // Ruleset Modal Handler - TypeScript implementation
 // Provides configuration selection UI for template analysis
 
+import { sanitizeHtml } from '../shared/sanitize';
+
 declare global {
   interface Window {
     showRulesetModal?: (repoUrl: string) => void;
@@ -484,7 +486,8 @@ window.showRulesetModal = showRulesetModal;
       header.className = 'analysis-header';
       section.insertBefore(header, section.firstChild);
     }
-    header.innerHTML = `<h2>Template Analysis Report</h2><p class="repo-url">${repoUrl}</p>`;
+    const safeRepoUrl = sanitizeHtml(repoUrl);
+    header.innerHTML = `<h2>Template Analysis Report</h2><p class="repo-url">${safeRepoUrl}</p>`;
 
     let loadingContainer = section.querySelector('.loading-container') as HTMLElement;
     if (!loadingContainer) {
@@ -560,7 +563,8 @@ window.showRulesetModal = showRulesetModal;
   function showError(containers: ReturnType<typeof ensureAnalysisSection>, message: string) {
     containers.loadingContainer.style.display = 'none';
     containers.resultsContainer.style.display = 'block';
-    containers.reportDiv.innerHTML = `<div class="error-message"><p>${message}</p></div>`;
+    const safeMessage = sanitizeHtml(message);
+    containers.reportDiv.innerHTML = `<div class="error-message"><p>${safeMessage}</p></div>`;
     console.log('[AnalyzeRepoIntegr] Error displayed');
   }
 

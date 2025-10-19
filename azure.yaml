@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: template-doctor
+metadata:
+  template: template-doctor@0.0.1-beta
+
+# Note: azd deploy for Container Apps is currently broken
+# Use the deploy.sh script instead after running azd provision
+
+hooks:
+  postprovision:
+    shell: sh
+    run: |
+      echo ""
+      echo "✅ Infrastructure provisioned successfully!"
+      echo ""
+      echo "📦 Next step: Deploy the application"
+      echo ""
+      echo "Run: ./scripts/deploy.sh"
+      echo ""
+    continueOnError: false

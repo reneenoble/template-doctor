@@ -27,3 +27,13 @@ local.settings.json
 __azurite*
 
 gallery.jsonpackages/server/config/
+
+.nuxt
+.nuxt/
+
+.azure
+.azure/
+
+.azdo
+
+debug-oauth.md

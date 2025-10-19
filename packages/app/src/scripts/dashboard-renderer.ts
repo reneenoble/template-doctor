@@ -401,17 +401,33 @@ class DashboardRenderer {
   async loadAndRenderTrend(data: AdaptedData, section: HTMLElement) {
     const trendHost = section.querySelector('#trendChart') as HTMLElement | null;
     if (!trendHost) return;
-    const folder = this.getResultsFolderForRepo(data.repoUrl);
-    if (!folder) return;
+    
+    // Extract owner/repo from repoUrl
+    const match = data.repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/i);
+    if (!match) return;
+    const [, owner, repo] = match;
+    
     let history: any[] = [];
     try {
-      const resp = await fetch(`/results/${folder}/history.json`, { cache: 'no-store' });
+      // Load from MongoDB API instead of filesystem
+      const resp = await fetch(`/api/v4/results/repo/${owner}/${repo}`, { cache: 'no-store' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      history = await resp.json();
+      const apiData = await resp.json();
+      
+      // Transform analyses array to history format
+      if (apiData.analyses && Array.isArray(apiData.analyses)) {
+        history = apiData.analyses.map((a: any) => ({
+          timestamp: a.scanDate || a.timestamp,
+          percentage: a.compliance?.percentage || 0,
+          issues: a.compliance?.issues || 0,
+          passed: a.compliance?.passed || 0,
+        }));
+      }
     } catch (err: any) {
-      console.warn(`No history.json found for ${folder}:`, err.message);
+      console.warn(`No history found for ${owner}/${repo}:`, err.message);
       return;
     }
+    
     if (!Array.isArray(history) || history.length < 2) {
       return;
     }
@@ -686,21 +702,16 @@ class DashboardRenderer {
           newCreateIssueButton.addEventListener('click', function () {
             console.log('Create GitHub Issue button clicked');
             if (typeof (window as any).createGitHubIssue === 'function') {
-              if (typeof (window as any).createGitHubIssue === 'function') {
-                (window as any).createGitHubIssue();
-              } else {
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showError(
-                    'Feature Unavailable',
-                    'GitHub issue creation is not available in this view.',
-                    5000,
-                  );
-                } else {
-                  console.error('GitHub issue creation is not available in this view');
-                }
-              }
+              (window as any).createGitHubIssue();
             } else {
-              alert('GitHub issue creation is not available in this view');
+              // Use notification system (required - no fallback to alert)
+              if ((window as any).NotificationSystem) {
+                (window as any).NotificationSystem.showError(
+                  'Feature Unavailable',
+                  'GitHub issue creation is not available in this view.',
+                  5000,
+                );
+              }
             }
           });
         }
@@ -724,21 +735,16 @@ class DashboardRenderer {
           newTestProvisionButton.addEventListener('click', function () {
             console.log('Test AZD Provision button clicked');
             if (typeof (window as any).testAzdProvision === 'function') {
-              if (typeof (window as any).testAzdProvision === 'function') {
-                (window as any).testAzdProvision();
-              } else {
-                if ((window as any).NotificationSystem) {
-                  (window as any).NotificationSystem.showError(
-                    'Feature Unavailable',
-                    'AZD provision testing is not available in this view.',
-                    5000,
-                  );
-                } else {
-                  console.error('AZD provision testing is not available in this view');
-                }
-              }
+              (window as any).testAzdProvision();
             } else {
-              alert('AZD provision testing is not available in this view');
+              // Use notification system (required - no fallback to alert)
+              if ((window as any).NotificationSystem) {
+                (window as any).NotificationSystem.showError(
+                  'Feature Unavailable',
+                  'AZD provision testing is not available in this view.',
+                  5000,
+                );
+              }
             }
           });
         }

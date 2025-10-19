@@ -1,0 +1,11 @@
+# Build checksums - Sat Oct 18 23:08:33 CEST 2025
+# Server
+46c9075a9be76c399bbd73f01b42f2402c3d2fab0009802bdde0f00e0e27a46b  packages/server/dist/analyzer-core/index.js
+18119cce93973432ebccad847ec403d42a2b27d4872a0e69e91226e91cf881f8  packages/server/dist/analyzer-core/run-analyzer.js
+663e91a8019461f44bc7507098ffc5ab9726415b4737d9bccf9d7bde27cc2750  packages/server/dist/analyzer-core/types.js
+519347538e93248ba1545efcb5dcd0d01ae255dcd5c8bb8b6224ef37cb021924  packages/server/dist/github/error-classifier.js
+37e8d15049933120c9a0fa41aa1887a56d2f079d4610fb279121fc39312c3f72  packages/server/dist/index.js
+# Frontend
+e996252ed027f9b563225bde697c72c63969138f8fd13d5b6c870a3d2cf0a629  packages/app/dist/leaderboards.html
+22629cc2234e314ca47e708bc9997c83a13b6d2ed117e368833317bd3e44a15e  packages/app/dist/setup.html
+c46f78375ee48dedf9c6e5ba03f14c850ae6e47623db9fde1986c2369b1d80b4  packages/app/dist/index.html

@@ -17,7 +17,7 @@
             font-family: 'Inter', sans-serif;
             background: #f8fafc;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             min-height: 100vh;
             color: #1f2937;
         }
@@ -248,6 +248,21 @@
     </style>
 </head>
 <body>
+    <!-- Header with Navigation -->
+    <header style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 20px 0; box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 1000;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
+            <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #1e293b;">
+                <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" style="width: 40px; height: 40px;" />
+                <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Template Doctor</h1>
+            </a>
+            <nav style="display: flex; gap: 20px;">
+                <a href="/" style="text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">Dashboard</a>
+                <a href="/leaderboards" style="text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">🏆 Leaderboards</a>
+                <a href="/setup" style="text-decoration: none; background: #3b82f6; color: white; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">⚙️ Setup</a>
+            </nav>
+        </div>
+    </header>
+
     <div class="container">
         <div class="header">
             <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
@@ -513,12 +528,16 @@
             // GitHub OAuth
             document.getElementById('github-client-id').value = currentConfig.GITHUB_CLIENT_ID || currentConfig.githubOAuth?.clientId || '';
             document.getElementById('github-scope').value = currentConfig.githubOAuth?.scope || 'repo read:user';
-            document.getElementById('github-redirect').value = currentConfig.githubOAuth?.redirectUri || '';
             
-            // Backend
-            document.getElementById('backend-base-url').value = currentConfig.backend?.baseUrl || '';
-            document.getElementById('backend-function-key').value = currentConfig.backend?.functionKey || '';
-            document.getElementById('backend-api-version').value = currentConfig.backend?.apiVersion || 'v4';
+            // Construct redirect URI from current location
+            const redirectUri = `${window.location.origin}/callback`;
+            document.getElementById('github-redirect').value = redirectUri;
+            
+            // Backend - using Express server, not Azure Functions
+            const backendBaseUrl = currentConfig.backend?.baseUrl || window.location.origin;
+            document.getElementById('backend-base-url').value = backendBaseUrl;
+            document.getElementById('backend-function-key').value = 'Not implemented (Express server does not use function keys)';
+            document.getElementById('backend-api-version').value = 'v4 (hardcoded in Express routes)';
             
             // Application Settings
             document.getElementById('default-rule-set').value = currentConfig.defaultRuleSet || currentConfig.DEFAULT_RULE_SET || 'dod';
@@ -621,5 +640,20 @@
             }
         }
     </script>
+
+    <!-- Footer -->
+    <footer class="site-footer" style="background: #1e293b; color: #cbd5e1; padding: 30px 0; margin-top: 60px;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="margin-bottom: 10px;">©2025 - CoreAI Microsoft</div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <a href="https://aka.ms/ai-gallery/submit" target="_blank" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="fas fa-plus-circle"></i> Submit new template to gallery
+                </a>
+                <a href="https://github.com/Azure-Samples/azd-template-artifacts" target="_blank" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="fas fa-check-square"></i> Definition of Done
+                </a>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

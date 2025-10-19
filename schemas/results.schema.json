@@ -13,6 +13,56 @@
             "format": "uri",
             "description": "The full URL of the analyzed repository"
         },
+        "azdValidation": {
+            "type": ["object", "null"],
+            "description": "Azure Developer CLI (azd) validation results from artifact parsing",
+            "required": ["azdUpSuccess", "azdDownSuccess", "psRuleErrors", "psRuleWarnings", "securityStatus", "overallStatus", "resultFileContent"],
+            "properties": {
+                "azdUpSuccess": {
+                    "type": "boolean",
+                    "description": "Whether 'azd up' succeeded"
+                },
+                "azdUpTime": {
+                    "type": ["string", "null"],
+                    "description": "Execution time for 'azd up' (e.g., '45.2s')",
+                    "pattern": "^\\d+(\\.\\d+)?s$"
+                },
+                "azdDownSuccess": {
+                    "type": "boolean",
+                    "description": "Whether 'azd down' succeeded"
+                },
+                "azdDownTime": {
+                    "type": ["string", "null"],
+                    "description": "Execution time for 'azd down' (e.g., '30.1s')",
+                    "pattern": "^\\d+(\\.\\d+)?s$"
+                },
+                "psRuleErrors": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Number of PSRule security errors found"
+                },
+                "psRuleWarnings": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Number of PSRule security warnings found"
+                },
+                "securityStatus": {
+                    "type": "string",
+                    "enum": ["pass", "warnings", "errors"],
+                    "description": "Overall security scan status"
+                },
+                "overallStatus": {
+                    "type": "string",
+                    "enum": ["success", "warning", "failure"],
+                    "description": "Overall validation status (success: all pass, warning: has warnings, failure: has errors or azd failures)"
+                },
+                "resultFileContent": {
+                    "type": "string",
+                    "description": "Full markdown content from the validation artifact result file"
+                }
+            },
+            "additionalProperties": false
+        },
         "timestamp": {
             "type": "string",
             "format": "date-time",

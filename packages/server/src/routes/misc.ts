@@ -676,15 +676,22 @@ router.post(
         try {
             const { overrides, user } = req.body || {};
 
-            // Authorization check
-            const allowedUsers = (process.env.SETUP_ALLOWED_USERS || "")
+            // Authorization check - use both SETUP_ALLOWED_USERS and ADMIN_GITHUB_USERS
+            const setupUsers = (process.env.SETUP_ALLOWED_USERS || "")
                 .split(",")
                 .map((u) => u.trim())
                 .filter(Boolean);
+            
+            const adminUsers = (process.env.ADMIN_GITHUB_USERS || "")
+                .split(",")
+                .map((u) => u.trim())
+                .filter(Boolean);
+            
+            const allowedUsers = [...new Set([...setupUsers, ...adminUsers])];
 
             if (!user || !allowedUsers.includes(user)) {
                 return res.status(403).json({
-                    error: "Unauthorized: user not in SETUP_ALLOWED_USERS",
+                    error: "Unauthorized: user not in SETUP_ALLOWED_USERS or ADMIN_GITHUB_USERS",
                     requestedUser: user,
                 });
             }
@@ -766,10 +773,18 @@ router.get("/setup/check-access", (req: Request, res: Response) => {
         });
     }
 
-    const allowedUsers = (process.env.SETUP_ALLOWED_USERS || "")
+    // Check both SETUP_ALLOWED_USERS (legacy) and ADMIN_GITHUB_USERS
+    const setupUsers = (process.env.SETUP_ALLOWED_USERS || "")
         .split(",")
         .map((u) => u.trim())
         .filter(Boolean);
+    
+    const adminUsers = (process.env.ADMIN_GITHUB_USERS || "")
+        .split(",")
+        .map((u) => u.trim())
+        .filter(Boolean);
+    
+    const allowedUsers = [...new Set([...setupUsers, ...adminUsers])];
 
     const hasAccess = allowedUsers.includes(username);
 
@@ -808,10 +823,18 @@ async function loadOverridesFromGist(): Promise<ConfigOverride[]> {
     // Skip header if present
     const dataLines = lines[0].startsWith("key,") ? lines.slice(1) : lines;
 
-    return dataLines.map((line) => {
+    // Map raw lines to overrides
+    const parsed = dataLines.map((line) => {
         const [key, value, updatedBy, updatedAt] = parseCsvLine(line);
-        return { key, value, updatedBy, updatedAt };
+        return { key, value, updatedBy, updatedAt } as ConfigOverride;
     });
+
+    // Deduplicate by key (last occurrence wins to reflect most recent update)
+    const map = new Map<string, ConfigOverride>();
+    for (const ov of parsed) {
+        map.set(ov.key, ov); // later entries overwrite earlier ones
+    }
+    return Array.from(map.values());
 }
 
 // Helper: Save overrides to GitHub Gist
