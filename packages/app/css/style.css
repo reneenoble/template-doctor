@@ -98,6 +98,34 @@ header {
   opacity: 0.9;
 }
 
+.saml-warning-banner .banner-close-btn {
+  background: none;
+  border: none;
+  color: #856404;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  margin-left: auto;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+}
+
+.saml-warning-banner .banner-close-btn:hover {
+  opacity: 1;
+  background-color: rgba(133, 100, 4, 0.1);
+  transform: scale(1.1);
+}
+
+.saml-warning-banner.hidden {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .saml-warning-banner {
     top: 62px; /* Adjust for smaller header */

@@ -19,10 +19,16 @@ const defaultPort = process.env.PORT || 3000; // Default to 3000 for OAuth compa
 // Structured logging middleware
 import { httpLogger } from './shared/logger.js';
 
+// Rate limiting middleware
+import { standardRateLimit } from "./middleware/rate-limit.js";
+
 // Middleware
 app.use(httpLogger); // HTTP request/response logging
 app.use(cors());
 app.use(express.json());
+
+// Apply standard rate limiting to all API routes
+app.use('/api', standardRateLimit);
 
 // Serve static files from frontend build (if available)
 // Use FRONTEND_DIST_PATH env var if set (for Docker), otherwise calculate relative path

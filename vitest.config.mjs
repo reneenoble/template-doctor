@@ -10,7 +10,6 @@ export default defineConfig({
         exclude: [
             "**/node_modules/**",
             "**/dist/**",
-            "**/legacy-api/**", // Exclude legacy API tests
         ],
         environment: "jsdom", // Frontend tests need DOM, server tests will override if needed
         globals: true,

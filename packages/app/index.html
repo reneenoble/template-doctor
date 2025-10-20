@@ -109,7 +109,7 @@
     </header>
 
     <!-- SAML Warning Banner -->
-    <div class="saml-warning-banner">
+    <div class="saml-warning-banner" id="saml-banner">
       <div class="container">
         <div class="banner-content">
           <i class="fas fa-exclamation-triangle"></i>
@@ -121,6 +121,9 @@
             </ul>
             <small class="banner-note">We're working on bypassing this requirement in a future update.</small>
           </div>
+          <button class="banner-close-btn" id="close-saml-banner" title="Dismiss this message" aria-label="Close banner">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
       </div>
     </div>

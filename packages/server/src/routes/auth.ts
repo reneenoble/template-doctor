@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { authRateLimit } from '../middleware/rate-limit.js';
 
 export const authRouter = Router();
 
 // GitHub OAuth token exchange
-authRouter.post('/github-oauth-token', async (req: Request, res: Response) => {
+// Apply auth rate limiting to prevent token abuse
+authRouter.post('/github-oauth-token', authRateLimit, async (req: Request, res: Response) => {
   const requestId = uuidv4();
 
   try {

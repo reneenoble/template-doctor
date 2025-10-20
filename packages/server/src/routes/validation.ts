@@ -6,6 +6,7 @@ import {
   AzdValidationResult,
 } from '../services/azd-validation';
 import { requireAuth } from '../middleware/auth';
+import { strictRateLimit } from '../middleware/rate-limit.js';
 
 /**
  * BREAKING CHANGE NOTICE (v3.0.0):
@@ -40,9 +41,9 @@ router.use(requireAuth);
 /**
  * POST /api/v4/validation-template
  * Triggers a GitHub workflow to validate an azd template
- * Requires authentication
+ * Requires authentication and strict rate limiting for expensive validation operations
  */
-router.post('/validation-template', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/validation-template', strictRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   try {
