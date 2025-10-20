@@ -337,7 +337,7 @@ setup_mongodb() {
         print_step "Using existing MongoDB"
         echo ""
         print_info "Enter your MongoDB connection string:"
-        echo "Format: mongodb+srv://user:password@cluster.mongodb.net/?options"
+        echo "Format: mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/?options"
         echo ""
         print_warning "NOTE: For local dev, docker-compose.yml will respect this MONGODB_URI from .env"
         echo "      For production, set it as an environment variable in your Container App"

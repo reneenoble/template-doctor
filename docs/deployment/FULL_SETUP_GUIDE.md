@@ -305,7 +305,7 @@ Use different tokens for OAuth operations vs workflow dispatch:
 If you have existing MongoDB:
 
 - During **Step 4**, choose option A
-- Provide connection string: `mongodb+srv://user:pass@cluster.mongodb.net/`
+- Provide connection string: `mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/`
 
 ### Skip UAMI
 
