@@ -47,11 +47,11 @@ PSRule warnings or unrelated workflow issues should show as **WARNING** state, n
 ```typescript
 // WRONG APPROACH - This parses logs, not artifact
 function parseAzdResults(logs: string): { success: boolean; details: string } {
-    // Looking for: "SUCCESS: Your up workflow to provision..."
-    // But this text is in action's Python code, NOT in logs!
-    const successPattern = /SUCCESS: Your up workflow to provision/i;
-    const failurePattern = /FAILED: Your up workflow/i;
-    // ...
+  // Looking for: "SUCCESS: Your up workflow to provision..."
+  // But this text is in action's Python code, NOT in logs!
+  const successPattern = /SUCCESS: Your up workflow to provision/i;
+  const failurePattern = /FAILED: Your up workflow/i;
+  // ...
 }
 ```
 
@@ -139,9 +139,9 @@ The `resultFile` is a **markdown file** uploaded as a GitHub Actions artifact wi
 
 - [x] Security Scan ← PASS
 - :warning: Security Scan ← WARNINGS (we parse this)
-    - [ ] :x: Rule1 (Error1) ← ERRORS (we parse this)
-          Do this
-          reference: http://example.com
+  - [ ] :x: Rule1 (Error1) ← ERRORS (we parse this)
+        Do this
+        reference: http://example.com
 ```
 
 **Parsing Rules:**
@@ -159,36 +159,36 @@ The `resultFile` is a **markdown file** uploaded as a GitHub Actions artifact wi
 
 ```typescript
 if (azdUpSuccess && azdDownSuccess) {
-    if (psRuleErrors === 0) {
-        overallStatus = psRuleWarnings > 0 ? "warning" : "success";
-        // ✅ GREEN or ⚠️ YELLOW
-    } else {
-        overallStatus = "failure";
-        // ❌ RED (PSRule errors)
-    }
+  if (psRuleErrors === 0) {
+    overallStatus = psRuleWarnings > 0 ? 'warning' : 'success';
+    // ✅ GREEN or ⚠️ YELLOW
+  } else {
+    overallStatus = 'failure';
+    // ❌ RED (PSRule errors)
+  }
 } else {
-    overallStatus = "failure";
-    // ❌ RED (AZD Up/Down failed)
+  overallStatus = 'failure';
+  // ❌ RED (AZD Up/Down failed)
 }
 ```
 
 **States:**
 
 1. **✅ SUCCESS (Green):**
-    - `azd up` ✓
-    - `azd down` ✓
-    - No PSRule errors
-    - No PSRule warnings
+   - `azd up` ✓
+   - `azd down` ✓
+   - No PSRule errors
+   - No PSRule warnings
 
 2. **⚠️ WARNING (Yellow):**
-    - `azd up` ✓
-    - `azd down` ✓
-    - No PSRule errors
-    - Has PSRule warnings OR workflow had unrelated failures
+   - `azd up` ✓
+   - `azd down` ✓
+   - No PSRule errors
+   - Has PSRule warnings OR workflow had unrelated failures
 
 3. **❌ FAILURE (Red):**
-    - `azd up` ✗ OR `azd down` ✗
-    - OR has PSRule errors
+   - `azd up` ✗ OR `azd down` ✗
+   - OR has PSRule errors
 
 ---
 
@@ -219,155 +219,153 @@ npm install adm-zip
 **New Helper Functions to Add:**
 
 ```typescript
-import AdmZip from "adm-zip";
+import AdmZip from 'adm-zip';
 
 /**
  * Downloads and extracts the validation result artifact
  */
 async function downloadValidationArtifact(
-    owner: string,
-    repo: string,
-    runId: number,
-    token: string,
+  owner: string,
+  repo: string,
+  runId: number,
+  token: string,
 ): Promise<string | null> {
-    try {
-        // 1. Fetch artifacts list
-        const artifactsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}/artifacts`;
-        const artifactsResponse = await fetch(artifactsUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            },
-        });
+  try {
+    // 1. Fetch artifacts list
+    const artifactsUrl = `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}/artifacts`;
+    const artifactsResponse = await fetch(artifactsUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
 
-        if (!artifactsResponse.ok) {
-            console.error("Failed to fetch artifacts list", {
-                status: artifactsResponse.status,
-            });
-            return null;
-        }
-
-        const artifactsData = await artifactsResponse.json();
-
-        // 2. Find validation result artifact
-        const validationArtifact = artifactsData.artifacts?.find((a: any) =>
-            a.name.endsWith("-validation-result"),
-        );
-
-        if (!validationArtifact) {
-            console.log("No validation result artifact found");
-            return null;
-        }
-
-        // 3. Download artifact ZIP
-        const downloadUrl = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${validationArtifact.id}/zip`;
-        const downloadResponse = await fetch(downloadUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/vnd.github+json",
-            },
-        });
-
-        if (!downloadResponse.ok) {
-            console.error("Failed to download artifact", {
-                status: downloadResponse.status,
-            });
-            return null;
-        }
-
-        // 4. Extract markdown from ZIP
-        const buffer = Buffer.from(await downloadResponse.arrayBuffer());
-        const zip = new AdmZip(buffer);
-        const zipEntries = zip.getEntries();
-
-        // Find the markdown file (should be only file in zip)
-        const markdownEntry = zipEntries.find(
-            (entry) => entry.entryName.endsWith(".md") && !entry.isDirectory,
-        );
-
-        if (!markdownEntry) {
-            console.error("No markdown file found in artifact ZIP");
-            return null;
-        }
-
-        return markdownEntry.getData().toString("utf8");
-    } catch (error) {
-        console.error("Error downloading artifact", { error });
-        return null;
+    if (!artifactsResponse.ok) {
+      console.error('Failed to fetch artifacts list', {
+        status: artifactsResponse.status,
+      });
+      return null;
     }
+
+    const artifactsData = await artifactsResponse.json();
+
+    // 2. Find validation result artifact
+    const validationArtifact = artifactsData.artifacts?.find((a: any) =>
+      a.name.endsWith('-validation-result'),
+    );
+
+    if (!validationArtifact) {
+      console.log('No validation result artifact found');
+      return null;
+    }
+
+    // 3. Download artifact ZIP
+    const downloadUrl = `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${validationArtifact.id}/zip`;
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+
+    if (!downloadResponse.ok) {
+      console.error('Failed to download artifact', {
+        status: downloadResponse.status,
+      });
+      return null;
+    }
+
+    // 4. Extract markdown from ZIP
+    const buffer = Buffer.from(await downloadResponse.arrayBuffer());
+    const zip = new AdmZip(buffer);
+    const zipEntries = zip.getEntries();
+
+    // Find the markdown file (should be only file in zip)
+    const markdownEntry = zipEntries.find(
+      (entry) => entry.entryName.endsWith('.md') && !entry.isDirectory,
+    );
+
+    if (!markdownEntry) {
+      console.error('No markdown file found in artifact ZIP');
+      return null;
+    }
+
+    return markdownEntry.getData().toString('utf8');
+  } catch (error) {
+    console.error('Error downloading artifact', { error });
+    return null;
+  }
 }
 
 /**
  * Parses the validation result markdown file
  */
 interface AzdValidationResult {
-    azdUpSuccess: boolean;
-    azdUpTime: string | null;
-    azdDownSuccess: boolean;
-    azdDownTime: string | null;
-    psRuleErrors: number;
-    psRuleWarnings: number;
-    securityStatus: "pass" | "warnings" | "errors";
-    overallStatus: "success" | "warning" | "failure";
-    resultFileContent: string;
+  azdUpSuccess: boolean;
+  azdUpTime: string | null;
+  azdDownSuccess: boolean;
+  azdDownTime: string | null;
+  psRuleErrors: number;
+  psRuleWarnings: number;
+  securityStatus: 'pass' | 'warnings' | 'errors';
+  overallStatus: 'success' | 'warning' | 'failure';
+  resultFileContent: string;
 }
 
 function parseAzdValidationResult(markdown: string): AzdValidationResult {
-    // Parse AZD Up status
-    const azdUpSuccess =
-        /- \[x\] azd up/i.test(markdown) ||
-        /:white_check_mark: azd up/i.test(markdown);
+  // Parse AZD Up status
+  const azdUpSuccess =
+    /- \[x\] azd up/i.test(markdown) || /:white_check_mark: azd up/i.test(markdown);
 
-    // Parse AZD Down status
-    const azdDownSuccess =
-        /- \[x\] azd down/i.test(markdown) ||
-        /:white_check_mark: azd down/i.test(markdown);
+  // Parse AZD Down status
+  const azdDownSuccess =
+    /- \[x\] azd down/i.test(markdown) || /:white_check_mark: azd down/i.test(markdown);
 
-    // Extract execution times (if available)
-    const azdUpTime = markdown.match(/azd up.*\(([\d.]+s)\)/)?.[1] || null;
-    const azdDownTime = markdown.match(/azd down.*\(([\d.]+s)\)/)?.[1] || null;
+  // Extract execution times (if available)
+  const azdUpTime = markdown.match(/azd up.*\(([\d.]+s)\)/)?.[1] || null;
+  const azdDownTime = markdown.match(/azd down.*\(([\d.]+s)\)/)?.[1] || null;
 
-    // Count PSRule warnings and errors
-    const psRuleWarnings = (markdown.match(/:warning:/g) || []).length;
+  // Count PSRule warnings and errors
+  const psRuleWarnings = (markdown.match(/:warning:/g) || []).length;
 
-    // Count errors under Security Requirements section
-    const securitySection = markdown.split("## Security Requirements")[1] || "";
-    const psRuleErrors = (securitySection.match(/- \[ \] :x:/g) || []).length;
+  // Count errors under Security Requirements section
+  const securitySection = markdown.split('## Security Requirements')[1] || '';
+  const psRuleErrors = (securitySection.match(/- \[ \] :x:/g) || []).length;
 
-    // Determine security status
-    let securityStatus: "pass" | "warnings" | "errors";
-    if (psRuleErrors > 0) {
-        securityStatus = "errors";
-    } else if (psRuleWarnings > 0) {
-        securityStatus = "warnings";
+  // Determine security status
+  let securityStatus: 'pass' | 'warnings' | 'errors';
+  if (psRuleErrors > 0) {
+    securityStatus = 'errors';
+  } else if (psRuleWarnings > 0) {
+    securityStatus = 'warnings';
+  } else {
+    securityStatus = 'pass';
+  }
+
+  // Determine overall status (three-state logic)
+  let overallStatus: 'success' | 'warning' | 'failure';
+  if (azdUpSuccess && azdDownSuccess) {
+    if (psRuleErrors === 0) {
+      overallStatus = psRuleWarnings > 0 ? 'warning' : 'success';
     } else {
-        securityStatus = "pass";
+      overallStatus = 'failure'; // PSRule errors = failure
     }
+  } else {
+    overallStatus = 'failure'; // AZD Up/Down failed = failure
+  }
 
-    // Determine overall status (three-state logic)
-    let overallStatus: "success" | "warning" | "failure";
-    if (azdUpSuccess && azdDownSuccess) {
-        if (psRuleErrors === 0) {
-            overallStatus = psRuleWarnings > 0 ? "warning" : "success";
-        } else {
-            overallStatus = "failure"; // PSRule errors = failure
-        }
-    } else {
-        overallStatus = "failure"; // AZD Up/Down failed = failure
-    }
-
-    return {
-        azdUpSuccess,
-        azdUpTime,
-        azdDownSuccess,
-        azdDownTime,
-        psRuleErrors,
-        psRuleWarnings,
-        securityStatus,
-        overallStatus,
-        resultFileContent: markdown,
-    };
+  return {
+    azdUpSuccess,
+    azdUpTime,
+    azdDownSuccess,
+    azdDownTime,
+    psRuleErrors,
+    psRuleWarnings,
+    securityStatus,
+    overallStatus,
+    resultFileContent: markdown,
+  };
 }
 ```
 
@@ -382,65 +380,60 @@ const data = await response.json();
 // Existing code fetches jobs...
 let jobs: any[] = [];
 let failedJobs: any[] = [];
-let errorSummary = "";
+let errorSummary = '';
 
-if (data.status === "completed" && data.conclusion === "failure") {
-    // ... existing job fetching code ...
+if (data.status === 'completed' && data.conclusion === 'failure') {
+  // ... existing job fetching code ...
 }
 
 // NEW: Fetch and parse artifact if workflow completed
 let azdValidation: AzdValidationResult | null = null;
-if (data.status === "completed") {
-    const artifactContent = await downloadValidationArtifact(
-        owner,
-        repo,
-        runIdToCheck,
-        token,
-    );
+if (data.status === 'completed') {
+  const artifactContent = await downloadValidationArtifact(owner, repo, runIdToCheck, token);
 
-    if (artifactContent) {
-        azdValidation = parseAzdValidationResult(artifactContent);
-        console.log("validation-status parsed artifact", {
-            requestId,
-            overallStatus: azdValidation.overallStatus,
-            azdUpSuccess: azdValidation.azdUpSuccess,
-            azdDownSuccess: azdValidation.azdDownSuccess,
-        });
-    }
+  if (artifactContent) {
+    azdValidation = parseAzdValidationResult(artifactContent);
+    console.log('validation-status parsed artifact', {
+      requestId,
+      overallStatus: azdValidation.overallStatus,
+      azdUpSuccess: azdValidation.azdUpSuccess,
+      azdDownSuccess: azdValidation.azdDownSuccess,
+    });
+  }
 }
 
 // Update response to include azdValidation
 res.json({
-    status: data.status,
-    conclusion: data.conclusion,
-    html_url: data.html_url,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    jobs: jobs.map((job: any) => ({
-        id: job.id,
-        name: job.name,
-        status: job.status,
-        conclusion: job.conclusion,
-        html_url: job.html_url,
-        started_at: job.started_at,
-        completed_at: job.completed_at,
-    })),
-    failedJobs: failedJobs.map((job: any) => ({
-        id: job.id,
-        name: job.name,
-        conclusion: job.conclusion,
-        html_url: job.html_url,
-        failedSteps: (job.steps || [])
-            .filter((step: any) => step.conclusion === "failure")
-            .map((step: any) => ({
-                name: step.name,
-                conclusion: step.conclusion,
-                number: step.number,
-            })),
-    })),
-    errorSummary,
-    azdValidation, // NEW: Add parsed validation data
-    requestId,
+  status: data.status,
+  conclusion: data.conclusion,
+  html_url: data.html_url,
+  created_at: data.created_at,
+  updated_at: data.updated_at,
+  jobs: jobs.map((job: any) => ({
+    id: job.id,
+    name: job.name,
+    status: job.status,
+    conclusion: job.conclusion,
+    html_url: job.html_url,
+    started_at: job.started_at,
+    completed_at: job.completed_at,
+  })),
+  failedJobs: failedJobs.map((job: any) => ({
+    id: job.id,
+    name: job.name,
+    conclusion: job.conclusion,
+    html_url: job.html_url,
+    failedSteps: (job.steps || [])
+      .filter((step: any) => step.conclusion === 'failure')
+      .map((step: any) => ({
+        name: step.name,
+        conclusion: step.conclusion,
+        number: step.number,
+      })),
+  })),
+  errorSummary,
+  azdValidation, // NEW: Add parsed validation data
+  requestId,
 });
 ```
 
@@ -460,15 +453,15 @@ res.json({
 
 ```typescript
 interface AzdValidationResult {
-    azdUpSuccess: boolean;
-    azdUpTime: string | null;
-    azdDownSuccess: boolean;
-    azdDownTime: string | null;
-    psRuleErrors: number;
-    psRuleWarnings: number;
-    securityStatus: "pass" | "warnings" | "errors";
-    overallStatus: "success" | "warning" | "failure";
-    resultFileContent: string;
+  azdUpSuccess: boolean;
+  azdUpTime: string | null;
+  azdDownSuccess: boolean;
+  azdDownTime: string | null;
+  psRuleErrors: number;
+  psRuleWarnings: number;
+  securityStatus: 'pass' | 'warnings' | 'errors';
+  overallStatus: 'success' | 'warning' | 'failure';
+  resultFileContent: string;
 }
 ```
 
@@ -479,48 +472,44 @@ interface AzdValidationResult {
  * Displays AZD validation results from artifact data
  */
 function displayAzdValidationResults(
-    container: HTMLElement,
-    azdValidation: AzdValidationResult,
-    githubRunUrl: string,
+  container: HTMLElement,
+  azdValidation: AzdValidationResult,
+  githubRunUrl: string,
 ): void {
-    const statusIcon = {
-        success: "✅",
-        warning: "⚠️",
-        failure: "❌",
-    }[azdValidation.overallStatus];
+  const statusIcon = {
+    success: '✅',
+    warning: '⚠️',
+    failure: '❌',
+  }[azdValidation.overallStatus];
 
-    const statusClass = {
-        success: "validation-success",
-        warning: "validation-warning",
-        failure: "validation-failure",
-    }[azdValidation.overallStatus];
+  const statusClass = {
+    success: 'validation-success',
+    warning: 'validation-warning',
+    failure: 'validation-failure',
+  }[azdValidation.overallStatus];
 
-    const statusMessage = {
-        success: "Template validation passed",
-        warning: "Template validation passed with warnings",
-        failure: "Template validation failed",
-    }[azdValidation.overallStatus];
+  const statusMessage = {
+    success: 'Template validation passed',
+    warning: 'Template validation passed with warnings',
+    failure: 'Template validation failed',
+  }[azdValidation.overallStatus];
 
-    // Build details HTML
-    const azdUpIcon = azdValidation.azdUpSuccess ? "✅" : "❌";
-    const azdDownIcon = azdValidation.azdDownSuccess ? "✅" : "❌";
-    const azdUpTime = azdValidation.azdUpTime
-        ? ` (${azdValidation.azdUpTime})`
-        : "";
-    const azdDownTime = azdValidation.azdDownTime
-        ? ` (${azdValidation.azdDownTime})`
-        : "";
+  // Build details HTML
+  const azdUpIcon = azdValidation.azdUpSuccess ? '✅' : '❌';
+  const azdDownIcon = azdValidation.azdDownSuccess ? '✅' : '❌';
+  const azdUpTime = azdValidation.azdUpTime ? ` (${azdValidation.azdUpTime})` : '';
+  const azdDownTime = azdValidation.azdDownTime ? ` (${azdValidation.azdDownTime})` : '';
 
-    let securityLine = "";
-    if (azdValidation.securityStatus === "pass") {
-        securityLine = "✅ Security Scan passed";
-    } else if (azdValidation.securityStatus === "warnings") {
-        securityLine = `⚠️ Security Scan: ${azdValidation.psRuleWarnings} warnings`;
-    } else {
-        securityLine = `❌ Security Scan: ${azdValidation.psRuleErrors} errors`;
-    }
+  let securityLine = '';
+  if (azdValidation.securityStatus === 'pass') {
+    securityLine = '✅ Security Scan passed';
+  } else if (azdValidation.securityStatus === 'warnings') {
+    securityLine = `⚠️ Security Scan: ${azdValidation.psRuleWarnings} warnings`;
+  } else {
+    securityLine = `❌ Security Scan: ${azdValidation.psRuleErrors} errors`;
+  }
 
-    container.innerHTML = `
+  container.innerHTML = `
         <div class="validation-result ${statusClass}">
             <div class="validation-header">
                 <span class="validation-icon">${statusIcon}</span>
@@ -555,22 +544,18 @@ Around line 606-750, find where it handles the status response and replace the r
 
 ```typescript
 // Inside pollValidationStatus(), after receiving statusData:
-if (statusData.status === "completed") {
-    clearInterval(pollInterval);
+if (statusData.status === 'completed') {
+  clearInterval(pollInterval);
 
-    // Check if we have artifact data
-    if (statusData.azdValidation) {
-        // Use artifact-based validation results
-        displayAzdValidationResults(
-            resultContainer,
-            statusData.azdValidation,
-            statusData.html_url,
-        );
-    } else {
-        // Fallback: artifact not yet available or workflow too old
-        // Show workflow conclusion
-        const conclusion = statusData.conclusion || "unknown";
-        resultContainer.innerHTML = `
+  // Check if we have artifact data
+  if (statusData.azdValidation) {
+    // Use artifact-based validation results
+    displayAzdValidationResults(resultContainer, statusData.azdValidation, statusData.html_url);
+  } else {
+    // Fallback: artifact not yet available or workflow too old
+    // Show workflow conclusion
+    const conclusion = statusData.conclusion || 'unknown';
+    resultContainer.innerHTML = `
             <div class="validation-result validation-${conclusion}">
                 <p>Workflow ${conclusion}</p>
                 <p>⚠️ Detailed validation results not available. 
@@ -578,7 +563,7 @@ if (statusData.status === "completed") {
                 </p>
             </div>
         `;
-    }
+  }
 }
 ```
 
@@ -586,80 +571,80 @@ if (statusData.status === "completed") {
 
 ```css
 .validation-result {
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
-    border: 2px solid;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 2px solid;
 }
 
 .validation-success {
-    background-color: rgba(0, 255, 0, 0.1);
-    border-color: #00ff00;
-    color: white;
+  background-color: rgba(0, 255, 0, 0.1);
+  border-color: #00ff00;
+  color: white;
 }
 
 .validation-warning {
-    background-color: rgba(255, 255, 0, 0.1);
-    border-color: #ffff00;
-    color: white;
+  background-color: rgba(255, 255, 0, 0.1);
+  border-color: #ffff00;
+  color: white;
 }
 
 .validation-failure {
-    background-color: rgba(255, 0, 0, 0.1);
-    border-color: #ff0000;
-    color: white;
+  background-color: rgba(255, 0, 0, 0.1);
+  border-color: #ff0000;
+  color: white;
 }
 
 .validation-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 15px;
 }
 
 .validation-icon {
-    font-size: 1.5em;
+  font-size: 1.5em;
 }
 
 .validation-details {
-    margin: 15px 0;
-    padding-left: 20px;
+  margin: 15px 0;
+  padding-left: 20px;
 }
 
 .validation-step {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 8px 0;
-    font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 1.1em;
 }
 
 .step-icon {
-    font-size: 1.2em;
-    min-width: 30px;
+  font-size: 1.2em;
+  min-width: 30px;
 }
 
 .validation-actions {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .btn-view-logs {
-    display: inline-block;
-    padding: 8px 16px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-    color: white;
-    text-decoration: none;
-    transition: background-color 0.2s;
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s;
 }
 
 .btn-view-logs:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 ```
 
@@ -673,62 +658,62 @@ if (statusData.status === "completed") {
 
 ```json
 {
-    "azdValidation": {
-        "type": "object",
-        "description": "AZD template validation results from artifact parsing",
-        "properties": {
-            "azdUpSuccess": {
-                "type": "boolean",
-                "description": "Whether 'azd up' command succeeded"
-            },
-            "azdUpTime": {
-                "type": ["string", "null"],
-                "description": "Execution time for 'azd up' command (e.g., '45.2s')"
-            },
-            "azdDownSuccess": {
-                "type": "boolean",
-                "description": "Whether 'azd down' command succeeded"
-            },
-            "azdDownTime": {
-                "type": ["string", "null"],
-                "description": "Execution time for 'azd down' command (e.g., '12.3s')"
-            },
-            "psRuleErrors": {
-                "type": "number",
-                "description": "Number of PSRule security errors found"
-            },
-            "psRuleWarnings": {
-                "type": "number",
-                "description": "Number of PSRule security warnings found"
-            },
-            "securityStatus": {
-                "type": "string",
-                "enum": ["pass", "warnings", "errors"],
-                "description": "Overall security scan status"
-            },
-            "overallStatus": {
-                "type": "string",
-                "enum": ["success", "warning", "failure"],
-                "description": "Overall validation status (three-state)"
-            },
-            "githubRunUrl": {
-                "type": "string",
-                "description": "URL to the GitHub workflow run"
-            },
-            "resultFileContent": {
-                "type": "string",
-                "description": "Full markdown content from the validation result artifact"
-            }
-        },
-        "required": [
-            "azdUpSuccess",
-            "azdDownSuccess",
-            "psRuleErrors",
-            "psRuleWarnings",
-            "securityStatus",
-            "overallStatus"
-        ]
-    }
+  "azdValidation": {
+    "type": "object",
+    "description": "AZD template validation results from artifact parsing",
+    "properties": {
+      "azdUpSuccess": {
+        "type": "boolean",
+        "description": "Whether 'azd up' command succeeded"
+      },
+      "azdUpTime": {
+        "type": ["string", "null"],
+        "description": "Execution time for 'azd up' command (e.g., '45.2s')"
+      },
+      "azdDownSuccess": {
+        "type": "boolean",
+        "description": "Whether 'azd down' command succeeded"
+      },
+      "azdDownTime": {
+        "type": ["string", "null"],
+        "description": "Execution time for 'azd down' command (e.g., '12.3s')"
+      },
+      "psRuleErrors": {
+        "type": "number",
+        "description": "Number of PSRule security errors found"
+      },
+      "psRuleWarnings": {
+        "type": "number",
+        "description": "Number of PSRule security warnings found"
+      },
+      "securityStatus": {
+        "type": "string",
+        "enum": ["pass", "warnings", "errors"],
+        "description": "Overall security scan status"
+      },
+      "overallStatus": {
+        "type": "string",
+        "enum": ["success", "warning", "failure"],
+        "description": "Overall validation status (three-state)"
+      },
+      "githubRunUrl": {
+        "type": "string",
+        "description": "URL to the GitHub workflow run"
+      },
+      "resultFileContent": {
+        "type": "string",
+        "description": "Full markdown content from the validation result artifact"
+      }
+    },
+    "required": [
+      "azdUpSuccess",
+      "azdDownSuccess",
+      "psRuleErrors",
+      "psRuleWarnings",
+      "securityStatus",
+      "overallStatus"
+    ]
+  }
 }
 ```
 
@@ -744,23 +729,23 @@ if (statusData.status === "completed") {
 
 ```typescript
 function createValidationBadge(validation: AzdValidationResult | null): string {
-    if (!validation) {
-        return '<span class="validation-badge badge-unknown">Not Validated</span>';
-    }
+  if (!validation) {
+    return '<span class="validation-badge badge-unknown">Not Validated</span>';
+  }
 
-    const badgeClass = {
-        success: "badge-success",
-        warning: "badge-warning",
-        failure: "badge-failure",
-    }[validation.overallStatus];
+  const badgeClass = {
+    success: 'badge-success',
+    warning: 'badge-warning',
+    failure: 'badge-failure',
+  }[validation.overallStatus];
 
-    const badgeText = {
-        success: "✅ Validated",
-        warning: "⚠️ Warnings",
-        failure: "❌ Failed",
-    }[validation.overallStatus];
+  const badgeText = {
+    success: '✅ Validated',
+    warning: '⚠️ Warnings',
+    failure: '❌ Failed',
+  }[validation.overallStatus];
 
-    return `<span class="validation-badge ${badgeClass}">${badgeText}</span>`;
+  return `<span class="validation-badge ${badgeClass}">${badgeText}</span>`;
 }
 ```
 
@@ -768,36 +753,36 @@ function createValidationBadge(validation: AzdValidationResult | null): string {
 
 ```css
 .validation-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85em;
-    font-weight: bold;
-    margin-left: 8px;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: bold;
+  margin-left: 8px;
 }
 
 .badge-success {
-    background-color: rgba(0, 255, 0, 0.2);
-    border: 1px solid #00ff00;
-    color: #00ff00;
+  background-color: rgba(0, 255, 0, 0.2);
+  border: 1px solid #00ff00;
+  color: #00ff00;
 }
 
 .badge-warning {
-    background-color: rgba(255, 255, 0, 0.2);
-    border: 1px solid #ffff00;
-    color: #ffff00;
+  background-color: rgba(255, 255, 0, 0.2);
+  border: 1px solid #ffff00;
+  color: #ffff00;
 }
 
 .badge-failure {
-    background-color: rgba(255, 0, 0, 0.2);
-    border: 1px solid #ff0000;
-    color: #ff0000;
+  background-color: rgba(255, 0, 0, 0.2);
+  border: 1px solid #ff0000;
+  color: #ff0000;
 }
 
 .badge-unknown {
-    background-color: rgba(128, 128, 128, 0.2);
-    border: 1px solid #808080;
-    color: #808080;
+  background-color: rgba(128, 128, 128, 0.2);
+  border: 1px solid #808080;
+  color: #808080;
 }
 ```
 
@@ -810,12 +795,12 @@ function createValidationBadge(validation: AzdValidationResult | null): string {
 **File:** `packages/server/tests/validation.spec.ts` (create if doesn't exist)
 
 ```typescript
-import { describe, it, expect } from "vitest";
-import { parseAzdValidationResult } from "../src/routes/validation";
+import { describe, it, expect } from 'vitest';
+import { parseAzdValidationResult } from '../src/routes/validation';
 
-describe("parseAzdValidationResult", () => {
-    it("should parse successful validation with no warnings", () => {
-        const markdown = `
+describe('parseAzdValidationResult', () => {
+  it('should parse successful validation with no warnings', () => {
+    const markdown = `
 # AI Gallery Standard Validation: CONFORMING
 
 ## Functional Requirements:
@@ -825,16 +810,16 @@ describe("parseAzdValidationResult", () => {
 ## Security Requirements:
 - [x] Security Scan
 `;
-        const result = parseAzdValidationResult(markdown);
-        expect(result.azdUpSuccess).toBe(true);
-        expect(result.azdDownSuccess).toBe(true);
-        expect(result.overallStatus).toBe("success");
-        expect(result.psRuleWarnings).toBe(0);
-        expect(result.psRuleErrors).toBe(0);
-    });
+    const result = parseAzdValidationResult(markdown);
+    expect(result.azdUpSuccess).toBe(true);
+    expect(result.azdDownSuccess).toBe(true);
+    expect(result.overallStatus).toBe('success');
+    expect(result.psRuleWarnings).toBe(0);
+    expect(result.psRuleErrors).toBe(0);
+  });
 
-    it("should parse validation with warnings", () => {
-        const markdown = `
+  it('should parse validation with warnings', () => {
+    const markdown = `
 # AI Gallery Standard Validation: CONFORMING
 
 ## Functional Requirements:
@@ -845,15 +830,15 @@ describe("parseAzdValidationResult", () => {
 - :warning: Security Scan
   - PSRule warning 1
 `;
-        const result = parseAzdValidationResult(markdown);
-        expect(result.azdUpSuccess).toBe(true);
-        expect(result.azdDownSuccess).toBe(true);
-        expect(result.overallStatus).toBe("warning");
-        expect(result.psRuleWarnings).toBeGreaterThan(0);
-    });
+    const result = parseAzdValidationResult(markdown);
+    expect(result.azdUpSuccess).toBe(true);
+    expect(result.azdDownSuccess).toBe(true);
+    expect(result.overallStatus).toBe('warning');
+    expect(result.psRuleWarnings).toBeGreaterThan(0);
+  });
 
-    it("should parse failed azd up", () => {
-        const markdown = `
+  it('should parse failed azd up', () => {
+    const markdown = `
 # AI Gallery Standard Validation: NON-CONFORMING
 
 ## Functional Requirements:
@@ -863,14 +848,14 @@ describe("parseAzdValidationResult", () => {
 ## Security Requirements:
 - [x] Security Scan
 `;
-        const result = parseAzdValidationResult(markdown);
-        expect(result.azdUpSuccess).toBe(false);
-        expect(result.azdDownSuccess).toBe(true);
-        expect(result.overallStatus).toBe("failure");
-    });
+    const result = parseAzdValidationResult(markdown);
+    expect(result.azdUpSuccess).toBe(false);
+    expect(result.azdDownSuccess).toBe(true);
+    expect(result.overallStatus).toBe('failure');
+  });
 
-    it("should parse PSRule errors", () => {
-        const markdown = `
+  it('should parse PSRule errors', () => {
+    const markdown = `
 # AI Gallery Standard Validation: NON-CONFORMING
 
 ## Functional Requirements:
@@ -882,12 +867,12 @@ describe("parseAzdValidationResult", () => {
   - [ ] :x: Rule violation 1
   - [ ] :x: Rule violation 2
 `;
-        const result = parseAzdValidationResult(markdown);
-        expect(result.azdUpSuccess).toBe(true);
-        expect(result.azdDownSuccess).toBe(true);
-        expect(result.psRuleErrors).toBe(2);
-        expect(result.overallStatus).toBe("failure");
-    });
+    const result = parseAzdValidationResult(markdown);
+    expect(result.azdUpSuccess).toBe(true);
+    expect(result.azdDownSuccess).toBe(true);
+    expect(result.psRuleErrors).toBe(2);
+    expect(result.overallStatus).toBe('failure');
+  });
 });
 ```
 
@@ -920,9 +905,9 @@ curl -X GET "http://localhost:3001/api/v4/validation-status?workflowOrgRepo=Temp
 - [ ] Trigger validation on a known good template
 - [ ] Verify artifact gets downloaded and parsed
 - [ ] Check all three states display correctly:
-    - [ ] Success (green ✅)
-    - [ ] Warning (yellow ⚠️)
-    - [ ] Failure (red ❌)
+  - [ ] Success (green ✅)
+  - [ ] Warning (yellow ⚠️)
+  - [ ] Failure (red ❌)
 - [ ] Verify execution times display if available
 - [ ] Test with template that has PSRule warnings
 - [ ] Test with template that fails azd up
@@ -989,25 +974,25 @@ curl -X GET "http://localhost:3001/api/v4/validation-status?workflowOrgRepo=Temp
 **Total Estimated Time:** 3.5-4.5 hours
 
 - **Phase 1 (Backend):** 1-2 hours
-    - Install dependencies: 5 min
-    - Add artifact download: 30 min
-    - Add markdown parsing: 30 min
-    - Integration & testing: 30-60 min
+  - Install dependencies: 5 min
+  - Add artifact download: 30 min
+  - Add markdown parsing: 30 min
+  - Integration & testing: 30-60 min
 
 - **Phase 2 (Frontend):** 1 hour
-    - Remove old parsing: 10 min
-    - Add new display logic: 30 min
-    - CSS styling: 20 min
+  - Remove old parsing: 10 min
+  - Add new display logic: 30 min
+  - CSS styling: 20 min
 
 - **Phase 3 (Schema):** 30 minutes
-    - Update schema: 10 min
-    - Generate TypeScript types: 10 min
-    - Update docs: 10 min
+  - Update schema: 10 min
+  - Generate TypeScript types: 10 min
+  - Update docs: 10 min
 
 - **Phase 4 (Badges):** 1 hour
-    - Add badge component: 30 min
-    - Styling: 15 min
-    - Integration: 15 min
+  - Add badge component: 30 min
+  - Styling: 15 min
+  - Integration: 15 min
 
 **Buffer:** 1 hour for unexpected issues
 
@@ -1021,21 +1006,21 @@ If implementation fails or introduces bugs:
 
 1. **Immediate Rollback:**
 
-    ```bash
-    git reset --hard HEAD~1
-    docker-compose down
-    docker-compose up --build
-    ```
+   ```bash
+   git reset --hard HEAD~1
+   docker-compose down
+   docker-compose up --build
+   ```
 
 2. **Partial Rollback (Backend Only):**
-    - Keep frontend changes (they're improvements anyway)
-    - Revert backend artifact parsing
-    - Frontend falls back to workflow conclusion
+   - Keep frontend changes (they're improvements anyway)
+   - Revert backend artifact parsing
+   - Frontend falls back to workflow conclusion
 
 3. **Feature Flag (If Time Permits):**
-    ```typescript
-    const USE_ARTIFACT_PARSING = process.env.ENABLE_ARTIFACT_PARSING === "true";
-    ```
+   ```typescript
+   const USE_ARTIFACT_PARSING = process.env.ENABLE_ARTIFACT_PARSING === 'true';
+   ```
 
 ---
 
@@ -1116,9 +1101,9 @@ After deployment, verify:
 1. **Trigger validation on demo template**
 2. **Wait for workflow completion**
 3. **Verify accurate status display:**
-    - Check success case (green ✅)
-    - Check warning case (yellow ⚠️)
-    - Check failure case (red ❌)
+   - Check success case (green ✅)
+   - Check warning case (yellow ⚠️)
+   - Check failure case (red ❌)
 4. **Verify execution times display**
 5. **Verify PSRule counts are accurate**
 6. **Verify GitHub run link works**

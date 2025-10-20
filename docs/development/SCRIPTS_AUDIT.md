@@ -57,9 +57,9 @@ This document tracks scripts in the `/scripts` directory to determine which are 
 #### `verify-packages.sh`
 
 - **Required Changes**:
-    - Add `server` to expected packages list
-    - Remove check for `api` (will move to legacy branch)
-    - Update expected directories: `(app server)`
+  - Add `server` to expected packages list
+  - Remove check for `api` (will move to legacy branch)
+  - Update expected directories: `(app server)`
 - **Priority**: High - blocks CI if not updated
 
 ### Scripts to Review
@@ -118,10 +118,10 @@ No new scripts needed for Docker deployment. Docker Compose and Dockerfiles are 
 - **Coordination File**: See `EXPRESS_MIGRATION_MATRIX.md` for API migration status
 - **When API function is migrated**: Review corresponding test/setup scripts
 - **Before deleting any script**:
-    1. Search codebase for references
-    2. Check GitHub Actions workflows
-    3. Check documentation
-    4. Confirm with team
+  1. Search codebase for references
+  2. Check GitHub Actions workflows
+  3. Check documentation
+  4. Confirm with team
 
 ## Testing Strategy
 

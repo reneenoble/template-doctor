@@ -31,47 +31,47 @@ This document describes the test coverage for the three features implemented:
 
 - **Purpose**: Verifies the analyzer returns a `categories` object
 - **Validates**:
-    - All 6 standard categories exist (repositoryManagement, functionalRequirements, deployment, security, testing, agents)
-    - Each category has `enabled`, `issues`, `compliant`, and `percentage` properties
-    - Arrays are properly initialized
+  - All 6 standard categories exist (repositoryManagement, functionalRequirements, deployment, security, testing, agents)
+  - Each category has `enabled`, `issues`, `compliant`, and `percentage` properties
+  - Arrays are properly initialized
 
 #### ✅ `correctly maps issue categories to standard category keys`
 
 - **Purpose**: Tests category mapping logic
 - **Validates**:
-    - Issues with `category: 'file'` map to `repositoryManagement`
-    - Issues with `category: 'missing'` map to `repositoryManagement`
-    - Missing required files are grouped correctly
+  - Issues with `category: 'file'` map to `repositoryManagement`
+  - Issues with `category: 'missing'` map to `repositoryManagement`
+  - Missing required files are grouped correctly
 
 #### ✅ `calculates correct percentage for each category`
 
 - **Purpose**: Validates percentage calculation
 - **Validates**:
-    - Formula: `Math.round((compliant.length / total) * 100)`
-    - Empty categories show 0%
-    - Categories with items show correct percentage
+  - Formula: `Math.round((compliant.length / total) * 100)`
+  - Empty categories show 0%
+  - Categories with items show correct percentage
 
 #### ✅ `does not include meta category in tiles`
 
 - **Purpose**: Ensures meta category is excluded from UI display
 - **Validates**:
-    - `categories.meta` is undefined
-    - Compliance summary exists in compliant array with `category: 'meta'`
-    - Meta items don't pollute tile display
+  - `categories.meta` is undefined
+  - Compliance summary exists in compliant array with `category: 'meta'`
+  - Meta items don't pollute tile display
 
 #### ✅ `groups bicep security issues into security category`
 
 - **Purpose**: Tests security-related grouping
 - **Validates**:
-    - Bicep files with auth issues map to `security` category
-    - Security category exists and can contain items
+  - Bicep files with auth issues map to `security` category
+  - Security category exists and can contain items
 
 #### ✅ `groups deployment-related items into deployment category`
 
 - **Purpose**: Tests deployment grouping
 - **Validates**:
-    - Workflows, Bicep files, azure.yaml map to `deployment`
-    - Deployment category contains expected items
+  - Workflows, Bicep files, azure.yaml map to `deployment`
+  - Deployment category contains expected items
 
 ### Example Usage
 
@@ -94,50 +94,50 @@ npx vitest run tests/unit/analyzer.categories.spec.js
 
 - **Purpose**: Verifies notification appears for external repos
 - **Validates**:
-    - `NotificationSystem.showInfo` is called with correct parameters
-    - Title is "Fork-First Analysis"
-    - Message contains "fork" and current username
-    - Duration is 6000ms (6 seconds)
+  - `NotificationSystem.showInfo` is called with correct parameters
+  - Title is "Fork-First Analysis"
+  - Message contains "fork" and current username
+  - Duration is 6000ms (6 seconds)
 
 #### ✅ `does not show fork notification when analyzing own repo`
 
 - **Purpose**: Ensures no notification for user's own repos
 - **Validates**:
-    - Owner matches current user (case-insensitive)
-    - Fork notification is NOT triggered
-    - Other notifications still work
+  - Owner matches current user (case-insensitive)
+  - Fork notification is NOT triggered
+  - Other notifications still work
 
 #### ✅ `does not show fork notification when not authenticated`
 
 - **Purpose**: Tests unauthenticated state handling
 - **Validates**:
-    - `GitHubClient.auth.isAuthenticated()` returns false
-    - Fork notification is NOT triggered
-    - No errors occur
+  - `GitHubClient.auth.isAuthenticated()` returns false
+  - Fork notification is NOT triggered
+  - No errors occur
 
 #### ✅ `fork notification displays in UI with correct styling`
 
 - **Purpose**: Visual verification of notification
 - **Validates**:
-    - Notification element appears in DOM
-    - Has class `.notification.info`
-    - Contains correct text content
+  - Notification element appears in DOM
+  - Has class `.notification.info`
+  - Contains correct text content
 
 #### ✅ `fork notification auto-dismisses after 6 seconds`
 
 - **Purpose**: Tests auto-dismiss behavior
 - **Validates**:
-    - Notification appears initially
-    - Notification disappears after 6 seconds
-    - Timeout is correctly implemented
+  - Notification appears initially
+  - Notification disappears after 6 seconds
+  - Timeout is correctly implemented
 
 #### ✅ `handles case-insensitive username comparison`
 
 - **Purpose**: Tests username normalization
 - **Validates**:
-    - `testuser` === `TestUser` (lowercase comparison)
-    - No notification when case doesn't match exactly
-    - Prevents false positives
+  - `testuser` === `TestUser` (lowercase comparison)
+  - No notification when case doesn't match exactly
+  - Prevents false positives
 
 ### Example Usage
 
@@ -168,28 +168,28 @@ The category tiles functionality is **confirmed working** through:
 The test file includes 6 comprehensive tests:
 
 1. **`renders all six category tiles with correct structure`**
-    - Validates all 6 tiles render
-    - Checks for icons, labels, percentages, badges
+   - Validates all 6 tiles render
+   - Checks for icons, labels, percentages, badges
 
 2. **`displays correct percentage and counts for each category`**
-    - Verifies numeric calculations
-    - Tests "X passed • Y issues" format
+   - Verifies numeric calculations
+   - Tests "X passed • Y issues" format
 
 3. **`shows enabled badge in green for enabled categories`**
-    - Validates badge color (#28a745)
-    - Checks "Enabled" text
+   - Validates badge color (#28a745)
+   - Checks "Enabled" text
 
 4. **`shows disabled badge in gray for disabled categories`**
-    - Validates badge color (#6c757d)
-    - Checks "Disabled" text
+   - Validates badge color (#6c757d)
+   - Checks "Disabled" text
 
 5. **`handles empty categories gracefully`**
-    - Tests 0% display
-    - Validates "0 passed • 0 issues"
+   - Tests 0% display
+   - Validates "0 passed • 0 issues"
 
 6. **`category tiles are responsive and maintain minimum width`**
-    - Verifies min-width: 200px
-    - Tests responsive grid layout
+   - Verifies min-width: 200px
+   - Tests responsive grid layout
 
 ### Why Integration Tests Are Pending
 
@@ -225,40 +225,40 @@ The AGENTS.md enrichment is **confirmed working** through:
 The test file includes 10 comprehensive tests:
 
 1. **`shows "Agents: Missing" badge when agents.md is not found`**
-    - Mocks 404 response
-    - Validates red badge (#d9534f)
+   - Mocks 404 response
+   - Validates red badge (#d9534f)
 
 2. **`shows "Agents: Invalid" badge when agents.md has formatting issues`**
-    - Tests malformed markdown
-    - Validates orange badge (#ff9800)
+   - Tests malformed markdown
+   - Validates orange badge (#ff9800)
 
 3. **`shows "Agents: OK" badge when agents.md is valid`**
-    - Tests proper table structure
-    - Validates green badge (#28a745)
+   - Tests proper table structure
+   - Validates green badge (#28a745)
 
 4. **`updates agents tile styling when agents.md is missing`**
-    - Verifies light red background (#ffe5e5)
-    - Checks border color
+   - Verifies light red background (#ffe5e5)
+   - Checks border color
 
 5. **`adds "Create agents.md Issue" button when agents.md is missing`**
-    - Validates button creation
-    - Checks button text and placement
+   - Validates button creation
+   - Checks button text and placement
 
 6. **`uses sessionStorage cache for repeated checks`**
-    - Tests caching mechanism
-    - Verifies fetch is not called multiple times
+   - Tests caching mechanism
+   - Verifies fetch is not called multiple times
 
 7. **`validates required table columns`**
-    - Tests for: name, description, inputs, outputs, permissions
-    - Ensures all columns are present
+   - Tests for: name, description, inputs, outputs, permissions
+   - Ensures all columns are present
 
 8. **`skips enrichment when agents category already exists from backend`**
-    - Validates backend data takes precedence
-    - Prevents duplicate enrichment
+   - Validates backend data takes precedence
+   - Prevents duplicate enrichment
 
 9. **`fetches from CDN (jsdelivr) with fallback to raw.githubusercontent`**
-    - Tests primary fetch source
-    - Validates fallback mechanism
+   - Tests primary fetch source
+   - Validates fallback mechanism
 
 10. **`counts agents correctly from table rows`**
     - Parses table structure

@@ -87,7 +87,7 @@ azd down
 APP_URL=$(azd env get-value SERVICE_WEB_URI)
 
 # Test health endpoint
-curl "${APP_URL}/api/v4/health"
+curl "${APP_URL}/api/health"
 
 # Test config endpoint
 curl "${APP_URL}/api/v4/client-settings"

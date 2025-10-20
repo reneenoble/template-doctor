@@ -17,9 +17,9 @@ Create a GitHub OAuth App for production:
 1. Go to https://github.com/settings/developers
 2. Click "New OAuth App"
 3. Fill in:
-    - **Application name**: Template Doctor (Production)
-    - **Homepage URL**: `https://your-app-url.azurewebsites.net` (will update after deployment)
-    - **Authorization callback URL**: `https://your-app-url.azurewebsites.net/callback.html`
+   - **Application name**: Template Doctor (Production)
+   - **Homepage URL**: `https://your-app-url.azurewebsites.net` (will update after deployment)
+   - **Authorization callback URL**: `https://your-app-url.azurewebsites.net/callback.html`
 4. Click "Register application"
 5. **Save the Client ID** (starts with `Ov23li...`)
 6. Click "Generate a new client secret"
@@ -33,9 +33,9 @@ Create a GitHub Personal Access Token:
 2. Click "Generate new token" → "Generate new token (classic)"
 3. Give it a descriptive name: "Template Doctor Azure Deployment"
 4. Select scopes:
-    - [x] `repo` (Full control of private repositories)
-    - [x] `workflow` (Update GitHub Action workflows)
-    - [x] `read:org` (Read org and team membership, read org projects)
+   - [x] `repo` (Full control of private repositories)
+   - [x] `workflow` (Update GitHub Action workflows)
+   - [x] `read:org` (Read org and team membership, read org projects)
 5. Click "Generate token"
 6. **Save the token** (starts with `ghp_...`)
 
@@ -75,30 +75,30 @@ Then update the `mongodbUri` parameter to use the output from the Cosmos module.
 
 1. Copy `.env.example` to `.env`:
 
-    ```bash
-    cp .env.example .env
-    ```
+   ```bash
+   cp .env.example .env
+   ```
 
 2. Fill in **all required values** in `.env`:
 
-    ```bash
-    # REQUIRED - From Step 1 (GitHub OAuth App)
-    GITHUB_CLIENT_ID=Ov23li...your-client-id
-    GITHUB_CLIENT_SECRET=...your-client-secret
+   ```bash
+   # REQUIRED - From Step 1 (GitHub OAuth App)
+   GITHUB_CLIENT_ID=Ov23li...your-client-id
+   GITHUB_CLIENT_SECRET=...your-client-secret
 
-    # REQUIRED - From Step 2 (GitHub PAT)
-    GITHUB_TOKEN=ghp_...your-github-token
-    GH_WORKFLOW_TOKEN=ghp_...your-github-token  # Can be same as GITHUB_TOKEN
+   # REQUIRED - From Step 2 (GitHub PAT)
+   GITHUB_TOKEN=ghp_...your-github-token
+   GH_WORKFLOW_TOKEN=ghp_...your-github-token  # Can be same as GITHUB_TOKEN
 
-    # REQUIRED - Admin user(s)
-    ADMIN_GITHUB_USERS=yourGitHubUsername  # Your GitHub username for admin access
+   # REQUIRED - Admin user(s)
+   ADMIN_GITHUB_USERS=yourGitHubUsername  # Your GitHub username for admin access
 
-    # REQUIRED - From Step 3 (MongoDB)
-    MONGODB_URI=mongodb+srv://...your-connection-string
+   # REQUIRED - From Step 3 (MongoDB)
+   MONGODB_URI=mongodb+srv://...your-connection-string
 
-    # OPTIONAL - Azure location (default: swedencentral)
-    AZURE_LOCATION=swedencentral
-    ```
+   # OPTIONAL - Azure location (default: swedencentral)
+   AZURE_LOCATION=swedencentral
+   ```
 
 3. **Verify `.env` has NO placeholders** - all values should be filled in!
 
@@ -133,73 +133,73 @@ MONGODB_URI=mongodb+srv://...
 
 1. Login to Azure:
 
-    ```bash
-    azd auth login
-    ```
+   ```bash
+   azd auth login
+   ```
 
 2. Initialize the environment:
 
-    ```bash
-    azd init
-    ```
+   ```bash
+   azd init
+   ```
 
-    - Enter an environment name (e.g., `prod`, `staging`, `your-name`)
-    - This will create `.azure/<env-name>/` directory
+   - Enter an environment name (e.g., `prod`, `staging`, `your-name`)
+   - This will create `.azure/<env-name>/` directory
 
 3. Provision infrastructure:
 
-    ```bash
-    azd provision
-    ```
+   ```bash
+   azd provision
+   ```
 
-    This will:
-    - Create Azure resources (Container Apps, Container Registry, Log Analytics)
-    - Set up secrets in Container App
-    - Output the deployed app URL
+   This will:
+   - Create Azure resources (Container Apps, Container Registry, Log Analytics)
+   - Set up secrets in Container App
+   - Output the deployed app URL
 
 4. **IMPORTANT**: Update GitHub OAuth App callback URL:
-    - Note the `SERVICE_WEB_URI` from azd provision output
-    - Go back to your GitHub OAuth App settings
-    - Update **Authorization callback URL** to: `https://<SERVICE_WEB_URI>/callback.html`
-    - Save the changes
+   - Note the `SERVICE_WEB_URI` from azd provision output
+   - Go back to your GitHub OAuth App settings
+   - Update **Authorization callback URL** to: `https://<SERVICE_WEB_URI>/callback.html`
+   - Save the changes
 
 5. Build and deploy the application:
 
-    ```bash
-    ./scripts/deploy.sh
-    ```
+   ```bash
+   ./scripts/deploy.sh
+   ```
 
-    This will:
-    - Build the Docker image in Azure Container Registry
-    - Update the Container App with the new image
-    - Set `TD_BACKEND_BASE_URL` to the deployed URL
+   This will:
+   - Build the Docker image in Azure Container Registry
+   - Update the Container App with the new image
+   - Set `TD_BACKEND_BASE_URL` to the deployed URL
 
 ## Step 7: Post-Deployment Verification
 
 1. **Test OAuth Login**:
-    - Open the deployed URL (from `SERVICE_WEB_URI`)
-    - Click "Sign in with GitHub"
-    - Authorize the OAuth app
-    - Verify you're logged in
+   - Open the deployed URL (from `SERVICE_WEB_URI`)
+   - Click "Sign in with GitHub"
+   - Authorize the OAuth app
+   - Verify you're logged in
 
 2. **Test Template Analysis**:
-    - Enter a GitHub repository URL (e.g., `https://github.com/Azure-Samples/todo-nodejs-mongo`)
-    - Click "Scan Template"
-    - Wait for analysis to complete
-    - Verify results appear
+   - Enter a GitHub repository URL (e.g., `https://github.com/Azure-Samples/todo-nodejs-mongo`)
+   - Click "Scan Template"
+   - Wait for analysis to complete
+   - Verify results appear
 
 3. **Test Workflow Validation** (if GH_WORKFLOW_TOKEN is set):
-    - Click "Run AZD Validation" on a template
-    - Verify workflow dispatches successfully
-    - Check GitHub Actions tab in your repository
+   - Click "Run AZD Validation" on a template
+   - Verify workflow dispatches successfully
+   - Check GitHub Actions tab in your repository
 
 4. **Check Database**:
-    - Verify analysis results are saved to MongoDB
-    - Check that tiles show up without hard refresh
+   - Verify analysis results are saved to MongoDB
+   - Check that tiles show up without hard refresh
 
 5. **Test Leaderboards** (admin only):
-    - Navigate to `/leaderboard.html`
-    - Verify leaderboard data loads (requires ADMIN_GITHUB_USERS)
+   - Navigate to `/leaderboard.html`
+   - Verify leaderboard data loads (requires ADMIN_GITHUB_USERS)
 
 ## Common Issues & Solutions
 

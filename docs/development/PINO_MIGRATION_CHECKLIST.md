@@ -89,18 +89,18 @@
 ### Before:
 
 ```typescript
-console.log("[Database] Connected to MongoDB");
-console.error("[Database] Connection failed:", error);
+console.log('[Database] Connected to MongoDB');
+console.error('[Database] Connection failed:', error);
 ```
 
 ### After:
 
 ```typescript
-import { createLogger } from "../shared/logger.js";
-const logger = createLogger("database");
+import { createLogger } from '../shared/logger.js';
+const logger = createLogger('database');
 
-logger.info("Connected to MongoDB");
-logger.error({ err: error }, "Connection failed");
+logger.info('Connected to MongoDB');
+logger.error({ err: error }, 'Connection failed');
 ```
 
 ### Structured Logging:
@@ -108,16 +108,16 @@ logger.error({ err: error }, "Connection failed");
 ```typescript
 // Rich context
 logger.info(
-    {
-        repoUrl: "https://github.com/org/repo",
-        analysisId: "123",
-        duration: 1234,
-    },
-    "Analysis saved successfully",
+  {
+    repoUrl: 'https://github.com/org/repo',
+    analysisId: '123',
+    duration: 1234,
+  },
+  'Analysis saved successfully',
 );
 
 // Error with stack trace
-logger.error({ err: error, repoUrl }, "Analysis save failed");
+logger.error({ err: error, repoUrl }, 'Analysis save failed');
 ```
 
 ## 📊 Progress Stats

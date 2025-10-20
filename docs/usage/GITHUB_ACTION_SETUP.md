@@ -9,15 +9,15 @@ Most organizations can use the default GITHUB_TOKEN. Some enterprises block PR c
 - The workflow `.github/workflows/submit-analysis.yml` listens for a `repository_dispatch` event of type `template-analysis-completed`.
 - It generates result files and creates a PR with `peter-evans/create-pull-request`.
 - Minimum permissions:
-    - In the workflow file (already present):
-        ```yaml
-        permissions:
-            contents: write
-            pull-requests: write
-        ```
-    - In Org AND Repo settings → Actions → General → Workflow permissions:
-        - Read and write permissions
-        - Allow GitHub Actions to create and approve pull requests (must be checked if using `GITHUB_TOKEN`).
+  - In the workflow file (already present):
+    ```yaml
+    permissions:
+      contents: write
+      pull-requests: write
+    ```
+  - In Org AND Repo settings → Actions → General → Workflow permissions:
+    - Read and write permissions
+    - Allow GitHub Actions to create and approve pull requests (must be checked if using `GITHUB_TOKEN`).
 
 If the org has that checkbox disabled and you cannot change it, use the Bot Token fallback.
 
@@ -26,28 +26,28 @@ If the org has that checkbox disabled and you cannot change it, use the Bot Toke
 Some organizations restrict GITHUB_TOKEN from creating PRs. Template Doctor includes a safe fallback to a personal access token (PAT) stored as a secret called `ACTIONS_BOT_TOKEN`.
 
 - In `.github/workflows/submit-analysis.yml`, PR creation is split into two steps:
-    - Uses `ACTIONS_BOT_TOKEN` if present
-    - Falls back to `GITHUB_TOKEN` otherwise
+  - Uses `ACTIONS_BOT_TOKEN` if present
+  - Falls back to `GITHUB_TOKEN` otherwise
 
 ### Steps
 
 1. Create a bot/service account
-    - Either a dedicated GitHub user or an internal automation account with access to your repo.
+   - Either a dedicated GitHub user or an internal automation account with access to your repo.
 
 2. Generate a fine-grained PAT
-    - Scope it only to the target repository (e.g., `Template-Doctor/template-doctor`).
-    - Permissions:
-        - Contents: Read & Write
-        - Pull requests: Read & Write
-    - If your organization requires SSO, click "Authorize" for the org after creating the token.
+   - Scope it only to the target repository (e.g., `Template-Doctor/template-doctor`).
+   - Permissions:
+     - Contents: Read & Write
+     - Pull requests: Read & Write
+   - If your organization requires SSO, click "Authorize" for the org after creating the token.
 
 3. Add the token as a repo secret
-    - Go to Repository → Settings → Secrets and variables → Actions → New repository secret
-    - Name: `ACTIONS_BOT_TOKEN`
-    - Value: paste the PAT
+   - Go to Repository → Settings → Secrets and variables → Actions → New repository secret
+   - Name: `ACTIONS_BOT_TOKEN`
+   - Value: paste the PAT
 
 4. Re-run "Save Results"
-    - Trigger a scan and click "Save Results" in the UI. The workflow will use `ACTIONS_BOT_TOKEN` and should create the PR successfully.
+   - Trigger a scan and click "Save Results" in the UI. The workflow will use `ACTIONS_BOT_TOKEN` and should create the PR successfully.
 
 ### Security tips
 
@@ -66,22 +66,22 @@ If you use an auto-approve step, the same restriction applies. Either:
 
 - The dispatch to start this workflow is sent by Template Doctor's server function using `GH_WORKFLOW_TOKEN`.
 - Target repository resolution precedence:
-    1. `GITHUB_REPO_OWNER` + `GITHUB_REPO_NAME`
-    2. `GITHUB_REPOSITORY` (owner/repo)
-    3. `GITHUB_ACTION_REPO` (server-side override)
+  1. `GITHUB_REPO_OWNER` + `GITHUB_REPO_NAME`
+  2. `GITHUB_REPOSITORY` (owner/repo)
+  3. `GITHUB_ACTION_REPO` (server-side override)
 - Set these where the API runs (local functions or your production environment).
 
 ## 5) Troubleshooting
 
 - Error: "GitHub Actions is not permitted to create or approve pull requests."
-    - Cause: Org policy blocks PR creation via GITHUB_TOKEN.
-    - Fix: Enable the checkbox in Org/Repo settings OR set up `ACTIONS_BOT_TOKEN` as described above.
+  - Cause: Org policy blocks PR creation via GITHUB_TOKEN.
+  - Fix: Enable the checkbox in Org/Repo settings OR set up `ACTIONS_BOT_TOKEN` as described above.
 
 - Error: 404 from the submit endpoint
-    - Ensure the API is deployed and the frontend points to the correct `apiBase`.
+  - Ensure the API is deployed and the frontend points to the correct `apiBase`.
 
 - Error: 401/403 from GitHub
-    - Check that `GH_WORKFLOW_TOKEN` has `repo` and `workflow` scopes and is authorized for the org (SSO).
+  - Check that `GH_WORKFLOW_TOKEN` has `repo` and `workflow` scopes and is authorized for the org (SSO).
 
 ## 6) Centralized archive of analysis metadata (optional)
 
@@ -99,11 +99,11 @@ How it’s enabled
 Required variables/secrets
 
 - In GitHub (repo → Settings → Secrets and variables → Actions):
-    - `TD_API_BASE`: Base URL to your API (e.g., `https://<your-swa>.azurestaticapps.net/api`). If missing, the step will safely skip with a log message.
-    - Optional: `TD_ARCHIVE_COLLECTION` (or `TD_COLLECTION`): Default collection name (defaults to `aigallery`).
+  - `TD_API_BASE`: Base URL to your API (e.g., `https://<your-swa>.azurestaticapps.net/api`). If missing, the step will safely skip with a log message.
+  - Optional: `TD_ARCHIVE_COLLECTION` (or `TD_COLLECTION`): Default collection name (defaults to `aigallery`).
 - In Azure Functions (hosting the `/archive-collection` endpoint):
-    - `GH_WORKFLOW_TOKEN`: PAT with access to the central archive repo (Contents and Pull requests read/write). If your org uses SSO, authorize the token for the org.
-    - Optional: `ARCHIVE_REPO_SLUG` to override the default central repo.
+  - `GH_WORKFLOW_TOKEN`: PAT with access to the central archive repo (Contents and Pull requests read/write). If your org uses SSO, authorize the token for the org.
+  - Optional: `ARCHIVE_REPO_SLUG` to override the default central repo.
 
 What the step does
 

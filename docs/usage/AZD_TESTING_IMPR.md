@@ -16,24 +16,24 @@ This PR enhances the AZD validation feature with artifact-based parsing, compreh
 ### 🧪 Test Infrastructure
 
 - **Playwright Browser Guard**: Fail-fast script prevents CI failures from missing browser binaries
-    - Detects `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` misconfigurations
-    - Provides actionable remediation steps
-    - Supports `PLAYWRIGHT_ALLOW_MISSING` override for unit-only pipelines
+  - Detects `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` misconfigurations
+  - Provides actionable remediation steps
+  - Supports `PLAYWRIGHT_ALLOW_MISSING` override for unit-only pipelines
 - **Expanded Test Coverage**: Vitest now includes server tests alongside root unit tests
 - **Server Test Config**: Added `tsconfig.test.json` for server-side test compilation
 
 ### ✅ Test Coverage Added
 
 - **E2E Tests** (Playwright):
-    - Validation UI (spinner, contrast, troubleshooting tips)
-    - Artifact-based results display
-    - GraphQL issue creation flow
-    - Error detection and highlighting
+  - Validation UI (spinner, contrast, troubleshooting tips)
+  - Artifact-based results display
+  - GraphQL issue creation flow
+  - Error detection and highlighting
 - **Unit Tests** (Vitest):
-    - Artifact download and ZIP extraction
-    - Markdown parsing (AZD Up/Down, PSRule errors/warnings, security status)
-    - Error pattern matching (UnmatchedPrincipalType detection)
-    - Issue body generation from artifacts
+  - Artifact download and ZIP extraction
+  - Markdown parsing (AZD Up/Down, PSRule errors/warnings, security status)
+  - Error pattern matching (UnmatchedPrincipalType detection)
+  - Issue body generation from artifacts
 
 ### 📚 Documentation
 

@@ -171,43 +171,43 @@ These variables were used with Azure Functions and are maintained for the legacy
 
 1. Copy the `.env.example` file to `.env` at the root of your project:
 
-    ```bash
-    cp .env.example .env
-    ```
+   ```bash
+   cp .env.example .env
+   ```
 
 2. Fill in at least the core environment variables in the `.env` file:
-    - GitHub authentication tokens
-    - GitHub OAuth credentials
-    - GitHub repo information
+   - GitHub authentication tokens
+   - GitHub OAuth credentials
+   - GitHub repo information
 
 3. Start the development environment:
 
-    **Option 1: Docker Compose (Recommended)**
+   **Option 1: Docker Compose (Recommended)**
 
-    ```bash
-    docker-compose up
-    ```
+   ```bash
+   docker-compose up
+   ```
 
-    **Option 2: Manual (Two Terminals)**
+   **Option 2: Manual (Two Terminals)**
 
-    Terminal 1 - Express Backend:
+   Terminal 1 - Express Backend:
 
-    ```bash
-    cd packages/server
-    npm run dev  # Port 3001
-    ```
+   ```bash
+   cd packages/server
+   npm run dev  # Port 3001
+   ```
 
-    Terminal 2 - Vite Frontend:
+   Terminal 2 - Vite Frontend:
 
-    ```bash
-    cd packages/app
-    npm run dev  # Port 4000
-    ```
+   ```bash
+   cd packages/app
+   npm run dev  # Port 4000
+   ```
 
 4. Access the application:
-    - Docker: http://localhost:3000
-    - Manual dev: http://localhost:4000
-    - Express API: http://localhost:3001
+   - Docker: http://localhost:3000
+   - Manual dev: http://localhost:4000
+   - Express API: http://localhost:3001
 
 ### Configuration Files
 
@@ -223,8 +223,8 @@ For the OAuth flow to work correctly, you need to:
 
 1. Create a GitHub OAuth App in your GitHub Developer Settings
 2. Set the Authorization callback URL based on your environment:
-    - Local development: `http://localhost:3000/callback.html`
-    - Production: `https://your-domain.com/callback.html`
+   - Local development: `http://localhost:3000/callback.html`
+   - Production: `https://your-domain.com/callback.html`
 3. Fill in the `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in your `.env` file
 4. Copy these values to `packages/server/.env` (or ensure build process copies them)
 

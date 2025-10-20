@@ -13,173 +13,159 @@ This document verifies 1:1 parity between the original Azure Functions code and 
 
 ```typescript
 export default wrapHttp(async (req: any, ctx: Context, requestId: string) => {
-    const env = loadEnv();
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const code = body.code;
-    if (!code) {
-        return { status: 400, body: { error: "Missing code", requestId } };
+  const env = loadEnv();
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const code = body.code;
+  if (!code) {
+    return { status: 400, body: { error: 'Missing code', requestId } };
+  }
+  const clientId = env.GITHUB_CLIENT_ID;
+  const clientSecret = env.GITHUB_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return {
+      status: 500,
+      body: {
+        error: 'Server not configured for GitHub OAuth',
+        requestId,
+      },
+    };
+  }
+  try {
+    const ghRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+      }),
+    });
+    const data = await ghRes.json();
+    ctx.log('GitHub OAuth response', {
+      requestId,
+      status: ghRes.status,
+      hasError: !!data.error,
+    });
+    if (!ghRes.ok) {
+      return {
+        status: ghRes.status,
+        body: {
+          error: data.error_description || data.error || 'OAuth exchange failed',
+          requestId,
+        },
+      };
     }
-    const clientId = env.GITHUB_CLIENT_ID;
-    const clientSecret = env.GITHUB_CLIENT_SECRET;
-    if (!clientId || !clientSecret) {
-        return {
-            status: 500,
-            body: {
-                error: "Server not configured for GitHub OAuth",
-                requestId,
-            },
-        };
+    if (data.error) {
+      return {
+        status: 400,
+        body: {
+          error: data.error_description || data.error,
+          requestId,
+        },
+      };
     }
-    try {
-        const ghRes = await fetch(
-            "https://github.com/login/oauth/access_token",
-            {
-                method: "POST",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    code,
-                }),
-            },
-        );
-        const data = await ghRes.json();
-        ctx.log("GitHub OAuth response", {
-            requestId,
-            status: ghRes.status,
-            hasError: !!data.error,
-        });
-        if (!ghRes.ok) {
-            return {
-                status: ghRes.status,
-                body: {
-                    error:
-                        data.error_description ||
-                        data.error ||
-                        "OAuth exchange failed",
-                    requestId,
-                },
-            };
-        }
-        if (data.error) {
-            return {
-                status: 400,
-                body: {
-                    error: data.error_description || data.error,
-                    requestId,
-                },
-            };
-        }
-        if (!data.access_token) {
-            return {
-                status: 502,
-                body: {
-                    error: "No access_token in GitHub response",
-                    requestId,
-                },
-            };
-        }
-        return {
-            status: 200,
-            body: {
-                access_token: data.access_token,
-                scope: data.scope || null,
-                token_type: data.token_type || "bearer",
-                requestId,
-            },
-        };
-    } catch (err: any) {
-        ctx.log.error("GitHub OAuth exchange exception", {
-            requestId,
-            error: err?.message,
-        });
-        return {
-            status: 500,
-            body: { error: "Internal error during token exchange", requestId },
-        };
+    if (!data.access_token) {
+      return {
+        status: 502,
+        body: {
+          error: 'No access_token in GitHub response',
+          requestId,
+        },
+      };
     }
+    return {
+      status: 200,
+      body: {
+        access_token: data.access_token,
+        scope: data.scope || null,
+        token_type: data.token_type || 'bearer',
+        requestId,
+      },
+    };
+  } catch (err: any) {
+    ctx.log.error('GitHub OAuth exchange exception', {
+      requestId,
+      error: err?.message,
+    });
+    return {
+      status: 500,
+      body: { error: 'Internal error during token exchange', requestId },
+    };
+  }
 });
 ```
 
 ### Express (`packages/server/src/routes/auth.ts`)
 
 ```typescript
-authRouter.post("/github-oauth-token", async (req: Request, res: Response) => {
-    const requestId = uuidv4();
-    try {
-        const body = req.body && typeof req.body === "object" ? req.body : {};
-        const code = body.code;
-        if (!code) {
-            return res.status(400).json({ error: "Missing code", requestId });
-        }
-        const clientId = process.env.GITHUB_CLIENT_ID;
-        const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-        if (!clientId || !clientSecret) {
-            return res.status(500).json({
-                error: "Server not configured for GitHub OAuth",
-                requestId,
-            });
-        }
-        const ghRes = await fetch(
-            "https://github.com/login/oauth/access_token",
-            {
-                method: "POST",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    code,
-                }),
-            },
-        );
-        const data = await ghRes.json();
-        console.log("GitHub OAuth response", {
-            requestId,
-            status: ghRes.status,
-            hasError: !!data.error,
-        });
-        if (!ghRes.ok) {
-            return res.status(ghRes.status).json({
-                error:
-                    data.error_description ||
-                    data.error ||
-                    "OAuth exchange failed",
-                requestId,
-            });
-        }
-        if (data.error) {
-            return res.status(400).json({
-                error: data.error_description || data.error,
-                requestId,
-            });
-        }
-        if (!data.access_token) {
-            return res.status(502).json({
-                error: "No access_token in GitHub response",
-                requestId,
-            });
-        }
-        return res.status(200).json({
-            access_token: data.access_token,
-            scope: data.scope || null,
-            token_type: data.token_type || "bearer",
-            requestId,
-        });
-    } catch (err: any) {
-        console.error("GitHub OAuth exchange exception", {
-            requestId,
-            error: err?.message,
-        });
-        return res
-            .status(500)
-            .json({ error: "Internal error during token exchange", requestId });
+authRouter.post('/github-oauth-token', async (req: Request, res: Response) => {
+  const requestId = uuidv4();
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const code = body.code;
+    if (!code) {
+      return res.status(400).json({ error: 'Missing code', requestId });
     }
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.status(500).json({
+        error: 'Server not configured for GitHub OAuth',
+        requestId,
+      });
+    }
+    const ghRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+      }),
+    });
+    const data = await ghRes.json();
+    console.log('GitHub OAuth response', {
+      requestId,
+      status: ghRes.status,
+      hasError: !!data.error,
+    });
+    if (!ghRes.ok) {
+      return res.status(ghRes.status).json({
+        error: data.error_description || data.error || 'OAuth exchange failed',
+        requestId,
+      });
+    }
+    if (data.error) {
+      return res.status(400).json({
+        error: data.error_description || data.error,
+        requestId,
+      });
+    }
+    if (!data.access_token) {
+      return res.status(502).json({
+        error: 'No access_token in GitHub response',
+        requestId,
+      });
+    }
+    return res.status(200).json({
+      access_token: data.access_token,
+      scope: data.scope || null,
+      token_type: data.token_type || 'bearer',
+      requestId,
+    });
+  } catch (err: any) {
+    console.error('GitHub OAuth exchange exception', {
+      requestId,
+      error: err?.message,
+    });
+    return res.status(500).json({ error: 'Internal error during token exchange', requestId });
+  }
 });
 ```
 
@@ -204,97 +190,87 @@ authRouter.post("/github-oauth-token", async (req: Request, res: Response) => {
 
 ```typescript
 export default wrapHttp(async (req: any, _ctx: Context, requestId: string) => {
-    if (req.method === "OPTIONS") {
-        return { status: 204 };
-    }
-    if (req.method !== "GET") {
-        return {
-            status: 405,
-            body: { error: "Method Not Allowed", requestId },
-        };
-    }
-    const baseUrl = getMergedValue(
-        "TD_BACKEND_BASE_URL",
-        process.env.TD_BACKEND_BASE_URL ||
-            process.env.BACKEND_BASE_URL ||
-            process.env.API_BASE_URL ||
-            "",
-    );
-    const functionKey = getMergedValue(
-        "TD_BACKEND_FUNCTION_KEY",
-        process.env.TD_BACKEND_FUNCTION_KEY ||
-            process.env.BACKEND_FUNCTION_KEY ||
-            "",
-    );
-    const githubClientId = getMergedValue(
-        "GITHUB_CLIENT_ID",
-        process.env.GITHUB_CLIENT_ID || "",
-    );
-    // ... (same pattern for all config values)
-    const payload: PublicConfig = {
-        GITHUB_CLIENT_ID: githubClientId,
-        backend: {
-            ...(baseUrl ? { baseUrl } : {}),
-            ...(functionKey ? { functionKey } : {}),
-        } as any,
-        DISPATCH_TARGET_REPO: dispatchTargetRepo,
-        DEFAULT_RULE_SET: defaultRuleSet,
-        REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
-        AUTO_SAVE_RESULTS: autoSaveResults,
-        ARCHIVE_ENABLED: archiveEnabled,
-        ARCHIVE_COLLECTION: archiveCollection,
-        ISSUE_AI_ENABLED: issueAIEnabled,
-        overrides: listOverrides(),
+  if (req.method === 'OPTIONS') {
+    return { status: 204 };
+  }
+  if (req.method !== 'GET') {
+    return {
+      status: 405,
+      body: { error: 'Method Not Allowed', requestId },
     };
-    return { status: 200, body: payload };
+  }
+  const baseUrl = getMergedValue(
+    'TD_BACKEND_BASE_URL',
+    process.env.TD_BACKEND_BASE_URL ||
+      process.env.BACKEND_BASE_URL ||
+      process.env.API_BASE_URL ||
+      '',
+  );
+  const functionKey = getMergedValue(
+    'TD_BACKEND_FUNCTION_KEY',
+    process.env.TD_BACKEND_FUNCTION_KEY || process.env.BACKEND_FUNCTION_KEY || '',
+  );
+  const githubClientId = getMergedValue('GITHUB_CLIENT_ID', process.env.GITHUB_CLIENT_ID || '');
+  // ... (same pattern for all config values)
+  const payload: PublicConfig = {
+    GITHUB_CLIENT_ID: githubClientId,
+    backend: {
+      ...(baseUrl ? { baseUrl } : {}),
+      ...(functionKey ? { functionKey } : {}),
+    } as any,
+    DISPATCH_TARGET_REPO: dispatchTargetRepo,
+    DEFAULT_RULE_SET: defaultRuleSet,
+    REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
+    AUTO_SAVE_RESULTS: autoSaveResults,
+    ARCHIVE_ENABLED: archiveEnabled,
+    ARCHIVE_COLLECTION: archiveCollection,
+    ISSUE_AI_ENABLED: issueAIEnabled,
+    overrides: listOverrides(),
+  };
+  return { status: 200, body: payload };
 });
 ```
 
 ### Express (`packages/server/src/routes/config.ts`)
 
 ```typescript
-configRouter.get("/client-settings", (req: Request, res: Response) => {
-    const requestId = uuidv4();
-    if (req.method === "OPTIONS") {
-        return res.status(204).send();
-    }
-    if (req.method !== "GET") {
-        return res.status(405).json({ error: "Method Not Allowed", requestId });
-    }
-    const baseUrl = getMergedValue(
-        "TD_BACKEND_BASE_URL",
-        process.env.TD_BACKEND_BASE_URL ||
-            process.env.BACKEND_BASE_URL ||
-            process.env.API_BASE_URL ||
-            "",
-    );
-    const functionKey = getMergedValue(
-        "TD_BACKEND_FUNCTION_KEY",
-        process.env.TD_BACKEND_FUNCTION_KEY ||
-            process.env.BACKEND_FUNCTION_KEY ||
-            "",
-    );
-    const githubClientId = getMergedValue(
-        "GITHUB_CLIENT_ID",
-        process.env.GITHUB_CLIENT_ID || "",
-    );
-    // ... (exact same pattern for all config values)
-    const payload: PublicConfig = {
-        GITHUB_CLIENT_ID: githubClientId,
-        backend: {
-            ...(baseUrl ? { baseUrl } : {}),
-            ...(functionKey ? { functionKey } : {}),
-        } as any,
-        DISPATCH_TARGET_REPO: dispatchTargetRepo,
-        DEFAULT_RULE_SET: defaultRuleSet,
-        REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
-        AUTO_SAVE_RESULTS: autoSaveResults,
-        ARCHIVE_ENABLED: archiveEnabled,
-        ARCHIVE_COLLECTION: archiveCollection,
-        ISSUE_AI_ENABLED: issueAIEnabled,
-        overrides: listOverrides(),
-    };
-    return res.status(200).json(payload);
+configRouter.get('/client-settings', (req: Request, res: Response) => {
+  const requestId = uuidv4();
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method Not Allowed', requestId });
+  }
+  const baseUrl = getMergedValue(
+    'TD_BACKEND_BASE_URL',
+    process.env.TD_BACKEND_BASE_URL ||
+      process.env.BACKEND_BASE_URL ||
+      process.env.API_BASE_URL ||
+      '',
+  );
+  const functionKey = getMergedValue(
+    'TD_BACKEND_FUNCTION_KEY',
+    process.env.TD_BACKEND_FUNCTION_KEY || process.env.BACKEND_FUNCTION_KEY || '',
+  );
+  const githubClientId = getMergedValue('GITHUB_CLIENT_ID', process.env.GITHUB_CLIENT_ID || '');
+  // ... (exact same pattern for all config values)
+  const payload: PublicConfig = {
+    GITHUB_CLIENT_ID: githubClientId,
+    backend: {
+      ...(baseUrl ? { baseUrl } : {}),
+      ...(functionKey ? { functionKey } : {}),
+    } as any,
+    DISPATCH_TARGET_REPO: dispatchTargetRepo,
+    DEFAULT_RULE_SET: defaultRuleSet,
+    REQUIRE_AUTH_FOR_RESULTS: requireAuthForResults,
+    AUTO_SAVE_RESULTS: autoSaveResults,
+    ARCHIVE_ENABLED: archiveEnabled,
+    ARCHIVE_COLLECTION: archiveCollection,
+    ISSUE_AI_ENABLED: issueAIEnabled,
+    overrides: listOverrides(),
+  };
+  return res.status(200).json(payload);
 });
 ```
 
@@ -365,26 +341,26 @@ configRouter.get("/client-settings", (req: Request, res: Response) => {
 Both implementations use:
 
 1. **Same helper functions** (copied verbatim):
-    - `extractRepoInfo(url)` - parse GitHub URL
-    - `createGitHubClient(token)` - GitHub API wrapper
-    - `listAllFilesFetch(...)` - recursive directory listing
-    - `getFileContentFetch(...)` - base64 content decode
+   - `extractRepoInfo(url)` - parse GitHub URL
+   - `createGitHubClient(token)` - GitHub API wrapper
+   - `listAllFilesFetch(...)` - recursive directory listing
+   - `getFileContentFetch(...)` - base64 content decode
 
 2. **Same analysis flow**:
-    - Parse request body
-    - Validate repoUrl or repos
-    - Get server/user tokens
-    - Determine fork strategy
-    - Fetch repo metadata
-    - List files recursively
-    - Fetch content for relevant files
-    - Call `runAnalyzer()` with same options
-    - Return results
+   - Parse request body
+   - Validate repoUrl or repos
+   - Get server/user tokens
+   - Determine fork strategy
+   - Fetch repo metadata
+   - List files recursively
+   - Fetch content for relevant files
+   - Call `runAnalyzer()` with same options
+   - Return results
 
 3. **Same error handling**:
-    - 400: Invalid repo URL or missing params
-    - 502: Failed to list files
-    - 500: Analyzer execution failed
+   - 400: Invalid repo URL or missing params
+   - 502: Failed to list files
+   - 500: Analyzer execution failed
 
 **Differences**:
 
@@ -409,12 +385,12 @@ return res.status(200).json({ data });
 
 ```typescript
 // Azure Functions
-ctx.log("Message", { metadata });
-ctx.log.error("Error", { error });
+ctx.log('Message', { metadata });
+ctx.log.error('Error', { error });
 
 // Express
-console.log("Message", { metadata });
-console.error("Error", { error });
+console.log('Message', { metadata });
+console.error('Error', { error });
 ```
 
 ### Pattern 3: Environment Variables

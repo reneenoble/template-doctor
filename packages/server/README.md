@@ -6,28 +6,28 @@ Express-based API server for Template Doctor, replacing Azure Functions.
 
 1. **Install dependencies:**
 
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 2. **Configure environment:**
 
-    ```bash
-    cp .env.example .env
-    # Edit .env with your GitHub tokens
-    ```
+   ```bash
+   cp .env.example .env
+   # Edit .env with your GitHub tokens
+   ```
 
 3. **Development:**
 
-    ```bash
-    npm run dev
-    ```
+   ```bash
+   npm run dev
+   ```
 
 4. **Production:**
-    ```bash
-    npm run build
-    npm start
-    ```
+   ```bash
+   npm run build
+   npm start
+   ```
 
 ## Environment Variables
 

@@ -72,10 +72,10 @@ The script guides you through 10 steps:
 
 - Tests if site is accessible
 - Provides manual verification steps:
-    - OAuth login
-    - Template analysis
-    - Database persistence
-    - Leaderboards (admin)
+  - OAuth login
+  - Template analysis
+  - Database persistence
+  - Leaderboards (admin)
 - Optionally opens deployed site in browser
 
 ## Usage
@@ -203,10 +203,10 @@ After the script completes:
 1. Go to https://github.com/settings/developers
 2. Select your OAuth App
 3. Update **Authorization callback URL** to:
-    ```
-    https://your-app-url/callback.html
-    ```
-    (The script displays this URL after deployment)
+   ```
+   https://your-app-url/callback.html
+   ```
+   (The script displays this URL after deployment)
 
 ### 2. Add GitHub Secrets (if UAMI enabled)
 
@@ -214,9 +214,9 @@ Add these secrets to your GitHub repository:
 
 1. Go to repository **Settings → Secrets and variables → Actions**
 2. Add:
-    - `AZURE_CLIENT_ID` - From script output
-    - `AZURE_TENANT_ID` - From script output
-    - `AZURE_SUBSCRIPTION_ID` - Your subscription ID
+   - `AZURE_CLIENT_ID` - From script output
+   - `AZURE_TENANT_ID` - From script output
+   - `AZURE_SUBSCRIPTION_ID` - Your subscription ID
 
 ### 3. Verify Deployment
 

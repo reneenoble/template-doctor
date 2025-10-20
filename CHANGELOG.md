@@ -5,6 +5,26 @@ All notable changes to Template Doctor will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ⚠ BREAKING CHANGES
+
+- **API Authentication**: All validation endpoints now require OAuth authentication. Existing clients that do not send authentication tokens will receive 401 errors. Migration required:
+  - Clients must implement GitHub OAuth flow to obtain access tokens
+  - Include `Authorization: Bearer <github_token>` header in all requests to validation endpoints
+  - Affected endpoints: `/api/v4/validation-template`, `/api/v4/validation-docker-image`, `/api/v4/validation-ossf`, `/api/v4/validation-status`, `/api/v4/validation-cancel`, `/api/v4/validation-callback`
+  - See `docs/development/OAUTH_CONFIGURATION.md` for OAuth setup details
+
+### Features
+
+- Add OAuth 2.0 authentication to all API endpoints (except public health/config endpoints)
+- Add three-tier rate limiting (standard: 100/min, strict: 10/min, auth: 20/min)
+
+### Bug Fixes
+
+- Fix health endpoint path in logger configuration (was `/api/v4/health`, corrected to `/api/health`)
+- Remove duplicate vitest imports in test files
+
 ## 1.0.0 (2025-10-07)
 
 ### ⚠ BREAKING CHANGES
@@ -98,42 +118,42 @@ Template Doctor 1.0.0 marks the completion of the TypeScript migration and trans
 ### Added
 
 - **Express Backend** (`packages/server`): New TypeScript REST API on port 3001
-    - OAuth token exchange
-    - Template validation endpoints
-    - GitHub integration
-    - CORS-enabled for frontend communication
+  - OAuth token exchange
+  - Template validation endpoints
+  - GitHub integration
+  - CORS-enabled for frontend communication
 - **Docker Deployment**: Containerized architecture with `Dockerfile.combined`
-    - Single-container production build
-    - Multi-container development setup with `docker-compose.yml`
+  - Single-container production build
+  - Multi-container development setup with `docker-compose.yml`
 - **TypeScript Frontend**: Vite SPA with HMR for fast development
-    - Port 4000 (development), Port 3000 (preview/production)
+  - Port 4000 (development), Port 3000 (preview/production)
 - **Comprehensive Documentation**:
-    - Updated README with Express architecture
-    - Docker deployment instructions
-    - Troubleshooting guide
-    - Port allocation table
+  - Updated README with Express architecture
+  - Docker deployment instructions
+  - Troubleshooting guide
+  - Port allocation table
 
 ### Changed
 
 - **Architecture**: Migrated from Azure Functions to Express server
 - **Build System**: Added `build:all` with correct dependency order (analyzer-core → server → app)
 - **Test Suite**: Reorganized unit tests
-    - Moved legacy API tests to `tests/unit/legacy-api/`
-    - Excluded legacy tests from vitest
-    - Only `analyzer.categories.spec.js` runs in CI (6 tests, all passing)
+  - Moved legacy API tests to `tests/unit/legacy-api/`
+  - Excluded legacy tests from vitest
+  - Only `analyzer.categories.spec.js` runs in CI (6 tests, all passing)
 
 ### Removed
 
 - **Azure Static Web Apps**: Removed all SWA deployment workflows
-    - `manual-swa-deploy.yml`
-    - `manual-swa-deploy-simple.yml`
-    - `nightly-swa-deploy.yml`
+  - `manual-swa-deploy.yml`
+  - `manual-swa-deploy-simple.yml`
+  - `nightly-swa-deploy.yml`
 - **Azure Functions**: Removed legacy serverless deployment
-    - `azure-functions-v4.yml` workflow deleted
-    - Legacy API code preserved in `legacy/azure-functions` branch
+  - `azure-functions-v4.yml` workflow deleted
+  - Legacy API code preserved in `legacy/azure-functions` branch
 - **Legacy Tests**: 7 legacy API tests moved out of CI
-    - Tests depend on removed Azure Functions code
-    - Preserved in `tests/unit/legacy-api/` for reference
+  - Tests depend on removed Azure Functions code
+  - Preserved in `tests/unit/legacy-api/` for reference
 
 ### Fixed
 
@@ -145,25 +165,25 @@ Template Doctor 1.0.0 marks the completion of the TypeScript migration and trans
 ### Infrastructure
 
 - **CI/CD Workflows**:
-    - Removed: smoke-api.yml (TODO: re-add after debugging server startup)
-    - Active: guard-packages, validation, submit-analysis, etc.
+  - Removed: smoke-api.yml (TODO: re-add after debugging server startup)
+  - Active: guard-packages, validation, submit-analysis, etc.
 - **Environment Variables**: Consolidated configuration
-    - Backend: `packages/server/.env` (copied from root during build)
-    - Frontend: `packages/app/config.json` (client config)
-    - Root: `.env` (single source of truth)
+  - Backend: `packages/server/.env` (copied from root during build)
+  - Frontend: `packages/app/config.json` (client config)
+  - Root: `.env` (single source of truth)
 
 ### Breaking Changes
 
 - **Deployment Method**: No longer uses Azure Static Web Apps or Azure Functions
-    - New deployment: Docker containers via `Dockerfile.combined`
-    - See README for migration instructions
+  - New deployment: Docker containers via `Dockerfile.combined`
+  - See README for migration instructions
 - **Port Changes**:
-    - Express backend: 3001 (was: Azure Functions on 7071)
-    - Frontend preview: 3000 (was: 5173)
-    - Frontend dev: 4000 (was: 5173)
+  - Express backend: 3001 (was: Azure Functions on 7071)
+  - Frontend preview: 3000 (was: 5173)
+  - Frontend dev: 4000 (was: 5173)
 - **Legacy API**: Removed from production
-    - Code preserved in `legacy/azure-functions` branch for reference
-    - Express server provides equivalent functionality
+  - Code preserved in `legacy/azure-functions` branch for reference
+  - Express server provides equivalent functionality
 
 ### Migration Guide
 
@@ -171,27 +191,27 @@ For users upgrading from pre-1.0.0 versions:
 
 1. **Pull latest changes**:
 
-    ```bash
-    git pull origin main
-    npm ci
-    ```
+   ```bash
+   git pull origin main
+   npm ci
+   ```
 
 2. **Update OAuth configuration**:
-    - Update GitHub OAuth app callback URLs to use port 3000/3001
-    - See `docs/development/OAUTH_CONFIGURATION.md`
+   - Update GitHub OAuth app callback URLs to use port 3000/3001
+   - See `docs/development/OAUTH_CONFIGURATION.md`
 
 3. **Docker deployment** (recommended):
 
-    ```bash
-    docker build -f Dockerfile.combined -t template-doctor .
-    docker run -p 3000:3000 --env-file .env template-doctor
-    ```
+   ```bash
+   docker build -f Dockerfile.combined -t template-doctor .
+   docker run -p 3000:3000 --env-file .env template-doctor
+   ```
 
 4. **Manual deployment**:
-    ```bash
-    npm run build:all
-    npm run preview -w packages/server
-    ```
+   ```bash
+   npm run build:all
+   npm run preview -w packages/server
+   ```
 
 ### Known Issues
 

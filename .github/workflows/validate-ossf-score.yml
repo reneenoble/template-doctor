@@ -9,220 +9,220 @@
 name: OSSF Scorecard Analysis
 run-name: OSSF ${{ inputs.id }}
 on:
-    workflow_dispatch:
-        inputs:
-            repo:
-                description: "Repository to analyze (owner/repo or full URL)"
-                required: true
-                default: ""
-            id:
-                description: "Unique identifier for the workflow run (for tracking purposes)"
-                required: true
-                default: ""
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'Repository to analyze (owner/repo or full URL)'
+        required: true
+        default: ''
+      id:
+        description: 'Unique identifier for the workflow run (for tracking purposes)'
+        required: true
+        default: ''
 
 # read access is required for retrieving repository metadata if using the default GITHUB_TOKEN
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    ossf-scorecard:
-        name: Run OSSF Scorecard
-        runs-on: ubuntu-latest
-        outputs:
-            artifact_name: ${{ steps.set-id.outputs.artifact_name }}
-            aggregate_score: ${{ steps.process-results.outputs.aggregate_score }}
-            analysis_b64: ${{ steps.validate-json.outputs.analysis_b64 }}
-            analysis_truncated: ${{ steps.validate-json.outputs.analysis_truncated }}
-            artifact_run_id: ${{ github.run_id }}
+  ossf-scorecard:
+    name: Run OSSF Scorecard
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.set-id.outputs.artifact_name }}
+      aggregate_score: ${{ steps.process-results.outputs.aggregate_score }}
+      analysis_b64: ${{ steps.validate-json.outputs.analysis_b64 }}
+      analysis_truncated: ${{ steps.validate-json.outputs.analysis_truncated }}
+      artifact_run_id: ${{ github.run_id }}
 
-        steps:
-            - name: Set workflow run ID
-              id: set-id
-              run: |
-                  # If the 'id' input is empty or an empty string, set it to a unique GUID
-                  if [ -z "${{ github.event.inputs.id }}" ] || [ "${{ github.event.inputs.id }}" = "null" ]; then
-                    # Generate a GUID (UUID v4)
-                    if command -v uuidgen >/dev/null 2>&1; then
-                      ID=$(uuidgen)
-                    else
-                      ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || (head -c16 /dev/urandom | xxd -p | sed 's/\(..\)/\1-/g; s/-$//'))
-                    fi
-                  else
-                    ID="${{ github.event.inputs.id }}"
-                  fi
+    steps:
+      - name: Set workflow run ID
+        id: set-id
+        run: |
+          # If the 'id' input is empty or an empty string, set it to a unique GUID
+          if [ -z "${{ github.event.inputs.id }}" ] || [ "${{ github.event.inputs.id }}" = "null" ]; then
+            # Generate a GUID (UUID v4)
+            if command -v uuidgen >/dev/null 2>&1; then
+              ID=$(uuidgen)
+            else
+              ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || (head -c16 /dev/urandom | xxd -p | sed 's/\(..\)/\1-/g; s/-$//'))
+            fi
+          else
+            ID="${{ github.event.inputs.id }}"
+          fi
 
-                  # Sanitize repo input to a filesystem-safe token for artifact names
-                  REPO_INPUT_RAW="${{ github.event.inputs.repo }}"
-                  REPO_PATH="$REPO_INPUT_RAW"
-                  # strip protocol/host for full URLs (e.g. https://github.com/owner/repo -> owner/repo)
-                  if echo "$REPO_PATH" | grep -E '^https?://' >/dev/null 2>&1; then
-                    REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#^https?://[^/]+/##')
-                  fi
-                  # strip git@host:owner/repo forms
-                  if echo "$REPO_PATH" | grep -E '^git@' >/dev/null 2>&1; then
-                    REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#^git@[^:]+:##')
-                  fi
-                  # trim trailing .git if present
-                  REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#\.git$##')
-                  # fallback if empty
-                  if [ -z "$REPO_PATH" ] || [ "$REPO_PATH" = "null" ]; then
-                    REPO_PATH="unknown_repo"
-                  fi
-                  # make filename-safe: replace / and other non-alphanum with _
-                  REPO_SAFE=$(printf '%s' "$REPO_PATH" | sed -E 's#[/\\ ]#_#g' | sed 's/[^0-9A-Za-z._-]/_/g')
+          # Sanitize repo input to a filesystem-safe token for artifact names
+          REPO_INPUT_RAW="${{ github.event.inputs.repo }}"
+          REPO_PATH="$REPO_INPUT_RAW"
+          # strip protocol/host for full URLs (e.g. https://github.com/owner/repo -> owner/repo)
+          if echo "$REPO_PATH" | grep -E '^https?://' >/dev/null 2>&1; then
+            REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#^https?://[^/]+/##')
+          fi
+          # strip git@host:owner/repo forms
+          if echo "$REPO_PATH" | grep -E '^git@' >/dev/null 2>&1; then
+            REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#^git@[^:]+:##')
+          fi
+          # trim trailing .git if present
+          REPO_PATH=$(echo "$REPO_PATH" | sed -E 's#\.git$##')
+          # fallback if empty
+          if [ -z "$REPO_PATH" ] || [ "$REPO_PATH" = "null" ]; then
+            REPO_PATH="unknown_repo"
+          fi
+          # make filename-safe: replace / and other non-alphanum with _
+          REPO_SAFE=$(printf '%s' "$REPO_PATH" | sed -E 's#[/\\ ]#_#g' | sed 's/[^0-9A-Za-z._-]/_/g')
 
-                  ARTIFACT_NAME="ossf-scorecard_${REPO_SAFE}_${ID}"
+          ARTIFACT_NAME="ossf-scorecard_${REPO_SAFE}_${ID}"
 
-                  echo "id=$ID" >> "$GITHUB_OUTPUT"
-                  echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-                  echo "Workflow run ID: $ID"
-                  echo "Artifact name: $ARTIFACT_NAME"
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Workflow run ID: $ID"
+          echo "Artifact name: $ARTIFACT_NAME"
 
-                  # Add the ID to the step summary
-                  echo "Workflow run INPUT_GUID_ID: $ID" >> $GITHUB_STEP_SUMMARY
+          # Add the ID to the step summary
+          echo "Workflow run INPUT_GUID_ID: $ID" >> $GITHUB_STEP_SUMMARY
 
-            - name: Restore Scorecard image cache
-              id: cache-scorecard-image
-              uses: actions/cache@v4
-              with:
-                  path: scorecard_image.tar
-                  key: scorecard-image-${{ runner.os }}-gcr-ossf-scorecard-stable
+      - name: Restore Scorecard image cache
+        id: cache-scorecard-image
+        uses: actions/cache@v4
+        with:
+          path: scorecard_image.tar
+          key: scorecard-image-${{ runner.os }}-gcr-ossf-scorecard-stable
 
-            - name: Load cached Scorecard image
-              if: steps.cache-scorecard-image.outputs.cache-hit == 'true'
-              run: |
-                  if [ -f scorecard_image.tar ]; then
-                    echo "Loading cached Scorecard image..."
-                    docker load -i scorecard_image.tar || true
-                  else
-                    echo "Cache indicated hit but tarball missing; proceeding to pull image."
-                  fi
+      - name: Load cached Scorecard image
+        if: steps.cache-scorecard-image.outputs.cache-hit == 'true'
+        run: |
+          if [ -f scorecard_image.tar ]; then
+            echo "Loading cached Scorecard image..."
+            docker load -i scorecard_image.tar || true
+          else
+            echo "Cache indicated hit but tarball missing; proceeding to pull image."
+          fi
 
-            - name: Pull and save Scorecard image (cache miss)
-              if: steps.cache-scorecard-image.outputs.cache-hit != 'true'
-              run: |
-                  echo "Pulling Scorecard image from registry..."
-                  docker pull gcr.io/openssf/scorecard:stable
-                  echo "Saving Scorecard image to tar for caching..."
-                  docker save gcr.io/openssf/scorecard:stable -o scorecard_image.tar
+      - name: Pull and save Scorecard image (cache miss)
+        if: steps.cache-scorecard-image.outputs.cache-hit != 'true'
+        run: |
+          echo "Pulling Scorecard image from registry..."
+          docker pull gcr.io/openssf/scorecard:stable
+          echo "Saving Scorecard image to tar for caching..."
+          docker save gcr.io/openssf/scorecard:stable -o scorecard_image.tar
 
-            - name: Normalize Repository Input
-              id: normalize-repo
-              run: |
-                  REPO_INPUT="${{ github.event.inputs.repo }}"
-                  if [ -z "$REPO_INPUT" ] || [ "$REPO_INPUT" = "null" ]; then
-                    echo "error: Repository input is required." >&2
-                    exit 1
-                  fi
+      - name: Normalize Repository Input
+        id: normalize-repo
+        run: |
+          REPO_INPUT="${{ github.event.inputs.repo }}"
+          if [ -z "$REPO_INPUT" ] || [ "$REPO_INPUT" = "null" ]; then
+            echo "error: Repository input is required." >&2
+            exit 1
+          fi
 
-                  # Normalize the repo argument
-                  if echo "$REPO_INPUT" | grep -E '^https?://' >/dev/null 2>&1; then
-                    REPO_ARG="$REPO_INPUT"
-                  elif echo "$REPO_INPUT" | grep -E '^[^/]+/[^/]+$' >/dev/null 2>&1; then
-                    REPO_ARG="https://github.com/$REPO_INPUT"
-                  else
-                    echo "error: Repo input must be 'owner/repo' or a full URL." >&2
-                    exit 1
-                  fi
+          # Normalize the repo argument
+          if echo "$REPO_INPUT" | grep -E '^https?://' >/dev/null 2>&1; then
+            REPO_ARG="$REPO_INPUT"
+          elif echo "$REPO_INPUT" | grep -E '^[^/]+/[^/]+$' >/dev/null 2>&1; then
+            REPO_ARG="https://github.com/$REPO_INPUT"
+          else
+            echo "error: Repo input must be 'owner/repo' or a full URL." >&2
+            exit 1
+          fi
 
-                  echo "repo_arg=$REPO_ARG" >> "$GITHUB_OUTPUT"
+          echo "repo_arg=$REPO_ARG" >> "$GITHUB_OUTPUT"
 
-            - name: Prepare Output Directory
-              id: prepare-output
-              run: |
-                  OUT_DIR="${{ github.workspace }}/ossf-scorecard-output"
-                  mkdir -p "$OUT_DIR"
-                  RESULT_FILE="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.json"
-                  STDERR_FILE="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.stderr.log"
-                  RESULT_LOG="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.log"
+      - name: Prepare Output Directory
+        id: prepare-output
+        run: |
+          OUT_DIR="${{ github.workspace }}/ossf-scorecard-output"
+          mkdir -p "$OUT_DIR"
+          RESULT_FILE="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.json"
+          STDERR_FILE="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.stderr.log"
+          RESULT_LOG="$OUT_DIR/scorecard_${{ steps.set-id.outputs.id }}.log"
 
-                  echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
-                  echo "stderr_file=$STDERR_FILE" >> "$GITHUB_OUTPUT"
-                  echo "result_log=$RESULT_LOG" >> "$GITHUB_OUTPUT"
+          echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
+          echo "stderr_file=$STDERR_FILE" >> "$GITHUB_OUTPUT"
+          echo "result_log=$RESULT_LOG" >> "$GITHUB_OUTPUT"
 
-            - name: Run Scorecard (Docker)
-              id: run-docker
-              run: |
-                  TOKEN="${{ secrets.SCORECARD_TOKEN }}"
-                  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-                    TOKEN="${{ secrets.GITHUB_TOKEN }}"
-                  fi
+      - name: Run Scorecard (Docker)
+        id: run-docker
+        run: |
+          TOKEN="${{ secrets.SCORECARD_TOKEN }}"
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          fi
 
-                  DOCKER_ENV_ARGS=()
-                  if [ -n "$TOKEN" ]; then
-                    DOCKER_ENV_ARGS+=( -e GITHUB_AUTH_TOKEN="$TOKEN" )
-                  fi
+          DOCKER_ENV_ARGS=()
+          if [ -n "$TOKEN" ]; then
+            DOCKER_ENV_ARGS+=( -e GITHUB_AUTH_TOKEN="$TOKEN" )
+          fi
 
-                  echo "Running OSSF Scorecard on ${{ steps.normalize-repo.outputs.repo_arg }}..." | tee "${{ steps.prepare-output.outputs.result_log }}"
-                  echo "Command: docker run --rm [AUTH_TOKEN_HIDDEN] gcr.io/openssf/scorecard:stable --format=json --repo=\"${{ steps.normalize-repo.outputs.repo_arg }}\"" >> "${{ steps.prepare-output.outputs.result_log }}"
-                  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Started analysis" >> "${{ steps.prepare-output.outputs.result_log }}"
+          echo "Running OSSF Scorecard on ${{ steps.normalize-repo.outputs.repo_arg }}..." | tee "${{ steps.prepare-output.outputs.result_log }}"
+          echo "Command: docker run --rm [AUTH_TOKEN_HIDDEN] gcr.io/openssf/scorecard:stable --format=json --repo=\"${{ steps.normalize-repo.outputs.repo_arg }}\"" >> "${{ steps.prepare-output.outputs.result_log }}"
+          echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Started analysis" >> "${{ steps.prepare-output.outputs.result_log }}"
 
-                  docker run --rm "${DOCKER_ENV_ARGS[@]}" gcr.io/openssf/scorecard:stable --format=json --repo="${{ steps.normalize-repo.outputs.repo_arg }}" > "${{ steps.prepare-output.outputs.result_file }}" 2> "${{ steps.prepare-output.outputs.stderr_file }}"
-                  DOCKER_EXIT=$?
-                  echo "docker_exit_code=$DOCKER_EXIT" >> "$GITHUB_OUTPUT"
+          docker run --rm "${DOCKER_ENV_ARGS[@]}" gcr.io/openssf/scorecard:stable --format=json --repo="${{ steps.normalize-repo.outputs.repo_arg }}" > "${{ steps.prepare-output.outputs.result_file }}" 2> "${{ steps.prepare-output.outputs.stderr_file }}"
+          DOCKER_EXIT=$?
+          echo "docker_exit_code=$DOCKER_EXIT" >> "$GITHUB_OUTPUT"
 
-                  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Completed analysis with exit code: $DOCKER_EXIT" >> "${{ steps.prepare-output.outputs.result_log }}"
+          echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Completed analysis with exit code: $DOCKER_EXIT" >> "${{ steps.prepare-output.outputs.result_log }}"
 
-            - name: Validate JSON Output
-              id: validate-json
-              run: |
-                  RESULT_FILE="${{ steps.prepare-output.outputs.result_file }}"
-                  if jq -e . "$RESULT_FILE" >/dev/null 2>&1; then
-                    echo "is_json=true" >> "$GITHUB_OUTPUT"
-                    # Add base64 encoding of the JSON for smaller files
-                    if [ "$(wc -c < "$RESULT_FILE")" -lt 10000 ]; then
-                      echo "analysis_b64=$(base64 -w0 "$RESULT_FILE")" >> "$GITHUB_OUTPUT"
-                      echo "analysis_truncated=false" >> "$GITHUB_OUTPUT"
-                    else
-                      echo "analysis_truncated=true" >> "$GITHUB_OUTPUT"
-                      echo "Analysis file too large for base64 encoding in outputs ($(wc -c < "$RESULT_FILE") bytes)" >> "$GITHUB_STEP_SUMMARY"
-                    fi
-                  else
-                    echo "is_json=false" >> "$GITHUB_OUTPUT"
-                  fi
+      - name: Validate JSON Output
+        id: validate-json
+        run: |
+          RESULT_FILE="${{ steps.prepare-output.outputs.result_file }}"
+          if jq -e . "$RESULT_FILE" >/dev/null 2>&1; then
+            echo "is_json=true" >> "$GITHUB_OUTPUT"
+            # Add base64 encoding of the JSON for smaller files
+            if [ "$(wc -c < "$RESULT_FILE")" -lt 10000 ]; then
+              echo "analysis_b64=$(base64 -w0 "$RESULT_FILE")" >> "$GITHUB_OUTPUT"
+              echo "analysis_truncated=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "analysis_truncated=true" >> "$GITHUB_OUTPUT"
+              echo "Analysis file too large for base64 encoding in outputs ($(wc -c < "$RESULT_FILE") bytes)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "is_json=false" >> "$GITHUB_OUTPUT"
+          fi
 
-            - name: Process Results
-              id: process-results
-              if: steps.validate-json.outputs.is_json == 'true'
-              run: |
-                  RESULT_FILE="${{ steps.prepare-output.outputs.result_file }}"
-                  AGG_SCORE=$(jq -r '.summary.score // .score // ""' "$RESULT_FILE" || true)
+      - name: Process Results
+        id: process-results
+        if: steps.validate-json.outputs.is_json == 'true'
+        run: |
+          RESULT_FILE="${{ steps.prepare-output.outputs.result_file }}"
+          AGG_SCORE=$(jq -r '.summary.score // .score // ""' "$RESULT_FILE" || true)
 
-                  if [ -n "$AGG_SCORE" ]; then
-                    SCORE_SAFE=$(printf '%s' "$AGG_SCORE" | sed 's/[^0-9A-Za-z._-]/_/g' | sed 's/\./_/g')
-                    ARTIFACT_NAME="${{ steps.set-id.outputs.artifact_name }}_score_${SCORE_SAFE}"
-                  else
-                    ARTIFACT_NAME="${{ steps.set-id.outputs.artifact_name }}"
-                  fi
+          if [ -n "$AGG_SCORE" ]; then
+            SCORE_SAFE=$(printf '%s' "$AGG_SCORE" | sed 's/[^0-9A-Za-z._-]/_/g' | sed 's/\./_/g')
+            ARTIFACT_NAME="${{ steps.set-id.outputs.artifact_name }}_score_${SCORE_SAFE}"
+          else
+            ARTIFACT_NAME="${{ steps.set-id.outputs.artifact_name }}"
+          fi
 
-                  echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-                  echo "aggregate_score=$AGG_SCORE" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+          echo "aggregate_score=$AGG_SCORE" >> "$GITHUB_OUTPUT"
 
-            - name: Upload Artifacts
-              id: upload-artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: ${{ steps.process-results.outputs.artifact_name }}
-                  path: |
-                      ${{ steps.prepare-output.outputs.result_file }}
-                      ${{ steps.prepare-output.outputs.result_log }}
-                      ${{ steps.prepare-output.outputs.stderr_file }}
+      - name: Upload Artifacts
+        id: upload-artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.process-results.outputs.artifact_name }}
+          path: |
+            ${{ steps.prepare-output.outputs.result_file }}
+            ${{ steps.prepare-output.outputs.result_log }}
+            ${{ steps.prepare-output.outputs.stderr_file }}
 
-            - name: Show short summary
-              run: |
-                  echo "Workflow input run: ${{ steps.set-id.outputs.id }}"
-                  echo "Workflow input repo: ${{ github.event.inputs.repo }}"
-                  echo "Workflow run ID: ${{ github.run_id }}"
-                  echo "Artifact: ${{ steps.process-results.outputs.artifact_name }}"
-                  echo "Scorecard FileName: ${{ steps.prepare-output.outputs.result_file }}"
-                  echo "Aggregate score: ${{ steps.process-results.outputs.aggregate_score }}"
-                  echo "Docker exit code: ${{ steps.run-docker.outputs.docker_exit_code }}"
+      - name: Show short summary
+        run: |
+          echo "Workflow input run: ${{ steps.set-id.outputs.id }}"
+          echo "Workflow input repo: ${{ github.event.inputs.repo }}"
+          echo "Workflow run ID: ${{ github.run_id }}"
+          echo "Artifact: ${{ steps.process-results.outputs.artifact_name }}"
+          echo "Scorecard FileName: ${{ steps.prepare-output.outputs.result_file }}"
+          echo "Aggregate score: ${{ steps.process-results.outputs.aggregate_score }}"
+          echo "Docker exit code: ${{ steps.run-docker.outputs.docker_exit_code }}"
 
-                  # Add detailed info to step summary
-                  echo "## OSSF Scorecard Analysis Results" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Repository:** ${{ github.event.inputs.repo }}" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Run ID:** ${{ steps.set-id.outputs.id }}" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Workflow Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Artifact Name:** ${{ steps.process-results.outputs.artifact_name }}" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Aggregate Score:** ${{ steps.process-results.outputs.aggregate_score }}" >> $GITHUB_STEP_SUMMARY
-                  echo "* **Docker Exit Code:** ${{ steps.run-docker.outputs.docker_exit_code }}" >> $GITHUB_STEP_SUMMARY
+          # Add detailed info to step summary
+          echo "## OSSF Scorecard Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "* **Repository:** ${{ github.event.inputs.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Run ID:** ${{ steps.set-id.outputs.id }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Workflow Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Artifact Name:** ${{ steps.process-results.outputs.artifact_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Aggregate Score:** ${{ steps.process-results.outputs.aggregate_score }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Docker Exit Code:** ${{ steps.run-docker.outputs.docker_exit_code }}" >> $GITHUB_STEP_SUMMARY

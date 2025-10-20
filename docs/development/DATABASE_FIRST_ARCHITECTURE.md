@@ -162,10 +162,10 @@ Stores application config as key-value pairs.
 
 ```json
 {
-    "repoUrl": "https://github.com/owner/repo",
-    "ruleSet": "dod",
-    "azureDeveloperCliEnabled": true,
-    "aiDeprecationCheckEnabled": true
+  "repoUrl": "https://github.com/owner/repo",
+  "ruleSet": "dod",
+  "azureDeveloperCliEnabled": true,
+  "aiDeprecationCheckEnabled": true
 }
 ```
 
@@ -206,17 +206,17 @@ Stores application config as key-value pairs.
 
 ```json
 {
-    "count": 100,
-    "leaderboard": [
-        {
-            "repoUrl": "...",
-            "owner": "...",
-            "repo": "...",
-            "compliance": 95.2,
-            "lastScan": "...",
-            "scanCount": 12
-        }
-    ]
+  "count": 100,
+  "leaderboard": [
+    {
+      "repoUrl": "...",
+      "owner": "...",
+      "repo": "...",
+      "compliance": 95.2,
+      "lastScan": "...",
+      "scanCount": 12
+    }
+  ]
 }
 ```
 
@@ -274,7 +274,7 @@ Stores application config as key-value pairs.
 **Usage**:
 
 ```typescript
-import { database } from "./services/database.js";
+import { database } from './services/database.js';
 
 await database.connect();
 const analyses = await database.analysis.find().toArray();
@@ -509,31 +509,31 @@ If issues arise during deployment:
 
 1. **Deploy Infrastructure**
 
-    ```bash
-    cd infra
-    az deployment group create --resource-group rg-template-doctor --template-file database.bicep
-    ```
+   ```bash
+   cd infra
+   az deployment group create --resource-group rg-template-doctor --template-file database.bicep
+   ```
 
 2. **Configure Environment Variables**
 
-    ```bash
-    az containerapp update \
-      --name ca-template-doctor \
-      --resource-group rg-template-doctor \
-      --set-env-vars "COSMOS_ENDPOINT=<endpoint>" "COSMOS_DATABASE_NAME=template-doctor"
-    ```
+   ```bash
+   az containerapp update \
+     --name ca-template-doctor \
+     --resource-group rg-template-doctor \
+     --set-env-vars "COSMOS_ENDPOINT=<endpoint>" "COSMOS_DATABASE_NAME=template-doctor"
+   ```
 
 3. **Update Frontend**
-    - Replace filesystem data loading with API calls
-    - Test tiles, leaderboard, report viewer
+   - Replace filesystem data loading with API calls
+   - Test tiles, leaderboard, report viewer
 
 4. **Run Migration Script**
-    - Backfill 56 existing results
-    - Validate data integrity
+   - Backfill 56 existing results
+   - Validate data integrity
 
 5. **Remove Legacy Code**
-    - Delete PR workflow endpoints
-    - Clean up filesystem writes
+   - Delete PR workflow endpoints
+   - Clean up filesystem writes
 
 ## References
 

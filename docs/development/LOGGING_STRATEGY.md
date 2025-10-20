@@ -34,71 +34,67 @@ npm install --save-dev @types/pino-http
 #### 2. Create Logger Module (`packages/server/src/shared/logger.ts`)
 
 ```typescript
-import pino from "pino";
+import pino from 'pino';
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV !== 'production';
 
 export const logger = pino({
-    level: process.env.LOG_LEVEL || (isDev ? "debug" : "info"),
-    transport: isDev
-        ? {
-              target: "pino-pretty",
-              options: {
-                  colorize: true,
-                  translateTime: "SYS:standard",
-                  ignore: "pid,hostname",
-              },
-          }
-        : undefined, // Production: JSON logs
-    formatters: {
-        level: (label) => {
-            return { level: label.toUpperCase() };
+  level: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+  transport: isDev
+    ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:standard',
+          ignore: 'pid,hostname',
         },
+      }
+    : undefined, // Production: JSON logs
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
     },
-    base: {
-        service: "template-doctor-server",
-        env: process.env.NODE_ENV || "development",
-    },
+  },
+  base: {
+    service: 'template-doctor-server',
+    env: process.env.NODE_ENV || 'development',
+  },
 });
 
 // Child loggers for different modules
 export const createLogger = (module: string) => {
-    return logger.child({ module });
+  return logger.child({ module });
 };
 
 // HTTP request logger middleware
-import pinoHttp from "pino-http";
+import pinoHttp from 'pino-http';
 
 export const httpLogger = pinoHttp({
-    logger,
-    autoLogging: true,
-    customLogLevel: (req, res, err) => {
-        if (res.statusCode >= 400 && res.statusCode < 500) return "warn";
-        if (res.statusCode >= 500 || err) return "error";
-        return "info";
-    },
-    customSuccessMessage: (req, res) => {
-        return `${req.method} ${req.url} - ${res.statusCode}`;
-    },
-    customErrorMessage: (req, res, err) => {
-        return `${req.method} ${req.url} - ${res.statusCode} - ${err.message}`;
-    },
-    // Redact sensitive data
-    redact: {
-        paths: [
-            "req.headers.authorization",
-            "req.headers.cookie",
-            'req.headers["x-github-token"]',
-        ],
-        remove: true,
-    },
+  logger,
+  autoLogging: true,
+  customLogLevel: (req, res, err) => {
+    if (res.statusCode >= 400 && res.statusCode < 500) return 'warn';
+    if (res.statusCode >= 500 || err) return 'error';
+    return 'info';
+  },
+  customSuccessMessage: (req, res) => {
+    return `${req.method} ${req.url} - ${res.statusCode}`;
+  },
+  customErrorMessage: (req, res, err) => {
+    return `${req.method} ${req.url} - ${res.statusCode} - ${err.message}`;
+  },
+  // Redact sensitive data
+  redact: {
+    paths: ['req.headers.authorization', 'req.headers.cookie', 'req.headers["x-github-token"]'],
+    remove: true,
+  },
 });
 ```
 
 #### 3. Add HTTP Logging Middleware (`packages/server/src/index.ts`)
 
 ```typescript
-import { httpLogger } from "./shared/logger.js";
+import { httpLogger } from './shared/logger.js';
 
 // Add after CORS, before routes
 app.use(httpLogger);
@@ -109,18 +105,18 @@ app.use(httpLogger);
 **Before:**
 
 ```typescript
-console.log("[Database] Connected to MongoDB");
-console.error("[Database] Connection failed:", error);
+console.log('[Database] Connected to MongoDB');
+console.error('[Database] Connection failed:', error);
 ```
 
 **After:**
 
 ```typescript
-import { createLogger } from "../shared/logger.js";
-const logger = createLogger("database");
+import { createLogger } from '../shared/logger.js';
+const logger = createLogger('database');
 
-logger.info("Connected to MongoDB");
-logger.error({ err: error }, "Connection failed");
+logger.info('Connected to MongoDB');
+logger.error({ err: error }, 'Connection failed');
 ```
 
 **Structured Logging:**
@@ -128,19 +124,19 @@ logger.error({ err: error }, "Connection failed");
 ```typescript
 // Rich context
 logger.info(
-    {
-        repoUrl: "https://github.com/org/repo",
-        analysisId: "123",
-        duration: 1234,
-    },
-    "Analysis saved successfully",
+  {
+    repoUrl: 'https://github.com/org/repo',
+    analysisId: '123',
+    duration: 1234,
+  },
+  'Analysis saved successfully',
 );
 
 // Error with stack trace
-logger.error({ err: error, repoUrl }, "Analysis save failed");
+logger.error({ err: error, repoUrl }, 'Analysis save failed');
 
 // Debug with detailed data
-logger.debug({ config, request }, "Processing request");
+logger.debug({ config, request }, 'Processing request');
 ```
 
 #### 5. Migration Checklist
@@ -187,35 +183,35 @@ npm install browser-bunyan pino-browser
 **Implementation (`packages/app/src/shared/logger.ts`):**
 
 ```typescript
-import pino from "pino-browser";
+import pino from 'pino-browser';
 
 const isDev = import.meta.env.DEV;
 
 export const logger = pino({
-    level: isDev ? "debug" : "info",
-    browser: {
-        asObject: true, // Get object instead of serialized strings
-        transmit: {
-            level: "error", // Send errors to backend
-            send: function (level, logEvent) {
-                // Send critical logs to backend
-                if (level.value >= 50) {
-                    // error and fatal
-                    fetch("/api/v4/client-logs", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(logEvent),
-                    }).catch(() => {
-                        // Silently fail
-                    });
-                }
-            },
-        },
+  level: isDev ? 'debug' : 'info',
+  browser: {
+    asObject: true, // Get object instead of serialized strings
+    transmit: {
+      level: 'error', // Send errors to backend
+      send: function (level, logEvent) {
+        // Send critical logs to backend
+        if (level.value >= 50) {
+          // error and fatal
+          fetch('/api/v4/client-logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(logEvent),
+          }).catch(() => {
+            // Silently fail
+          });
+        }
+      },
     },
+  },
 });
 
 export const createLogger = (module: string) => {
-    return logger.child({ module });
+  return logger.child({ module });
 };
 ```
 
@@ -244,72 +240,72 @@ export const createLogger = (module: string) => {
 **Implementation (`packages/app/src/shared/logger.ts`):**
 
 ```typescript
-type LogLevel = "debug" | "info" | "warn" | "error";
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 class Logger {
-    private module: string;
-    private isDev: boolean;
+  private module: string;
+  private isDev: boolean;
 
-    constructor(module: string) {
-        this.module = module;
-        this.isDev = import.meta.env.DEV;
-    }
+  constructor(module: string) {
+    this.module = module;
+    this.isDev = import.meta.env.DEV;
+  }
 
-    private log(level: LogLevel, message: string, data?: any) {
-        if (!this.isDev && level === "debug") return;
+  private log(level: LogLevel, message: string, data?: any) {
+    if (!this.isDev && level === 'debug') return;
 
-        const prefix = `[${this.module}]`;
-        const timestamp = new Date().toISOString();
+    const prefix = `[${this.module}]`;
+    const timestamp = new Date().toISOString();
 
-        switch (level) {
-            case "debug":
-                console.debug(timestamp, prefix, message, data);
-                break;
-            case "info":
-                console.info(timestamp, prefix, message, data);
-                break;
-            case "warn":
-                console.warn(timestamp, prefix, message, data);
-                break;
-            case "error":
-                console.error(timestamp, prefix, message, data);
-                // Optionally send errors to backend
-                if (!this.isDev) {
-                    this.sendToBackend(level, message, data);
-                }
-                break;
+    switch (level) {
+      case 'debug':
+        console.debug(timestamp, prefix, message, data);
+        break;
+      case 'info':
+        console.info(timestamp, prefix, message, data);
+        break;
+      case 'warn':
+        console.warn(timestamp, prefix, message, data);
+        break;
+      case 'error':
+        console.error(timestamp, prefix, message, data);
+        // Optionally send errors to backend
+        if (!this.isDev) {
+          this.sendToBackend(level, message, data);
         }
+        break;
     }
+  }
 
-    private sendToBackend(level: string, message: string, data: any) {
-        fetch("/api/v4/client-logs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                level,
-                module: this.module,
-                message,
-                data,
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {}); // Silent fail
-    }
+  private sendToBackend(level: string, message: string, data: any) {
+    fetch('/api/v4/client-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level,
+        module: this.module,
+        message,
+        data,
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {}); // Silent fail
+  }
 
-    debug(message: string, data?: any) {
-        this.log("debug", message, data);
-    }
+  debug(message: string, data?: any) {
+    this.log('debug', message, data);
+  }
 
-    info(message: string, data?: any) {
-        this.log("info", message, data);
-    }
+  info(message: string, data?: any) {
+    this.log('info', message, data);
+  }
 
-    warn(message: string, data?: any) {
-        this.log("warn", message, data);
-    }
+  warn(message: string, data?: any) {
+    this.log('warn', message, data);
+  }
 
-    error(message: string, data?: any) {
-        this.log("error", message, data);
-    }
+  error(message: string, data?: any) {
+    this.log('error', message, data);
+  }
 }
 
 export const createLogger = (module: string) => new Logger(module);
@@ -318,11 +314,11 @@ export const createLogger = (module: string) => new Logger(module);
 **Usage:**
 
 ```typescript
-import { createLogger } from "../shared/logger";
-const logger = createLogger("search");
+import { createLogger } from '../shared/logger';
+const logger = createLogger('search');
 
-logger.info("Search results loaded", { count: results.length });
-logger.error("API call failed", { error, url });
+logger.info('Search results loaded', { count: results.length });
+logger.error('API call failed', { error, url });
 ```
 
 ---

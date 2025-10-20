@@ -22,27 +22,27 @@ Allows users to log in with their GitHub account to:
 ### Setup Steps
 
 1. **Create OAuth App**:
-    - Go to: https://github.com/settings/developers
-    - Click "New OAuth App"
+   - Go to: https://github.com/settings/developers
+   - Click "New OAuth App"
 
 2. **Configure App**:
 
-    ```
-    Application name: Template Doctor
-    Homepage URL: https://template-doctor.yourdomain.com
-    Authorization callback URL: https://template-doctor.yourdomain.com/callback.html
-    ```
+   ```
+   Application name: Template Doctor
+   Homepage URL: https://template-doctor.yourdomain.com
+   Authorization callback URL: https://template-doctor.yourdomain.com/callback.html
+   ```
 
 3. **Get Credentials**:
-    - After creating, note down:
-        - **Client ID**: `Iv1.xxxxxxxxxxxx`
-        - **Client Secret**: Click "Generate a new client secret"
+   - After creating, note down:
+     - **Client ID**: `Iv1.xxxxxxxxxxxx`
+     - **Client Secret**: Click "Generate a new client secret"
 
 4. **Set in Azure**:
-    ```bash
-    azd env set GITHUB_CLIENT_ID "Iv1.xxxxxxxxxxxx"
-    azd env set GITHUB_CLIENT_SECRET "your-secret-here"
-    ```
+   ```bash
+   azd env set GITHUB_CLIENT_ID "Iv1.xxxxxxxxxxxx"
+   azd env set GITHUB_CLIENT_SECRET "your-secret-here"
+   ```
 
 ### Update Callback URL After Deployment
 
@@ -88,31 +88,31 @@ When creating the token at https://github.com/settings/tokens/new, select:
 ### Setup Steps
 
 1. **Create Fine-Grained or Classic Token**:
-    - Go to: https://github.com/settings/tokens/new
-    - Choose token type:
-        - **Classic Token** (easier, works across all orgs)
-        - **Fine-Grained Token** (more secure, org-specific)
+   - Go to: https://github.com/settings/tokens/new
+   - Choose token type:
+     - **Classic Token** (easier, works across all orgs)
+     - **Fine-Grained Token** (more secure, org-specific)
 
 2. **Configure Token**:
 
-    ```
-    Token name: template-doctor-production
-    Expiration: 90 days (or No expiration for production)
+   ```
+   Token name: template-doctor-production
+   Expiration: 90 days (or No expiration for production)
 
-    Scopes:
-    ✅ repo
-    ✅ workflow
-    ✅ read:org
-    ```
+   Scopes:
+   ✅ repo
+   ✅ workflow
+   ✅ read:org
+   ```
 
 3. **Save Token**:
-    - Copy the token (you won't see it again!)
-    - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+   - Copy the token (you won't see it again!)
+   - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 4. **Set in Azure**:
-    ```bash
-    azd env set GITHUB_TOKEN "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    ```
+   ```bash
+   azd env set GITHUB_TOKEN "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ```
 
 ### Token Best Practices
 
@@ -180,17 +180,17 @@ curl -H "Authorization: token ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
 
 1. Trigger an analysis on a repository
 2. Check Container App logs:
-    ```bash
-    az containerapp logs show \
-      --name ca-web-<id> \
-      --resource-group rg-<env> \
-      --follow
-    ```
+   ```bash
+   az containerapp logs show \
+     --name ca-web-<id> \
+     --resource-group rg-<env> \
+     --follow
+   ```
 3. Look for successful GitHub API calls:
-    ```
-    ✅ Cloned repository: Azure-Samples/todo-nodejs-mongo
-    ✅ Created PR #123: Update analysis results
-    ```
+   ```
+   ✅ Cloned repository: Azure-Samples/todo-nodejs-mongo
+   ✅ Created PR #123: Update analysis results
+   ```
 
 **Troubleshooting:**
 
@@ -240,10 +240,10 @@ azd deploy
 1. Go to https://github.com/settings/tokens
 2. Edit token → Add `repo` scope
 3. Update in Azure:
-    ```bash
-    azd env set GITHUB_TOKEN "ghp_NEW_TOKEN_WITH_REPO_SCOPE"
-    azd deploy
-    ```
+   ```bash
+   azd env set GITHUB_TOKEN "ghp_NEW_TOKEN_WITH_REPO_SCOPE"
+   azd deploy
+   ```
 
 ### Issue: Can't trigger workflow with "Refusing to allow OAuth App"
 

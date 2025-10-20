@@ -135,81 +135,81 @@ Add to both `repos` and `analysis` collections:    compliance: { ... }
 ````
 
 2. **Top Analyzers (aigallery)** (`/api/v4/leaderboards/top-analyzers-aigallery`)
-    - Needs: `collection` field### 2. GitHub API Integration
+   - Needs: `collection` field### 2. GitHub API Integration
 
-    - Ranks users by analyses in aigallery collection
+   - Ranks users by analyses in aigallery collection
 
-    - Shows average template score**Purpose**: Fetch real repository metadata (stars, forks, activity)
+   - Shows average template score**Purpose**: Fetch real repository metadata (stars, forks, activity)
 
 3. **Most Successful Builders** (`/api/v4/leaderboards/successful-builders`)**Implementation**:
-    - Needs: `metadata.stars`, `metadata.forks`
+   - Needs: `metadata.stars`, `metadata.forks`
 
-    - Ranks template authors by success metrics```typescript
+   - Ranks template authors by success metrics```typescript
 
-    - Uses stars as download proxy// packages/api/src/github-metrics/
+   - Uses stars as download proxy// packages/api/src/github-metrics/
 
 class GitHubMetricsService {
 
 4. **Healthiest Templates (Python)** (`/api/v4/leaderboards/healthiest-python`) async getRepositoryMetrics(owner: string, repo: string) {
-    - Needs: `metadata.language` // Fetch stars, forks, recent commits, contributors
+   - Needs: `metadata.language` // Fetch stars, forks, recent commits, contributors
 
-    - Filters by language="Python" // Cache results to avoid rate limits
+   - Filters by language="Python" // Cache results to avoid rate limits
 
-    - Ranks by compliance score }
+   - Ranks by compliance score }
 
 5. **Healthiest Templates (JavaScript)** (`/api/v4/leaderboards/healthiest-javascript`) async getTemplateActivity(templates: string[]) {
-    - Needs: `metadata.language` // Batch fetch activity metrics for multiple templates
+   - Needs: `metadata.language` // Batch fetch activity metrics for multiple templates
 
-    - Filters by language="JavaScript" // Return activity scores based on commits, PRs, issues
+   - Filters by language="JavaScript" // Return activity scores based on commits, PRs, issues
 
-    - Ranks by compliance score }
+   - Ranks by compliance score }
 
 }
 
 #### Implementation Steps```
 
 1. **Database Migration**### 3. AZD Deployment Analytics
-    - Add `collection` field to existing documents (default: "aigallery")
+   - Add `collection` field to existing documents (default: "aigallery")
 
-    - Create `metadata` object structure**Purpose**: Track successful deployments by service type
+   - Create `metadata` object structure**Purpose**: Track successful deployments by service type
 
-    - Update database schema documentation
+   - Update database schema documentation
 
 **Data Collection Points**:
 
 2. **GitHub Metadata Service**
-    - Create background job to fetch GitHub stats- Azure Developer CLI telemetry (if available)
+   - Create background job to fetch GitHub stats- Azure Developer CLI telemetry (if available)
 
-    - Sync stars, forks, language stats- Analysis of azd configuration files success rates
+   - Sync stars, forks, language stats- Analysis of azd configuration files success rates
 
-    - Rate limit handling (5000 requests/hour)- Deployment target detection (ACA, AKS, Azure Functions)
+   - Rate limit handling (5000 requests/hour)- Deployment target detection (ACA, AKS, Azure Functions)
 
-    - Cache results for 24 hours
+   - Cache results for 24 hours
 
 **Implementation**:
 
 3. **Backfill Existing Data**
-    - Script to populate metadata for existing templates```typescript
+   - Script to populate metadata for existing templates```typescript
 
-    - Bulk GitHub API calls with batching// packages/analyzer-core/src/azd-analyzer/
+   - Bulk GitHub API calls with batching// packages/analyzer-core/src/azd-analyzer/
 
-    - Progress tracking and error handlingclass AzdDeploymentAnalyzer {
+   - Progress tracking and error handlingclass AzdDeploymentAnalyzer {
 
-    analyzeDeploymentConfig(templatePath: string) {
+   analyzeDeploymentConfig(templatePath: string) {
 
 4. **API Implementation** // Parse azure.yaml, infra/ directory
-    - Add Phase 2 query logic to leaderboards routes // Determine deployment targets
+   - Add Phase 2 query logic to leaderboards routes // Determine deployment targets
 
-    - Update `available: false` to `true` for these sections // Assess configuration completeness
+   - Update `available: false` to `true` for these sections // Assess configuration completeness
 
-    - Test with real data }
+   - Test with real data }
 
 5. **Frontend Updates** calculateDeploymentScore(template: any) {
-    - Remove "Coming Soon" placeholders // Score based on config completeness, best practices
+   - Remove "Coming Soon" placeholders // Score based on config completeness, best practices
 
-    - Wire up to Phase 2 endpoints // Return success probability
+   - Wire up to Phase 2 endpoints // Return success probability
 
-    - Add loading states }
+   - Add loading states }
 
 }
 
@@ -275,7 +275,7 @@ class GitHubMetricsService {
 
 3. **MSFT Tech Usage** - Microsoft technology adoption percentages // Query analysis_results, group by analyzer_user
 
-    // Return top users by analysis count
+   // Return top users by analysis count
 
 **Requirements**:}
 
@@ -285,7 +285,7 @@ class GitHubMetricsService {
 
 - Pattern matching for model referencesexport async function getTemplateIssues(
 
-    req: HttpRequest,
+  req: HttpRequest,
 
 **Estimated Effort**: 3-4 weeks (requires ML/NLP) context: InvocationContext,
 
@@ -810,15 +810,15 @@ curl -w "@curl-format.txt" http://localhost:3001/api/v4/leaderboards/most-issues
 ## Next Steps
 
 1. **Immediate** (this sprint):
-    - Update frontend to call Phase 1 endpoints
-    - Test with real MongoDB data
-    - Deploy to Azure with azd up
+   - Update frontend to call Phase 1 endpoints
+   - Test with real MongoDB data
+   - Deploy to Azure with azd up
 
 2. **Sprint 2** (next 1-2 weeks):
-    - Design and test database migration
-    - Implement GitHub metadata sync service
-    - Deploy Phase 2 (8 working sections)
+   - Design and test database migration
+   - Implement GitHub metadata sync service
+   - Deploy Phase 2 (8 working sections)
 
 3. **Future** (if demand exists):
-    - Evaluate Phase 3 (AI/tech detection)
-    - Gather feedback on Phase 4 (deployment tracking)
+   - Evaluate Phase 3 (AI/tech detection)
+   - Gather feedback on Phase 4 (deployment tracking)

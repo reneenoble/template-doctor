@@ -39,9 +39,9 @@ SETUP_ALLOWED_USERS=user1,user2,admin
 2. Create a new **secret** (private) gist
 3. Filename: `template-doctor-config.csv`
 4. Content:
-    ```csv
-    key,value,updated_by,updated_at
-    ```
+   ```csv
+   key,value,updated_by,updated_at
+   ```
 5. Click "Create secret gist"
 6. Copy the Gist ID from the URL (e.g., `https://gist.github.com/USERNAME/abc123def456` → `abc123def456`)
 
@@ -104,20 +104,20 @@ curl http://localhost:3001/api/v4/setup
 
 ```json
 {
-    "overrides": {
-        "feature1": "enabled",
-        "timeout": "5000"
-    },
-    "metadata": [
-        {
-            "key": "feature1",
-            "value": "enabled",
-            "updatedBy": "anfibiacreativa",
-            "updatedAt": "2025-10-06T12:42:57.675Z"
-        }
-    ],
-    "count": 2,
-    "source": "gist:abc123def456"
+  "overrides": {
+    "feature1": "enabled",
+    "timeout": "5000"
+  },
+  "metadata": [
+    {
+      "key": "feature1",
+      "value": "enabled",
+      "updatedBy": "anfibiacreativa",
+      "updatedAt": "2025-10-06T12:42:57.675Z"
+    }
+  ],
+  "count": 2,
+  "source": "gist:abc123def456"
 }
 ```
 
@@ -155,15 +155,15 @@ curl -X POST http://localhost:3001/api/v4/setup \
 
 ```json
 {
-    "ok": true,
-    "message": "Configuration overrides saved to Gist",
-    "applied": 2,
-    "timestamp": "2025-10-06T12:42:57.675Z",
-    "gist": {
-        "id": "abc123def456",
-        "url": "https://gist.github.com/username/abc123def456",
-        "file": "template-doctor-config.csv"
-    }
+  "ok": true,
+  "message": "Configuration overrides saved to Gist",
+  "applied": 2,
+  "timestamp": "2025-10-06T12:42:57.675Z",
+  "gist": {
+    "id": "abc123def456",
+    "url": "https://gist.github.com/username/abc123def456",
+    "file": "template-doctor-config.csv"
+  }
 }
 ```
 
@@ -197,11 +197,11 @@ Tokens are only used for **authentication** when accessing the GitHub API - they
 
 ```json
 {
-    "overrides": {},
-    "metadata": [],
-    "count": 0,
-    "message": "No configuration overrides found",
-    "hint": "Set CONFIG_GIST_ID environment variable"
+  "overrides": {},
+  "metadata": [],
+  "count": 0,
+  "message": "No configuration overrides found",
+  "hint": "Set CONFIG_GIST_ID environment variable"
 }
 ```
 
@@ -209,8 +209,8 @@ Tokens are only used for **authentication** when accessing the GitHub API - they
 
 ```json
 {
-    "error": "Unauthorized: user not in SETUP_ALLOWED_USERS",
-    "requestedUser": "hacker"
+  "error": "Unauthorized: user not in SETUP_ALLOWED_USERS",
+  "requestedUser": "hacker"
 }
 ```
 
@@ -230,11 +230,11 @@ The setup endpoint works alongside the in-memory override system in `packages/se
 
 1. **On GET**: Load overrides from Gist → Apply to memory
 2. **On POST**:
-    - Update Gist with new values
-    - Apply overrides to memory immediately
+   - Update Gist with new values
+   - Apply overrides to memory immediately
 3. **On server restart**:
-    - GET endpoint can reload from Gist
-    - Or admin can manually re-POST overrides
+   - GET endpoint can reload from Gist
+   - Or admin can manually re-POST overrides
 
 ### Deployment Considerations
 

@@ -1,170 +1,154 @@
-version: "3.8"
+version: '3.8'
 
 services:
-    # Combined container (Express + Vite frontend) - RECOMMENDED
-    # Use: docker-compose up combined
-    combined:
-        build:
-            context: .
-            dockerfile: Dockerfile.combined
-        container_name: template-doctor-combined
-        ports:
-            - "3000:3000" # Single port for both frontend and backend
-        environment:
-            - NODE_ENV=production
-            - PORT=3000
-            # GitHub OAuth
-            - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-            - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-            # GitHub Tokens
-            - GITHUB_TOKEN=${GITHUB_TOKEN}
-            - GH_WORKFLOW_TOKEN=${GH_WORKFLOW_TOKEN}
-            - GITHUB_TOKEN_ANALYZER=${GITHUB_TOKEN_ANALYZER}
-            # Admin Access
-            - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
-            # Database - respects .env settings, falls back to local MongoDB if not set
-            - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/template-doctor}
-            - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
-            - COSMOS_KEY=${COSMOS_KEY}
-            - COSMOS_DATABASE_NAME=${COSMOS_DATABASE_NAME:-template-doctor}
-            # Configuration (with database fallback)
-            - DEFAULT_RULE_SET=${DEFAULT_RULE_SET:-dod}
-            - REQUIRE_AUTH_FOR_RESULTS=${REQUIRE_AUTH_FOR_RESULTS:-false}
-            - AUTO_SAVE_RESULTS=${AUTO_SAVE_RESULTS:-false}
-            - ARCHIVE_ENABLED=${ARCHIVE_ENABLED:-true}
-            - ARCHIVE_COLLECTION=${ARCHIVE_COLLECTION:-gallery}
-            - ARCHIVE_REPO_SLUG=${ARCHIVE_REPO_SLUG}
-            - DISPATCH_TARGET_REPO=${DISPATCH_TARGET_REPO}
-            - ISSUE_AI_ENABLED=${ISSUE_AI_ENABLED:-false}
-            - DEPRECATED_MODELS=${DEPRECATED_MODELS}
-        healthcheck:
-            test:
-                [
-                    "CMD",
-                    "wget",
-                    "--quiet",
-                    "--tries=1",
-                    "--spider",
-                    "http://localhost:3000/api/health",
-                ]
-            interval: 10s
-            timeout: 5s
-            retries: 3
-            start_period: 10s
-        restart: unless-stopped
-        networks:
-            - template-doctor
-        profiles:
-            - combined
+  # Combined container (Express + Vite frontend) - RECOMMENDED
+  # Use: docker-compose up combined
+  combined:
+    build:
+      context: .
+      dockerfile: Dockerfile.combined
+    container_name: template-doctor-combined
+    ports:
+      - '3000:3000' # Single port for both frontend and backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # GitHub OAuth
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # GitHub Tokens
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_WORKFLOW_TOKEN=${GH_WORKFLOW_TOKEN}
+      - GITHUB_TOKEN_ANALYZER=${GITHUB_TOKEN_ANALYZER}
+      # Admin Access
+      - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
+      # Database - respects .env settings, falls back to local MongoDB if not set
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/template-doctor}
+      - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
+      - COSMOS_KEY=${COSMOS_KEY}
+      - COSMOS_DATABASE_NAME=${COSMOS_DATABASE_NAME:-template-doctor}
+      # Configuration (with database fallback)
+      - DEFAULT_RULE_SET=${DEFAULT_RULE_SET:-dod}
+      - REQUIRE_AUTH_FOR_RESULTS=${REQUIRE_AUTH_FOR_RESULTS:-false}
+      - AUTO_SAVE_RESULTS=${AUTO_SAVE_RESULTS:-false}
+      - ARCHIVE_ENABLED=${ARCHIVE_ENABLED:-true}
+      - ARCHIVE_COLLECTION=${ARCHIVE_COLLECTION:-gallery}
+      - ARCHIVE_REPO_SLUG=${ARCHIVE_REPO_SLUG}
+      - DISPATCH_TARGET_REPO=${DISPATCH_TARGET_REPO}
+      - ISSUE_AI_ENABLED=${ISSUE_AI_ENABLED:-false}
+      - DEPRECATED_MODELS=${DEPRECATED_MODELS}
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - template-doctor
+    profiles:
+      - combined
 
-    # MongoDB for local development (optional)
-    mongodb:
-        image: mongo:7
-        container_name: template-doctor-mongodb
-        ports:
-            - "27017:27017"
-        environment:
-            - MONGO_INITDB_DATABASE=template-doctor
-        volumes:
-            - mongodb_data:/data/db
-        healthcheck:
-            test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-            interval: 10s
-            timeout: 5s
-            retries: 3
-            start_period: 10s
-        restart: unless-stopped
-        networks:
-            - template-doctor
-        profiles:
-            - combined
-            - dev
+  # MongoDB for local development (optional)
+  mongodb:
+    image: mongo:7
+    container_name: template-doctor-mongodb
+    ports:
+      - '27017:27017'
+    environment:
+      - MONGO_INITDB_DATABASE=template-doctor
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - template-doctor
+    profiles:
+      - combined
+      - dev
 
-    # ============================================
-    # Multi-container setup (legacy, for development)
-    # Use: docker-compose up server app
-    # ============================================
+  # ============================================
+  # Multi-container setup (legacy, for development)
+  # Use: docker-compose up server app
+  # ============================================
 
-    # Express backend server
-    server:
-        build:
-            context: .
-            dockerfile: packages/server/Dockerfile
-        container_name: template-doctor-server
-        ports:
-            - "3001:3001" # Express server (NOT 7071 - that's Azure Functions)
-        environment:
-            - NODE_ENV=production
-            - PORT=3001
-            # GitHub OAuth
-            - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-            - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-            # GitHub Tokens
-            - GITHUB_TOKEN=${GITHUB_TOKEN}
-            - GH_WORKFLOW_TOKEN=${GH_WORKFLOW_TOKEN}
-            - GITHUB_TOKEN_ANALYZER=${GITHUB_TOKEN_ANALYZER}
-            # Admin Access
-            - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
-            # Database
-            - MONGODB_URI=${MONGODB_URI}
-            - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
-            - COSMOS_KEY=${COSMOS_KEY}
-            - COSMOS_DATABASE_NAME=${COSMOS_DATABASE_NAME:-template-doctor}
-            # Configuration
-            - DEFAULT_RULE_SET=${DEFAULT_RULE_SET:-dod}
-            - REQUIRE_AUTH_FOR_RESULTS=${REQUIRE_AUTH_FOR_RESULTS:-true}
-            - AUTO_SAVE_RESULTS=${AUTO_SAVE_RESULTS:-false}
-            - ARCHIVE_ENABLED=${ARCHIVE_ENABLED:-false}
-            - ARCHIVE_COLLECTION=${ARCHIVE_COLLECTION:-aigallery}
-            - DISPATCH_TARGET_REPO=${DISPATCH_TARGET_REPO}
-            - ISSUE_AI_ENABLED=${ISSUE_AI_ENABLED:-false}
-            - DEPRECATED_MODELS=${DEPRECATED_MODELS}
-            # Backend URL (empty for same-origin)
-            - TD_BACKEND_BASE_URL=
-        healthcheck:
-            test:
-                [
-                    "CMD",
-                    "wget",
-                    "--quiet",
-                    "--tries=1",
-                    "--spider",
-                    "http://localhost:3001/api/health",
-                ]
-            interval: 10s
-            timeout: 5s
-            retries: 3
-            start_period: 10s
-        restart: unless-stopped
-        networks:
-            - template-doctor
-        profiles:
-            - dev
+  # Express backend server
+  server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: template-doctor-server
+    ports:
+      - '3001:3001' # Express server (NOT 7071 - that's Azure Functions)
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # GitHub OAuth
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # GitHub Tokens
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_WORKFLOW_TOKEN=${GH_WORKFLOW_TOKEN}
+      - GITHUB_TOKEN_ANALYZER=${GITHUB_TOKEN_ANALYZER}
+      # Admin Access
+      - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
+      # Database
+      - MONGODB_URI=${MONGODB_URI}
+      - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
+      - COSMOS_KEY=${COSMOS_KEY}
+      - COSMOS_DATABASE_NAME=${COSMOS_DATABASE_NAME:-template-doctor}
+      # Configuration
+      - DEFAULT_RULE_SET=${DEFAULT_RULE_SET:-dod}
+      - REQUIRE_AUTH_FOR_RESULTS=${REQUIRE_AUTH_FOR_RESULTS:-true}
+      - AUTO_SAVE_RESULTS=${AUTO_SAVE_RESULTS:-false}
+      - ARCHIVE_ENABLED=${ARCHIVE_ENABLED:-false}
+      - ARCHIVE_COLLECTION=${ARCHIVE_COLLECTION:-aigallery}
+      - DISPATCH_TARGET_REPO=${DISPATCH_TARGET_REPO}
+      - ISSUE_AI_ENABLED=${ISSUE_AI_ENABLED:-false}
+      - DEPRECATED_MODELS=${DEPRECATED_MODELS}
+      # Backend URL (empty for same-origin)
+      - TD_BACKEND_BASE_URL=
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3001/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - template-doctor
+    profiles:
+      - dev
 
-    # Vite frontend app
-    app:
-        build:
-            context: .
-            dockerfile: packages/app/Dockerfile
-        container_name: template-doctor-app
-        ports:
-            - "3000:3000"
-        environment:
-            - NODE_ENV=production
-            - PORT=3000
-            - VITE_API_BASE_URL=http://localhost:3001
-        depends_on:
-            server:
-                condition: service_healthy
-        restart: unless-stopped
-        networks:
-            - template-doctor
-        profiles:
-            - dev
+  # Vite frontend app
+  app:
+    build:
+      context: .
+      dockerfile: packages/app/Dockerfile
+    container_name: template-doctor-app
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_API_BASE_URL=http://localhost:3001
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - template-doctor
+    profiles:
+      - dev
 
 networks:
-    template-doctor:
-        driver: bridge
+  template-doctor:
+    driver: bridge
 
 volumes:
-    mongodb_data:
+  mongodb_data:

@@ -1,134 +1,134 @@
 [
-    {
-        "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
-        "owner": "Azure-Samples",
-        "repo": "todo-nodejs-mongo",
-        "testId": "test-20241009-120000",
-        "timestamp": 1728489600000,
-        "status": "success",
-        "startedAt": { "$date": "2024-10-09T12:00:00.000Z" },
-        "completedAt": { "$date": "2024-10-09T12:05:30.000Z" },
-        "duration": 330000,
-        "result": {
-            "deploymentTime": 285000,
-            "resourcesCreated": 7,
-            "errors": [],
-            "warnings": [
-                "Resource group already exists, reusing existing resources",
-                "Cosmos DB provisioning took longer than expected (120s)"
-            ],
-            "logs": "Starting deployment...\n[12:00:15] Creating resource group: rg-todo-nodejs-mongo-dev\n[12:00:30] Creating Cosmos DB account: cosmos-todo-dev\n[12:02:45] Creating Container Apps environment\n[12:03:30] Building and deploying container\n[12:05:00] Deployment successful\n[12:05:30] All resources ready",
-            "azdVersion": "1.9.5",
-            "azureRegion": "eastus",
-            "resourcesDetails": {
-                "resourceGroup": "rg-todo-nodejs-mongo-dev",
-                "cosmosDb": "cosmos-todo-dev",
-                "containerApp": "ca-todo-nodejs-mongo",
-                "containerEnvironment": "cae-todo-dev",
-                "logAnalytics": "log-todo-dev",
-                "managedIdentity": "mi-todo-nodejs-mongo",
-                "appInsights": "ai-todo-dev"
-            },
-            "endpoints": {
-                "app": "https://ca-todo-nodejs-mongo.azurecontainerapps.io",
-                "api": "https://ca-todo-nodejs-mongo.azurecontainerapps.io/api"
-            },
-            "costs": {
-                "estimated": "$45.50/month",
-                "breakdown": {
-                    "cosmosDb": "$25.00",
-                    "containerApp": "$15.00",
-                    "logAnalytics": "$5.50"
-                }
-            }
-        },
-        "triggeredBy": "user@example.com",
-        "createdAt": { "$date": "2024-10-09T12:00:00.000Z" },
-        "updatedAt": { "$date": "2024-10-09T12:05:30.000Z" }
+  {
+    "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
+    "owner": "Azure-Samples",
+    "repo": "todo-nodejs-mongo",
+    "testId": "test-20241009-120000",
+    "timestamp": 1728489600000,
+    "status": "success",
+    "startedAt": { "$date": "2024-10-09T12:00:00.000Z" },
+    "completedAt": { "$date": "2024-10-09T12:05:30.000Z" },
+    "duration": 330000,
+    "result": {
+      "deploymentTime": 285000,
+      "resourcesCreated": 7,
+      "errors": [],
+      "warnings": [
+        "Resource group already exists, reusing existing resources",
+        "Cosmos DB provisioning took longer than expected (120s)"
+      ],
+      "logs": "Starting deployment...\n[12:00:15] Creating resource group: rg-todo-nodejs-mongo-dev\n[12:00:30] Creating Cosmos DB account: cosmos-todo-dev\n[12:02:45] Creating Container Apps environment\n[12:03:30] Building and deploying container\n[12:05:00] Deployment successful\n[12:05:30] All resources ready",
+      "azdVersion": "1.9.5",
+      "azureRegion": "eastus",
+      "resourcesDetails": {
+        "resourceGroup": "rg-todo-nodejs-mongo-dev",
+        "cosmosDb": "cosmos-todo-dev",
+        "containerApp": "ca-todo-nodejs-mongo",
+        "containerEnvironment": "cae-todo-dev",
+        "logAnalytics": "log-todo-dev",
+        "managedIdentity": "mi-todo-nodejs-mongo",
+        "appInsights": "ai-todo-dev"
+      },
+      "endpoints": {
+        "app": "https://ca-todo-nodejs-mongo.azurecontainerapps.io",
+        "api": "https://ca-todo-nodejs-mongo.azurecontainerapps.io/api"
+      },
+      "costs": {
+        "estimated": "$45.50/month",
+        "breakdown": {
+          "cosmosDb": "$25.00",
+          "containerApp": "$15.00",
+          "logAnalytics": "$5.50"
+        }
+      }
     },
-    {
-        "repoUrl": "https://github.com/Azure-Samples/contoso-real-estate",
-        "owner": "Azure-Samples",
-        "repo": "contoso-real-estate",
-        "testId": "test-20241008-140000",
-        "timestamp": 1728396000000,
-        "status": "failed",
-        "startedAt": { "$date": "2024-10-08T14:00:00.000Z" },
-        "completedAt": { "$date": "2024-10-08T14:08:45.000Z" },
-        "duration": 525000,
-        "result": {
-            "deploymentTime": 485000,
-            "resourcesCreated": 5,
-            "errors": [
-                "Container image build failed: Node.js version mismatch",
-                "Deployment rollback initiated due to health check failures"
-            ],
-            "warnings": [
-                "Container build took longer than expected (180s)",
-                "Multiple retries required for image push"
-            ],
-            "logs": "Starting deployment...\n[14:00:15] Creating resource group: rg-contoso-real-estate-dev\n[14:00:45] Creating Azure Container Registry\n[14:02:30] Building container image\n[14:05:45] ERROR: Node.js version mismatch in Dockerfile\n[14:06:00] Build failed, attempting rollback\n[14:08:45] Deployment failed",
-            "azdVersion": "1.9.5",
-            "azureRegion": "westus2",
-            "resourcesDetails": {
-                "resourceGroup": "rg-contoso-real-estate-dev",
-                "containerRegistry": "crcontosoredev",
-                "containerApp": "ca-contoso-real-estate",
-                "containerEnvironment": "cae-contoso-dev",
-                "logAnalytics": "log-contoso-dev"
-            },
-            "endpoints": null,
-            "costs": {
-                "estimated": "Deployment failed - no costs incurred",
-                "breakdown": {}
-            }
-        },
-        "triggeredBy": "admin@example.com",
-        "createdAt": { "$date": "2024-10-08T14:00:00.000Z" },
-        "updatedAt": { "$date": "2024-10-08T14:08:45.000Z" }
+    "triggeredBy": "user@example.com",
+    "createdAt": { "$date": "2024-10-09T12:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-09T12:05:30.000Z" }
+  },
+  {
+    "repoUrl": "https://github.com/Azure-Samples/contoso-real-estate",
+    "owner": "Azure-Samples",
+    "repo": "contoso-real-estate",
+    "testId": "test-20241008-140000",
+    "timestamp": 1728396000000,
+    "status": "failed",
+    "startedAt": { "$date": "2024-10-08T14:00:00.000Z" },
+    "completedAt": { "$date": "2024-10-08T14:08:45.000Z" },
+    "duration": 525000,
+    "result": {
+      "deploymentTime": 485000,
+      "resourcesCreated": 5,
+      "errors": [
+        "Container image build failed: Node.js version mismatch",
+        "Deployment rollback initiated due to health check failures"
+      ],
+      "warnings": [
+        "Container build took longer than expected (180s)",
+        "Multiple retries required for image push"
+      ],
+      "logs": "Starting deployment...\n[14:00:15] Creating resource group: rg-contoso-real-estate-dev\n[14:00:45] Creating Azure Container Registry\n[14:02:30] Building container image\n[14:05:45] ERROR: Node.js version mismatch in Dockerfile\n[14:06:00] Build failed, attempting rollback\n[14:08:45] Deployment failed",
+      "azdVersion": "1.9.5",
+      "azureRegion": "westus2",
+      "resourcesDetails": {
+        "resourceGroup": "rg-contoso-real-estate-dev",
+        "containerRegistry": "crcontosoredev",
+        "containerApp": "ca-contoso-real-estate",
+        "containerEnvironment": "cae-contoso-dev",
+        "logAnalytics": "log-contoso-dev"
+      },
+      "endpoints": null,
+      "costs": {
+        "estimated": "Deployment failed - no costs incurred",
+        "breakdown": {}
+      }
     },
-    {
-        "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
-        "owner": "Azure-Samples",
-        "repo": "todo-nodejs-mongo",
-        "testId": "test-20241001-100000",
-        "timestamp": 1727784000000,
-        "status": "success",
-        "startedAt": { "$date": "2024-10-01T10:00:00.000Z" },
-        "completedAt": { "$date": "2024-10-01T10:04:15.000Z" },
-        "duration": 255000,
-        "result": {
-            "deploymentTime": 220000,
-            "resourcesCreated": 7,
-            "errors": [],
-            "warnings": [],
-            "logs": "Starting deployment...\n[10:00:15] Creating resource group\n[10:01:00] Provisioning resources\n[10:03:45] Deploying application\n[10:04:15] Deployment complete",
-            "azdVersion": "1.9.3",
-            "azureRegion": "eastus",
-            "resourcesDetails": {
-                "resourceGroup": "rg-todo-nodejs-mongo-dev",
-                "cosmosDb": "cosmos-todo-dev",
-                "containerApp": "ca-todo-nodejs-mongo",
-                "containerEnvironment": "cae-todo-dev",
-                "logAnalytics": "log-todo-dev",
-                "managedIdentity": "mi-todo-nodejs-mongo",
-                "appInsights": "ai-todo-dev"
-            },
-            "endpoints": {
-                "app": "https://ca-todo-nodejs-mongo.azurecontainerapps.io",
-                "api": "https://ca-todo-nodejs-mongo.azurecontainerapps.io/api"
-            },
-            "costs": {
-                "estimated": "$42.00/month",
-                "breakdown": {
-                    "cosmosDb": "$24.00",
-                    "containerApp": "$13.00",
-                    "logAnalytics": "$5.00"
-                }
-            }
-        },
-        "triggeredBy": "user@example.com",
-        "createdAt": { "$date": "2024-10-01T10:00:00.000Z" },
-        "updatedAt": { "$date": "2024-10-01T10:04:15.000Z" }
-    }
+    "triggeredBy": "admin@example.com",
+    "createdAt": { "$date": "2024-10-08T14:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-08T14:08:45.000Z" }
+  },
+  {
+    "repoUrl": "https://github.com/Azure-Samples/todo-nodejs-mongo",
+    "owner": "Azure-Samples",
+    "repo": "todo-nodejs-mongo",
+    "testId": "test-20241001-100000",
+    "timestamp": 1727784000000,
+    "status": "success",
+    "startedAt": { "$date": "2024-10-01T10:00:00.000Z" },
+    "completedAt": { "$date": "2024-10-01T10:04:15.000Z" },
+    "duration": 255000,
+    "result": {
+      "deploymentTime": 220000,
+      "resourcesCreated": 7,
+      "errors": [],
+      "warnings": [],
+      "logs": "Starting deployment...\n[10:00:15] Creating resource group\n[10:01:00] Provisioning resources\n[10:03:45] Deploying application\n[10:04:15] Deployment complete",
+      "azdVersion": "1.9.3",
+      "azureRegion": "eastus",
+      "resourcesDetails": {
+        "resourceGroup": "rg-todo-nodejs-mongo-dev",
+        "cosmosDb": "cosmos-todo-dev",
+        "containerApp": "ca-todo-nodejs-mongo",
+        "containerEnvironment": "cae-todo-dev",
+        "logAnalytics": "log-todo-dev",
+        "managedIdentity": "mi-todo-nodejs-mongo",
+        "appInsights": "ai-todo-dev"
+      },
+      "endpoints": {
+        "app": "https://ca-todo-nodejs-mongo.azurecontainerapps.io",
+        "api": "https://ca-todo-nodejs-mongo.azurecontainerapps.io/api"
+      },
+      "costs": {
+        "estimated": "$42.00/month",
+        "breakdown": {
+          "cosmosDb": "$24.00",
+          "containerApp": "$13.00",
+          "logAnalytics": "$5.00"
+        }
+      }
+    },
+    "triggeredBy": "user@example.com",
+    "createdAt": { "$date": "2024-10-01T10:00:00.000Z" },
+    "updatedAt": { "$date": "2024-10-01T10:04:15.000Z" }
+  }
 ]

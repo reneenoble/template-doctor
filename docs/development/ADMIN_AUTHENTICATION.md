@@ -10,21 +10,21 @@ Admin endpoints in Template Doctor are protected by GitHub-based authentication 
 
 1. **Client includes GitHub token** in Authorization header:
 
-    ```
-    Authorization: Bearer <github_personal_access_token>
-    ```
+   ```
+   Authorization: Bearer <github_personal_access_token>
+   ```
 
 2. **Server validates token** with GitHub API:
 
-    ```
-    GET https://api.github.com/user
-    ```
+   ```
+   GET https://api.github.com/user
+   ```
 
 3. **Server checks authorization** against admin user list:
 
-    ```
-    ADMIN_GITHUB_USERS=username1,username2,username3
-    ```
+   ```
+   ADMIN_GITHUB_USERS=username1,username2,username3
+   ```
 
 4. **Access granted** if user is in admin list
 
@@ -59,7 +59,7 @@ The `docker-compose.yml` automatically passes `ADMIN_GITHUB_USERS` to containers
 
 ```yaml
 environment:
-    - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
+  - ADMIN_GITHUB_USERS=${ADMIN_GITHUB_USERS}
 ```
 
 ### Azure Deployment
@@ -91,8 +91,8 @@ curl http://localhost:3000/api/v4/admin/config
 
 ```json
 {
-    "error": "Unauthorized",
-    "message": "Missing or invalid Authorization header. Expected: Bearer <github_token>"
+  "error": "Unauthorized",
+  "message": "Missing or invalid Authorization header. Expected: Bearer <github_token>"
 }
 ```
 
@@ -107,8 +107,8 @@ curl -H "Authorization: Bearer fake_token" \
 
 ```json
 {
-    "error": "Unauthorized",
-    "message": "Invalid GitHub token or unable to fetch user information"
+  "error": "Unauthorized",
+  "message": "Invalid GitHub token or unable to fetch user information"
 }
 ```
 
@@ -127,17 +127,17 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 
 ```json
 {
-    "settings": [
-        {
-            "_id": "...",
-            "key": "DEFAULT_RULE_SET",
-            "value": "dod",
-            "category": "features",
-            "updatedBy": "anfibiacreativa",
-            "createdAt": "2025-10-16T09:45:00.000Z",
-            "updatedAt": "2025-10-16T09:45:00.000Z"
-        }
-    ]
+  "settings": [
+    {
+      "_id": "...",
+      "key": "DEFAULT_RULE_SET",
+      "value": "dod",
+      "category": "features",
+      "updatedBy": "anfibiacreativa",
+      "createdAt": "2025-10-16T09:45:00.000Z",
+      "updatedAt": "2025-10-16T09:45:00.000Z"
+    }
+  ]
 }
 ```
 
@@ -155,9 +155,9 @@ curl -X PUT \
 
 ```json
 {
-    "success": true,
-    "key": "DEFAULT_RULE_SET",
-    "value": "security"
+  "success": true,
+  "key": "DEFAULT_RULE_SET",
+  "value": "security"
 }
 ```
 
@@ -181,8 +181,8 @@ curl -X POST \
 
 ```json
 {
-    "success": true,
-    "updated": 3
+  "success": true,
+  "updated": 3
 }
 ```
 
@@ -200,9 +200,9 @@ curl -H "Authorization: Bearer $OTHER_TOKEN" \
 
 ```json
 {
-    "error": "Forbidden",
-    "message": "User 'otheruser' does not have admin privileges",
-    "hint": "Contact the system administrator to request admin access"
+  "error": "Forbidden",
+  "message": "User 'otheruser' does not have admin privileges",
+  "hint": "Contact the system administrator to request admin access"
 }
 ```
 
@@ -361,14 +361,14 @@ Location: `packages/server/src/middleware/auth.ts`
 
 ```typescript
 export async function requireAuth(req, res, next) {
-    // Extract token from Authorization: Bearer <token>
-    // Validate with GitHub API
-    // Attach req.githubUser
+  // Extract token from Authorization: Bearer <token>
+  // Validate with GitHub API
+  // Attach req.githubUser
 }
 
 export function requireAdmin(req, res, next) {
-    // Check req.githubUser against ADMIN_GITHUB_USERS
-    // Grant or deny access
+  // Check req.githubUser against ADMIN_GITHUB_USERS
+  // Grant or deny access
 }
 ```
 

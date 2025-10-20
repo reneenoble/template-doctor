@@ -10,13 +10,13 @@ Template Doctor has a feature that scans repositories for references to deprecat
 
 1. The script fetches HTML content from Microsoft's model lifecycle documentation
 2. It parses the tables in the documentation to identify multiple date types:
-    - Model names (from the "Model" column)
-    - Legacy dates (from the "Legacy" column)
-    - Deprecation dates (from the "Deprecation" column)
-    - Retirement dates (from the "Retirement" column)
+   - Model names (from the "Model" column)
+   - Legacy dates (from the "Legacy" column)
+   - Deprecation dates (from the "Deprecation" column)
+   - Retirement dates (from the "Retirement" column)
 3. For each model, it checks if any of the dates indicate the model is deprecated:
-    - If any date is in the past, the model is considered deprecated
-    - If the `--include-future` flag is used, models with future deprecation dates are also included
+   - If any date is in the past, the model is considered deprecated
+   - If the `--include-future` flag is used, models with future deprecation dates are also included
 4. It filters the results to only include models with names that match known patterns (gpt-, text-, etc.)
 5. The script can either update the configuration file directly or output the results for manual updates
 
@@ -86,14 +86,10 @@ If the script cannot update the configuration automatically, it will display the
 
 ```json
 {
-    "azureDeveloperCliEnabled": true,
-    "archiveEnabled": false,
-    "defaultRuleSet": "dod",
-    "deprecatedModels": [
-        "gpt-3.5-turbo",
-        "text-davinci-003",
-        "...other models..."
-    ]
+  "azureDeveloperCliEnabled": true,
+  "archiveEnabled": false,
+  "defaultRuleSet": "dod",
+  "deprecatedModels": ["gpt-3.5-turbo", "text-davinci-003", "...other models..."]
 }
 ```
 
@@ -136,32 +132,32 @@ This script can be added to a CI/CD pipeline to automatically keep the deprecate
 name: Update Deprecated Models
 
 on:
-    schedule:
-        - cron: "0 0 * * 0" # Run weekly on Sundays at midnight
-    workflow_dispatch: # Allow manual triggers
+  schedule:
+    - cron: '0 0 * * 0' # Run weekly on Sundays at midnight
+  workflow_dispatch: # Allow manual triggers
 
 jobs:
-    update-models:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-            - uses: actions/setup-node@v3
-              with:
-                  node-version: "16"
-            - name: Fetch deprecated models
-              run: node scripts/fetch-deprecated-models.js
-            - name: Check for changes
-              id: git-check
-              run: |
-                  git diff --quiet packages/app/config.json || echo "changes=true" >> $GITHUB_OUTPUT
-            - name: Create Pull Request
-              if: steps.git-check.outputs.changes == 'true'
-              uses: peter-evans/create-pull-request@v4
-              with:
-                  commit-message: "chore: update deprecated models list"
-                  title: "Update deprecated models list"
-                  body: "Automatically generated PR to update the list of deprecated models from Microsoft documentation."
-                  branch: "auto/update-deprecated-models"
+  update-models:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - name: Fetch deprecated models
+        run: node scripts/fetch-deprecated-models.js
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --quiet packages/app/config.json || echo "changes=true" >> $GITHUB_OUTPUT
+      - name: Create Pull Request
+        if: steps.git-check.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v4
+        with:
+          commit-message: 'chore: update deprecated models list'
+          title: 'Update deprecated models list'
+          body: 'Automatically generated PR to update the list of deprecated models from Microsoft documentation.'
+          branch: 'auto/update-deprecated-models'
 ```
 
 ## Troubleshooting
@@ -170,9 +166,9 @@ If the script fails to extract models, it might be due to changes in the structu
 
 1. Check if the URL is still valid (currently using: `https://learn.microsoft.com/azure/ai-foundry/concepts/model-lifecycle-retirement`)
 2. Run with verbose output to see detailed logging about table parsing:
-    ```bash
-    node scripts/fetch-deprecated-models.js --dry-run
-    ```
+   ```bash
+   node scripts/fetch-deprecated-models.js --dry-run
+   ```
 3. Examine the HTML structure of the page and update the extraction logic in the script if needed
 4. Manually update the `deprecatedModels` array in `config.json` as a temporary solution
 

@@ -39,10 +39,10 @@ Template Doctor analyzes and validates samples and templates against organizatio
 - Location: `packages/app/`
 - Technology: TypeScript + Vite
 - Responsibilities:
-    - User interaction and batch scanning controls
-    - Results viewing and dashboard rendering
-    - Notifications UI
-    - GitHub issue creation
+  - User interaction and batch scanning controls
+  - Results viewing and dashboard rendering
+  - Notifications UI
+  - GitHub issue creation
 - Development: Port 4000 (dev server), Port 3000 (preview)
 - Deployment: Docker container or static hosting (GitHub Pages)
 
@@ -52,41 +52,41 @@ Template Doctor analyzes and validates samples and templates against organizatio
 - Technology: TypeScript + Express
 - Port: 3001 (configurable via `PORT` env var)
 - Key Endpoints:
-    - `/api/v4/analyze` - Template analysis with fork-first SAML strategy
-    - `/api/v4/github-oauth-token` - OAuth token exchange
-    - `/api/v4/client-settings` - Runtime configuration
-    - `/api/v4/validate-template` - Initiates GitHub workflow validations (pending migration)
-    - `/api/v4/validation-status` - Checks validation status (pending migration)
-    - `/api/v4/validation-callback` - Receives callbacks (pending migration)
-    - `/api/v4/archive-collection` - Archives metadata (pending migration)
+  - `/api/v4/analyze` - Template analysis with fork-first SAML strategy
+  - `/api/v4/github-oauth-token` - OAuth token exchange
+  - `/api/v4/client-settings` - Runtime configuration
+  - `/api/v4/validate-template` - Initiates GitHub workflow validations (pending migration)
+  - `/api/v4/validation-status` - Checks validation status (pending migration)
+  - `/api/v4/validation-callback` - Receives callbacks (pending migration)
+  - `/api/v4/archive-collection` - Archives metadata (pending migration)
 
 ### Docker Deployment
 
 - **Multi-Container** (`docker-compose.yml`):
-    - Separate frontend and backend containers
-    - Internal networking between services
-    - Ideal for development and testing
+  - Separate frontend and backend containers
+  - Internal networking between services
+  - Ideal for development and testing
 
 - **Single Container** (`Dockerfile.combined`):
-    - Nginx reverse proxy
-    - Frontend static files
-    - Backend Express server
-    - Production-optimized build
+  - Nginx reverse proxy
+  - Frontend static files
+  - Backend Express server
+  - Production-optimized build
 
 ### GitHub Workflows
 
 - Location: `.github/workflows/`
 - Key Workflows:
-    - `validation-template.yml`: Executes template validation
-    - `submit-analysis.yml`: Processes results and creates PRs
-    - `nightly-swa-deploy.yml`: Deploys frontend to GitHub Pages
+  - `validation-template.yml`: Executes template validation
+  - `submit-analysis.yml`: Processes results and creates PRs
+  - `nightly-swa-deploy.yml`: Deploys frontend to GitHub Pages
 
 ### Results Repository
 
 - Location: `packages/app/results/`
 - Components:
-    - `index-data.js`: Master list of scanned templates
-    - Per-scan dashboards and data files
+  - `index-data.js`: Master list of scanned templates
+  - Per-scan dashboards and data files
 
 ## Functional Scope
 
@@ -142,75 +142,75 @@ Template Doctor analyzes and validates samples and templates against organizatio
 
 - As a user, I can analyze one template and see a clear success or error outcome
 - Acceptance:
-    - When "Analyze" is clicked, a loading notification appears
-    - On success, a success notification appears and results render
-    - On error, an error notification appears with a retry path
+  - When "Analyze" is clicked, a loading notification appears
+  - On success, a success notification appears and results render
+  - On error, an error notification appears with a retry path
 
 ### US2: Run a batch scan across many templates
 
 - As a user, I can paste multiple targets and run a batch scan with status per item
 - Acceptance:
-    - Batch mode toggle reveals the multi-target input
-    - Each item displays one of: Pending, In Progress, Succeeded, Failed, Canceled
-    - Progress counters update as items complete
+  - Batch mode toggle reveals the multi-target input
+  - Each item displays one of: Pending, In Progress, Succeeded, Failed, Canceled
+  - Progress counters update as items complete
 
 ### US3: Resume a partially completed batch after reload
 
 - As a user, I can resume a batch after reloading the page
 - Acceptance:
-    - On load, if there's persisted state, a resume confirmation appears
-    - If confirmed, only incomplete items are processed; completed items are skipped
+  - On load, if there's persisted state, a resume confirmation appears
+  - If confirmed, only incomplete items are processed; completed items are skipped
 
 ### US4: Cancel a running batch
 
 - As a user, I can cancel an in-progress batch
 - Acceptance:
-    - Clicking Cancel stops processing promptly
-    - The current item resolves to Canceled if applicable; no new items start
-    - A notification confirms cancellation
+  - Clicking Cancel stops processing promptly
+  - The current item resolves to Canceled if applicable; no new items start
+  - A notification confirms cancellation
 
 ### US5: Create GitHub issues for findings
 
 - As a user, I can create issues for all findings with one click
 - Acceptance:
-    - Issues are created with standardized titles and labels
-    - Each issue includes detailed context and links to the report
-    - Issues are assigned to GitHub Copilot for automated fixes
+  - Issues are created with standardized titles and labels
+  - Each issue includes detailed context and links to the report
+  - Issues are assigned to GitHub Copilot for automated fixes
 
 ### US6: View security analysis for infrastructure
 
 - As a user, I can see security best practice violations in Bicep files
 - Acceptance:
-    - Dashboard shows security findings categorized by type
-    - Managed Identity usage is evaluated
-    - Insecure authentication methods are flagged
+  - Dashboard shows security findings categorized by type
+  - Managed Identity usage is evaluated
+  - Insecure authentication methods are flagged
 
 ### US7: Save results to GitHub
 
 - As a user, I can save scan results to be published on GitHub Pages
 - Acceptance:
-    - "Save Results" action creates a PR with dashboard and data files
-    - PR is automatically created with proper metadata
-    - When merged, results appear in the historical scans section
+  - "Save Results" action creates a PR with dashboard and data files
+  - PR is automatically created with proper metadata
+  - When merged, results appear in the historical scans section
 
 ## System Architecture
 
 ### Frontend (Static Web App)
 
 - Modules:
-    - Web UI: Main user interface components
-    - Results Viewer: Dashboard and report rendering
-    - Batch Manager: Multi-template scanning coordination
-    - Notification System: In-app alerts and prompts
+  - Web UI: Main user interface components
+  - Results Viewer: Dashboard and report rendering
+  - Batch Manager: Multi-template scanning coordination
+  - Notification System: In-app alerts and prompts
 
 ### Azure Functions
 
 - Endpoints:
-    - validate-template: Initiates validation workflows
-    - validation-status: Polls for workflow status
-    - validation-callback: Receives completion callbacks
-    - github-oauth-token: Handles authentication
-    - archive-collection: Optional metadata archiving
+  - validate-template: Initiates validation workflows
+  - validation-status: Polls for workflow status
+  - validation-callback: Receives completion callbacks
+  - github-oauth-token: Handles authentication
+  - archive-collection: Optional metadata archiving
 
 ### GitHub Workflows
 
@@ -267,17 +267,17 @@ Template Doctor analyzes and validates samples and templates against organizatio
 ## Components
 
 - Frontend (static, TypeScript migration in progress)
-    - Location: `packages/app/`
-    - Responsibilities: user interaction, batch controls, rendering results, notifications UI.
-    - Served locally via Vite dev server (`npm run -w packages/app dev`); deployed to GitHub Pages.
+  - Location: `packages/app/`
+  - Responsibilities: user interaction, batch controls, rendering results, notifications UI.
+  - Served locally via Vite dev server (`npm run -w packages/app dev`); deployed to GitHub Pages.
 - Azure Functions API
-    - Location: `api/`
-    - Responsibilities: authentication helpers, analysis endpoints and utilities as needed.
-    - Notable functions: `github-oauth-token`, `add-template-pr` (for PR creation using `dashboard-template.html`), to store a historical of tested templates.
+  - Location: `api/`
+  - Responsibilities: authentication helpers, analysis endpoints and utilities as needed.
+  - Notable functions: `github-oauth-token`, `add-template-pr` (for PR creation using `dashboard-template.html`), to store a historical of tested templates.
 - GitHub Integrations
-    - GitHub Action and App for automated scanning and result publication.
+  - GitHub Action and App for automated scanning and result publication.
 - Results Artifacts
-    - Location: `results/` (static data and dashboards), consumed by the frontend report loader.
+  - Location: `results/` (static data and dashboards), consumed by the frontend report loader.
 
 ## Functional Scope
 
@@ -315,13 +315,13 @@ Template Doctor analyzes and validates samples and templates against organizatio
 - The user can test deployability with the Template Doctor analyzes [Azure Developer CLI](https://github.com/Azure/azure-dev)
 - The user can open the template in Codespaces to fix manually with Copilot
 
-    One-click issue creation details:
-    - Issues are created per finding (or batched by category, configurable) with a consistent title prefix, e.g., "[Template Doctor] <rule-id>: <summary>".
-    - Each issue includes rich context: ruleset name/version (DoD, partner, or custom), analysis run timestamp (ISO-8601), target repo/ref, severity, and direct links to the dashboard/report artifact.
-    - Standardized labels are applied for fast triage, e.g., `template-doctor`, `autofix`, severity labels (`severity:high|medium|low`), and ruleset tags (`ruleset:DoD|partner|custom`).
-    - Issues are dated in the body and/or via a `run:YYYY-MM-DD` label for easy filtering.
-    - Issues are auto-assigned to a configured automation account or GitHub App (e.g., Copilot) which proposes or opens a PR to address the finding.
-    - All operations are idempotent where possible (re-runs update or comment vs. duplicate) to avoid issue spam.
+  One-click issue creation details:
+  - Issues are created per finding (or batched by category, configurable) with a consistent title prefix, e.g., "[Template Doctor] <rule-id>: <summary>".
+  - Each issue includes rich context: ruleset name/version (DoD, partner, or custom), analysis run timestamp (ISO-8601), target repo/ref, severity, and direct links to the dashboard/report artifact.
+  - Standardized labels are applied for fast triage, e.g., `template-doctor`, `autofix`, severity labels (`severity:high|medium|low`), and ruleset tags (`ruleset:DoD|partner|custom`).
+  - Issues are dated in the body and/or via a `run:YYYY-MM-DD` label for easy filtering.
+  - Issues are auto-assigned to a configured automation account or GitHub App (e.g., Copilot) which proposes or opens a PR to address the finding.
+  - All operations are idempotent where possible (re-runs update or comment vs. duplicate) to avoid issue spam.
 
 6. Authentication & GitHub
 
@@ -352,69 +352,69 @@ US1: Analyze a single template
 
 - As a user, I can analyze one template and see a clear success or error outcome, based on the DoD, or other ruleset
 - Acceptance:
-    - When “Analyze” is clicked, a loading notification appears.
-    - On success, a success notification appears and results render.
-    - On error, an error notification appears with a retry path.
+  - When “Analyze” is clicked, a loading notification appears.
+  - On success, a success notification appears and results render.
+  - On error, an error notification appears with a retry path.
 
 US2: Run a batch scan across many templates
 
 - As a user, I can paste multiple targets and run a batch scan with status per item.
 - Acceptance:
-    - Batch mode toggle reveals the multi-target input.
-    - Each item displays one of: Pending, In Progress, Succeeded, Failed, Canceled.
-    - Progress counters update as items complete.
+  - Batch mode toggle reveals the multi-target input.
+  - Each item displays one of: Pending, In Progress, Succeeded, Failed, Canceled.
+  - Progress counters update as items complete.
 
 US3: Retry failed items in batch mode
 
 - As a user, I can retry items that failed.
 - Acceptance:
-    - Failed items expose a retry action.
-    - On retry, the item’s status transitions through In Progress to Succeeded or Failed.
+  - Failed items expose a retry action.
+  - On retry, the item’s status transitions through In Progress to Succeeded or Failed.
 
 US4: Resume a partially completed batch after reload
 
 - As a user, I can resume a batch after reloading the page.
 - Acceptance:
-    - On load, if there’s persisted state, a resume confirmation appears (notification UI).
-    - If confirmed, only incomplete items are processed; completed items are skipped.
+  - On load, if there’s persisted state, a resume confirmation appears (notification UI).
+  - If confirmed, only incomplete items are processed; completed items are skipped.
 
 US5: Cancel a running batch
 
 - As a user, I can cancel an in-progress batch.
 - Acceptance:
-    - Clicking Cancel stops processing promptly.
-    - The current item resolves to Canceled if applicable; no new items start.
-    - A notification confirms cancellation.
+  - Clicking Cancel stops processing promptly.
+  - The current item resolves to Canceled if applicable; no new items start.
+  - A notification confirms cancellation.
 
 US6: See clear notifications without native dialogs
 
 - As a user, I get consistent in-app notifications and never see native alert/confirm/prompt.
 - Acceptance:
-    - Info/success/warning/error notifications render with titles and messages.
-    - Loading notifications transition to a terminal state (success/error) or dismiss.
-    - Confirms are handled in-notification; no native dialogs appear.
+  - Info/success/warning/error notifications render with titles and messages.
+  - Loading notifications transition to a terminal state (success/error) or dismiss.
+  - Confirms are handled in-notification; no native dialogs appear.
 
 US7: Authenticate with GitHub when required
 
 - As a user, I can authenticate via a backend helper without exposing secrets in the browser.
 - Acceptance:
-    - Token exchange happens via `api/github-oauth-token`.
-    - Frontend never stores long-lived secrets; CORS is restricted to Pages origin.
+  - Token exchange happens via `api/github-oauth-token`.
+  - Frontend never stores long-lived secrets; CORS is restricted to Pages origin.
 
 US8: Publish and view results on GitHub Pages
 
 - As a maintainer, I can deploy or locally start the frontend and browse generated reports.
 - Acceptance:
-    - Pages workflow publishes content from `src/frontend` (excluding backups/tests/reports).
-    - Report pages and dashboards render on the Pages site.
+  - Pages workflow publishes content from `src/frontend` (excluding backups/tests/reports).
+  - Report pages and dashboards render on the Pages site.
 
 US9: Create a PR that includes a dashboard (optional)
 
 - As a maintainer, I can trigger a PR to add a dashboard file using a provided HTML template. (token permissions dependendant)
 
 - Acceptance:
-    - Function `add-template-pr` uses `dashboard-template.html` to compose content.
-    - A PR is created against the target repo with the dashboard artifact.
+  - Function `add-template-pr` uses `dashboard-template.html` to compose content.
+  - A PR is created against the target repo with the dashboard artifact.
 
 US10: Test with DoD standards, partner standards or custom rules
 
@@ -424,18 +424,18 @@ US11: Contribute safely with tests and formatting
 
 - As a contributor, I must include tests and pass CI checks.
 - Acceptance:
-    - New features/bugfixes include Playwright E2E coverage.
-    - `npm run format:check` passes; CI is green before merge.
+  - New features/bugfixes include Playwright E2E coverage.
+  - `npm run format:check` passes; CI is green before merge.
 
 US12: One-click issue creation with rich labeling and automation handoff
 
 - As a maintainer, I can create issues for findings in one click, with standardized labels, dates, and tags, and auto-assign them to automation (e.g., Copilot) to open a PR.
 - Acceptance:
-    - A single action creates issues for current findings with consistent title schema and body content including run timestamp and ruleset.
-    - Labels applied include `template-doctor`, a severity label, and a `ruleset:*` label; optionally a `run:YYYY-MM-DD` label is added.
-    - Issues include direct links to the specific dashboard/report.
-    - The assignee is set to a configured automation account (e.g., Copilot or a GitHub App) so that a follow-up PR is proposed or opened.
-    - Re-running the action should update or comment on existing issues instead of creating duplicates when content matches (idempotent behavior).
+  - A single action creates issues for current findings with consistent title schema and body content including run timestamp and ruleset.
+  - Labels applied include `template-doctor`, a severity label, and a `ruleset:*` label; optionally a `run:YYYY-MM-DD` label is added.
+  - Issues include direct links to the specific dashboard/report.
+  - The assignee is set to a configured automation account (e.g., Copilot or a GitHub App) so that a follow-up PR is proposed or opened.
+  - Re-running the action should update or comment on existing issues instead of creating duplicates when content matches (idempotent behavior).
 
 ## Scenarios
 

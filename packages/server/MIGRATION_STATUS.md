@@ -83,32 +83,32 @@ Migrating all Azure Functions from `packages/api/` to Express routes in `package
 ### Azure Functions (OLD)
 
 ```typescript
-import { HttpRequest, Context } from "@azure/functions";
-import { wrapHttp } from "./shared/http";
+import { HttpRequest, Context } from '@azure/functions';
+import { wrapHttp } from './shared/http';
 
 export const handler = wrapHttp(async (req: HttpRequest, ctx: Context) => {
-    ctx.log("Processing request");
-    if (req.method !== "POST") {
-        return { status: 405, body: { error: "Method not allowed" } };
-    }
-    return { status: 200, body: { success: true } };
+  ctx.log('Processing request');
+  if (req.method !== 'POST') {
+    return { status: 405, body: { error: 'Method not allowed' } };
+  }
+  return { status: 200, body: { success: true } };
 });
 ```
 
 ### Express (NEW)
 
 ```typescript
-import { Router, Request, Response } from "express";
+import { Router, Request, Response } from 'express';
 
 export const myRouter = Router();
 
-myRouter.post("/my-endpoint", async (req: Request, res: Response) => {
-    console.log("Processing request");
-    try {
-        res.status(200).json({ success: true });
-    } catch (error: any) {
-        res.status(500).json({ error: error?.message });
-    }
+myRouter.post('/my-endpoint', async (req: Request, res: Response) => {
+  console.log('Processing request');
+  try {
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message });
+  }
 });
 ```
 
@@ -116,25 +116,25 @@ myRouter.post("/my-endpoint", async (req: Request, res: Response) => {
 
 1. **Local Development**:
 
-    ```bash
-    # Terminal 1: Start Express server
-    cd packages/server
-    npm run dev
+   ```bash
+   # Terminal 1: Start Express server
+   cd packages/server
+   npm run dev
 
-    # Terminal 2: Run smoke tests
-    ./test-server.sh
-    ```
+   # Terminal 2: Run smoke tests
+   ./test-server.sh
+   ```
 
 2. **Integration Testing**:
-    - Point frontend `config.local.json` to `http://localhost:7071`
-    - Test OAuth login flow
-    - Test template analysis with real repository
+   - Point frontend `config.local.json` to `http://localhost:7071`
+   - Test OAuth login flow
+   - Test template analysis with real repository
 
 3. **Production Validation**:
-    - Build Docker container
-    - Deploy to Azure Container Apps
-    - Verify environment variables accessible
-    - Test all endpoints with production data
+   - Build Docker container
+   - Deploy to Azure Container Apps
+   - Verify environment variables accessible
+   - Test all endpoints with production data
 
 ## Known Issues & Solutions
 

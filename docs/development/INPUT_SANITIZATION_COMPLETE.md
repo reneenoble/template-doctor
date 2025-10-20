@@ -54,7 +54,7 @@ Added comprehensive input sanitization and XSS prevention to the Template Doctor
 
 ```typescript
 // DANGEROUS - No sanitization
-const repoName = template.repoUrl.split("github.com/")[1];
+const repoName = template.repoUrl.split('github.com/')[1];
 html += `<div title="${repoName}">${repoName}</div>`;
 
 performSearch(query.trim()); // Only trimmed
@@ -91,7 +91,7 @@ const malicious = '<script>alert("XSS")</script>';
 const malicious = '" onload="alert(1)"';
 
 // Sanitized output
-("&quot; onload=&quot;alert(1)&quot;");
+('&quot; onload=&quot;alert(1)&quot;');
 // Quotes escaped, attribute injection prevented
 ```
 
@@ -122,24 +122,24 @@ const malicious = '<img src=x onerror="alert(1)">';
 ## 🎯 Security Best Practices Applied
 
 1. **Input Validation**
-    - Length limits (500 chars for search)
-    - Control character removal
-    - Whitespace normalization
+   - Length limits (500 chars for search)
+   - Control character removal
+   - Whitespace normalization
 
 2. **Output Encoding**
-    - HTML entity escaping (`< > & " '`)
-    - Attribute-safe encoding
-    - Context-aware sanitization
+   - HTML entity escaping (`< > & " '`)
+   - Attribute-safe encoding
+   - Context-aware sanitization
 
 3. **URL Validation**
-    - Strict GitHub URL pattern matching
-    - Character whitelist for owner/repo names
-    - Rejection of path traversal attempts
+   - Strict GitHub URL pattern matching
+   - Character whitelist for owner/repo names
+   - Rejection of path traversal attempts
 
 4. **Defense in Depth**
-    - Sanitize at input (search query)
-    - Sanitize at storage (template data)
-    - Sanitize at output (HTML rendering)
+   - Sanitize at input (search query)
+   - Sanitize at storage (template data)
+   - Sanitize at output (HTML rendering)
 
 ## ✅ Testing Results
 
@@ -170,7 +170,7 @@ Test Files  1 passed (1)
 **When displaying user input:**
 
 ```typescript
-import { sanitizeHtml, sanitizeAttribute } from "../shared/sanitize.js";
+import { sanitizeHtml, sanitizeAttribute } from '../shared/sanitize.js';
 
 // For HTML content
 const safeContent = sanitizeHtml(userInput);
@@ -178,30 +178,30 @@ element.innerHTML = safeContent;
 
 // For HTML attributes
 const safeAttr = sanitizeAttribute(userInput);
-element.setAttribute("title", safeAttr);
+element.setAttribute('title', safeAttr);
 ```
 
 **When processing search queries:**
 
 ```typescript
-import { sanitizeSearchQuery } from "../shared/sanitize.js";
+import { sanitizeSearchQuery } from '../shared/sanitize.js';
 
 const sanitized = sanitizeSearchQuery(query, 500);
 if (sanitized) {
-    performSearch(sanitized);
+  performSearch(sanitized);
 }
 ```
 
 **When validating GitHub URLs:**
 
 ```typescript
-import { sanitizeGitHubUrl } from "../shared/sanitize.js";
+import { sanitizeGitHubUrl } from '../shared/sanitize.js';
 
 const validUrl = sanitizeGitHubUrl(userProvidedUrl);
 if (validUrl) {
-    analyzeRepository(validUrl);
+  analyzeRepository(validUrl);
 } else {
-    showError("Invalid GitHub URL");
+  showError('Invalid GitHub URL');
 }
 ```
 

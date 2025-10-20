@@ -61,8 +61,8 @@ This schema treats **repositories as the primary entity**, with analysis results
 ```javascript
 db.repos.createIndex({ repoUrl: 1 }, { unique: true });
 db.repos.createIndex({ owner: 1, repo: 1 });
-db.repos.createIndex({ "latestAnalysis.compliancePercentage": -1 });
-db.repos.createIndex({ "latestAnalysis.scanDate": -1 });
+db.repos.createIndex({ 'latestAnalysis.compliancePercentage': -1 });
+db.repos.createIndex({ 'latestAnalysis.scanDate': -1 });
 ```
 
 ### 2. `analysis` Collection (Historical Analysis Results)
@@ -156,7 +156,7 @@ db.repos.createIndex({ "latestAnalysis.scanDate": -1 });
 ```javascript
 db.analysis.createIndex({ repoUrl: 1, scanDate: -1 });
 db.analysis.createIndex({ scanDate: -1 });
-db.analysis.createIndex({ "compliance.percentage": -1 });
+db.analysis.createIndex({ 'compliance.percentage': -1 });
 db.analysis.createIndex({ createdBy: 1 });
 ```
 
@@ -165,23 +165,23 @@ db.analysis.createIndex({ createdBy: 1 });
 ```javascript
 // Keep only last 10 analyses per repo
 db.analysis
-    .aggregate([
-        { $sort: { repoUrl: 1, scanDate: -1 } },
-        {
-            $group: {
-                _id: "$repoUrl",
-                analyses: { $push: "$$ROOT" },
-            },
-        },
-        {
-            $project: {
-                toDelete: { $slice: ["$analyses", 10, 999] },
-            },
-        },
-        { $unwind: "$toDelete" },
-        { $replaceRoot: { newRoot: "$toDelete" } },
-    ])
-    .forEach((doc) => db.analysis.deleteOne({ _id: doc._id }));
+  .aggregate([
+    { $sort: { repoUrl: 1, scanDate: -1 } },
+    {
+      $group: {
+        _id: '$repoUrl',
+        analyses: { $push: '$$ROOT' },
+      },
+    },
+    {
+      $project: {
+        toDelete: { $slice: ['$analyses', 10, 999] },
+      },
+    },
+    { $unwind: '$toDelete' },
+    { $replaceRoot: { newRoot: '$toDelete' } },
+  ])
+  .forEach((doc) => db.analysis.deleteOne({ _id: doc._id }));
 ```
 
 ### 3. `rulesets` Collection (Unchanged)
@@ -229,27 +229,24 @@ db.analysis
 
 ```javascript
 // Fast - only queries repos collection
-db.repos.find({}).sort({ "latestAnalysis.scanDate": -1 }).limit(50);
+db.repos.find({}).sort({ 'latestAnalysis.scanDate': -1 }).limit(50);
 ```
 
 ### Leaderboard (Top Compliance)
 
 ```javascript
 // Fast - indexed on compliance percentage
-db.repos.find({}).sort({ "latestAnalysis.compliancePercentage": -1 }).limit(20);
+db.repos.find({}).sort({ 'latestAnalysis.compliancePercentage': -1 }).limit(20);
 ```
 
 ### Repository Detail Page
 
 ```javascript
 // 1. Get repo with latest test
-const repo = db.repos.findOne({ repoUrl: "..." });
+const repo = db.repos.findOne({ repoUrl: '...' });
 
 // 2. Get last 10 analysis results for trend chart
-const history = db.analysis
-    .find({ repoUrl: "..." })
-    .sort({ scanDate: -1 })
-    .limit(10);
+const history = db.analysis.find({ repoUrl: '...' }).sort({ scanDate: -1 }).limit(10);
 ```
 
 ### Analysis Trend Chart
@@ -257,9 +254,9 @@ const history = db.analysis
 ```javascript
 // Get historical compliance percentages
 db.analysis
-    .find({ repoUrl: "..." }, { scanDate: 1, "compliance.percentage": 1 })
-    .sort({ scanDate: -1 })
-    .limit(10);
+  .find({ repoUrl: '...' }, { scanDate: 1, 'compliance.percentage': 1 })
+  .sort({ scanDate: -1 })
+  .limit(10);
 ```
 
 ## Benefits of This Design
@@ -267,30 +264,30 @@ db.analysis
 ### ✅ Advantages
 
 1. **Repository-Centric Access**
-    - Repos are the main entity users interact with
-    - One document per repo = simple, fast dashboard queries
-    - Latest analysis embedded for speed
+   - Repos are the main entity users interact with
+   - One document per repo = simple, fast dashboard queries
+   - Latest analysis embedded for speed
 
 2. **Historical Tracking**
-    - Keep 10 analysis results per repo for trend analysis
-    - Separate collection = doesn't bloat repo documents
-    - Easy to query specific time ranges
+   - Keep 10 analysis results per repo for trend analysis
+   - Separate collection = doesn't bloat repo documents
+   - Easy to query specific time ranges
 
 3. **Efficient AZD Tests**
-    - Only latest test matters (embedded in repo)
-    - No separate collection needed
-    - Updated in-place when new test runs
+   - Only latest test matters (embedded in repo)
+   - No separate collection needed
+   - Updated in-place when new test runs
 
 4. **Optimized Query Patterns**
-    - Dashboard: Single query to `repos` collection
-    - Leaderboard: Single sorted query on indexed field
-    - Details: One repo lookup + one analysis query
-    - Trends: Efficient indexed query on repoUrl + scanDate
+   - Dashboard: Single query to `repos` collection
+   - Leaderboard: Single sorted query on indexed field
+   - Details: One repo lookup + one analysis query
+   - Trends: Efficient indexed query on repoUrl + scanDate
 
 5. **Clean Data Lifecycle**
-    - Old analysis results automatically pruned (>10 per repo)
-    - Repo documents stay small and fast
-    - AZD test is always current (overwrites)
+   - Old analysis results automatically pruned (>10 per repo)
+   - Repo documents stay small and fast
+   - AZD test is always current (overwrites)
 
 ### 📊 Access Pattern Analysis
 
@@ -303,50 +300,50 @@ db.analysis
 
 1. **New Analysis Scan:**
 
-    ```javascript
-    // 1. Insert full analysis result
-    const result = db.analysis.insertOne({...})
+   ```javascript
+   // 1. Insert full analysis result
+   const result = db.analysis.insertOne({...})
 
-    // 2. Update repo with latest summary
-    db.repos.updateOne(
-      { repoUrl: "..." },
-      {
-        $set: {
-          latestAnalysis: {
-            scanDate: ...,
-            compliancePercentage: ...,
-            analysisId: result.insertedId
-          },
-          updatedAt: new Date()
-        }
-      },
-      { upsert: true } // Create repo if doesn't exist
-    )
+   // 2. Update repo with latest summary
+   db.repos.updateOne(
+     { repoUrl: "..." },
+     {
+       $set: {
+         latestAnalysis: {
+           scanDate: ...,
+           compliancePercentage: ...,
+           analysisId: result.insertedId
+         },
+         updatedAt: new Date()
+       }
+     },
+     { upsert: true } // Create repo if doesn't exist
+   )
 
-    // 3. Prune old analyses (keep last 10)
-    const count = db.analysis.countDocuments({ repoUrl: "..." })
-    if (count > 10) {
-      const toDelete = db.analysis.find({ repoUrl: "..." })
-        .sort({ scanDate: -1 })
-        .skip(10)
-        .toArray()
-      db.analysis.deleteMany({ _id: { $in: toDelete.map(d => d._id) } })
-    }
-    ```
+   // 3. Prune old analyses (keep last 10)
+   const count = db.analysis.countDocuments({ repoUrl: "..." })
+   if (count > 10) {
+     const toDelete = db.analysis.find({ repoUrl: "..." })
+       .sort({ scanDate: -1 })
+       .skip(10)
+       .toArray()
+     db.analysis.deleteMany({ _id: { $in: toDelete.map(d => d._id) } })
+   }
+   ```
 
 2. **New AZD Test:**
-    ```javascript
-    // Simply overwrite latest test in repo document
-    db.repos.updateOne(
-      { repoUrl: "..." },
-      {
-        $set: {
-          latestAzdTest: {...},
-          updatedAt: new Date()
-        }
-      }
-    )
-    ```
+   ```javascript
+   // Simply overwrite latest test in repo document
+   db.repos.updateOne(
+     { repoUrl: "..." },
+     {
+       $set: {
+         latestAzdTest: {...},
+         updatedAt: new Date()
+       }
+     }
+   )
+   ```
 
 ## Migration from V1 to V2
 
@@ -354,38 +351,38 @@ db.analysis
 
 ```javascript
 db.analysis.aggregate([
-    { $sort: { repoUrl: 1, scanDate: -1 } },
-    {
-        $group: {
-            _id: "$repoUrl",
-            latest: { $first: "$$ROOT" },
-            owner: { $first: "$owner" },
-            repo: { $first: "$repo" },
-        },
+  { $sort: { repoUrl: 1, scanDate: -1 } },
+  {
+    $group: {
+      _id: '$repoUrl',
+      latest: { $first: '$$ROOT' },
+      owner: { $first: '$owner' },
+      repo: { $first: '$repo' },
     },
-    {
-        $project: {
-            _id: 0,
-            repoUrl: "$_id",
-            owner: "$owner",
-            repo: "$repo",
-            latestAnalysis: {
-                scanDate: "$latest.scanDate",
-                ruleSet: "$latest.ruleSet",
-                compliancePercentage: "$latest.compliance.percentage",
-                passed: "$latest.compliance.passed",
-                issues: "$latest.compliance.issues",
-                analysisId: "$latest._id",
-            },
-            latestAzdTest: null,
-            upstreamTemplate: "$latest.upstreamTemplate",
-            archiveRequested: "$latest.archiveRequested",
-            tags: [],
-            createdAt: "$latest.createdAt",
-            updatedAt: "$latest.updatedAt",
-        },
+  },
+  {
+    $project: {
+      _id: 0,
+      repoUrl: '$_id',
+      owner: '$owner',
+      repo: '$repo',
+      latestAnalysis: {
+        scanDate: '$latest.scanDate',
+        ruleSet: '$latest.ruleSet',
+        compliancePercentage: '$latest.compliance.percentage',
+        passed: '$latest.compliance.passed',
+        issues: '$latest.compliance.issues',
+        analysisId: '$latest._id',
+      },
+      latestAzdTest: null,
+      upstreamTemplate: '$latest.upstreamTemplate',
+      archiveRequested: '$latest.archiveRequested',
+      tags: [],
+      createdAt: '$latest.createdAt',
+      updatedAt: '$latest.updatedAt',
     },
-    { $out: "repos" },
+  },
+  { $out: 'repos' },
 ]);
 ```
 
@@ -429,29 +426,29 @@ db.analysis.aggregate([
 
 ```javascript
 db.repos
-    .find({
-        "latestAnalysis.compliancePercentage": { $lt: 50 },
-    })
-    .sort({ "latestAnalysis.compliancePercentage": 1 });
+  .find({
+    'latestAnalysis.compliancePercentage': { $lt: 50 },
+  })
+  .sort({ 'latestAnalysis.compliancePercentage': 1 });
 ```
 
 ### Get analysis trend for a repository
 
 ```javascript
 db.analysis
-    .find({
-        repoUrl: "https://github.com/owner/repo",
-    })
-    .sort({ scanDate: -1 })
-    .limit(10);
+  .find({
+    repoUrl: 'https://github.com/owner/repo',
+  })
+  .sort({ scanDate: -1 })
+  .limit(10);
 ```
 
 ### Count analyses per ruleset
 
 ```javascript
 db.analysis.aggregate([
-    { $group: { _id: "$ruleSet", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
+  { $group: { _id: '$ruleSet', count: { $sum: 1 } } },
+  { $sort: { count: -1 } },
 ]);
 ```
 
@@ -459,7 +456,7 @@ db.analysis.aggregate([
 
 ```javascript
 db.analysis.find({
-    "categories.security.issues.0": { $exists: true },
+  'categories.security.issues.0': { $exists: true },
 });
 ```
 
@@ -467,22 +464,22 @@ db.analysis.find({
 
 ```javascript
 db.analysis.aggregate([
-    { $match: { categories: { $exists: true } } },
-    {
-        $project: {
-            repoMgmt: "$categories.repositoryManagement.percentage",
-            deployment: "$categories.deployment.percentage",
-            security: "$categories.security.percentage",
-        },
+  { $match: { categories: { $exists: true } } },
+  {
+    $project: {
+      repoMgmt: '$categories.repositoryManagement.percentage',
+      deployment: '$categories.deployment.percentage',
+      security: '$categories.security.percentage',
     },
-    {
-        $group: {
-            _id: null,
-            avgRepoMgmt: { $avg: "$repoMgmt" },
-            avgDeployment: { $avg: "$deployment" },
-            avgSecurity: { $avg: "$security" },
-        },
+  },
+  {
+    $group: {
+      _id: null,
+      avgRepoMgmt: { $avg: '$repoMgmt' },
+      avgDeployment: { $avg: '$deployment' },
+      avgSecurity: { $avg: '$security' },
     },
+  },
 ]);
 ```
 
@@ -517,10 +514,10 @@ Typical Request Unit costs for common operations:
 ```javascript
 // ~20 RUs with index on latestAnalysis.scanDate
 db.repos
-    .find({})
-    .sort({ "latestAnalysis.scanDate": -1 })
-    .limit(50)
-    .project({ _id: 1, repoUrl: 1, owner: 1, repo: 1, latestAnalysis: 1 });
+  .find({})
+  .sort({ 'latestAnalysis.scanDate': -1 })
+  .limit(50)
+  .project({ _id: 1, repoUrl: 1, owner: 1, repo: 1, latestAnalysis: 1 });
 ```
 
 **Leaderboard (top 100 by compliance):**
@@ -528,10 +525,10 @@ db.repos
 ```javascript
 // ~30 RUs with index on latestAnalysis.compliancePercentage
 db.repos
-    .find({})
-    .sort({ "latestAnalysis.compliancePercentage": -1 })
-    .limit(100)
-    .project({ _id: 1, repoUrl: 1, owner: 1, repo: 1, latestAnalysis: 1 });
+  .find({})
+  .sort({ 'latestAnalysis.compliancePercentage': -1 })
+  .limit(100)
+  .project({ _id: 1, repoUrl: 1, owner: 1, repo: 1, latestAnalysis: 1 });
 ```
 
 ## Backup Strategy
@@ -579,16 +576,16 @@ mongorestore --db=template_doctor --collection=repos /backups/mongodb/20250115_0
 **Point-in-Time Restore (PITR):**
 
 1. Enable in Azure Portal:
-    - Navigate to Cosmos DB account
-    - Settings → Backup & Restore
-    - Enable "Point in Time Restore"
-    - Set retention period (7-35 days)
+   - Navigate to Cosmos DB account
+   - Settings → Backup & Restore
+   - Enable "Point in Time Restore"
+   - Set retention period (7-35 days)
 
 2. Restore from PITR:
-    - Portal → Backup & Restore → Restore
-    - Select timestamp
-    - Choose collections to restore
-    - Create new Cosmos DB account (cannot restore to existing)
+   - Portal → Backup & Restore → Restore
+   - Select timestamp
+   - Choose collections to restore
+   - Create new Cosmos DB account (cannot restore to existing)
 
 **Periodic Exports for Long-Term Archival:**
 
@@ -616,84 +613,76 @@ MongoDB schema validation can enforce data quality at the database level:
 
 ```javascript
 // Create repos collection with validation
-db.createCollection("repos", {
-    validator: {
-        $jsonSchema: {
-            bsonType: "object",
-            required: ["repoUrl", "owner", "repo", "createdAt", "updatedAt"],
-            properties: {
-                repoUrl: {
-                    bsonType: "string",
-                    pattern: "^https://github.com/",
-                    description: "must be a valid GitHub URL",
-                },
-                owner: {
-                    bsonType: "string",
-                    minLength: 1,
-                    description: "must be a non-empty string",
-                },
-                repo: {
-                    bsonType: "string",
-                    minLength: 1,
-                    description: "must be a non-empty string",
-                },
-                latestAnalysis: {
-                    bsonType: "object",
-                    properties: {
-                        compliancePercentage: {
-                            bsonType: "number",
-                            minimum: 0,
-                            maximum: 100,
-                            description: "must be between 0 and 100",
-                        },
-                        passed: {
-                            bsonType: "int",
-                            minimum: 0,
-                        },
-                        issues: {
-                            bsonType: "int",
-                            minimum: 0,
-                        },
-                    },
-                },
-            },
+db.createCollection('repos', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['repoUrl', 'owner', 'repo', 'createdAt', 'updatedAt'],
+      properties: {
+        repoUrl: {
+          bsonType: 'string',
+          pattern: '^https://github.com/',
+          description: 'must be a valid GitHub URL',
         },
+        owner: {
+          bsonType: 'string',
+          minLength: 1,
+          description: 'must be a non-empty string',
+        },
+        repo: {
+          bsonType: 'string',
+          minLength: 1,
+          description: 'must be a non-empty string',
+        },
+        latestAnalysis: {
+          bsonType: 'object',
+          properties: {
+            compliancePercentage: {
+              bsonType: 'number',
+              minimum: 0,
+              maximum: 100,
+              description: 'must be between 0 and 100',
+            },
+            passed: {
+              bsonType: 'int',
+              minimum: 0,
+            },
+            issues: {
+              bsonType: 'int',
+              minimum: 0,
+            },
+          },
+        },
+      },
     },
+  },
 });
 
 // Create analysis collection with validation
-db.createCollection("analysis", {
-    validator: {
-        $jsonSchema: {
-            bsonType: "object",
-            required: [
-                "repoUrl",
-                "owner",
-                "repo",
-                "scanDate",
-                "ruleSet",
-                "compliance",
-                "createdAt",
-            ],
-            properties: {
-                repoUrl: {
-                    bsonType: "string",
-                    pattern: "^https://github.com/",
-                },
-                compliance: {
-                    bsonType: "object",
-                    required: ["percentage", "passed", "issues"],
-                    properties: {
-                        percentage: {
-                            bsonType: "number",
-                            minimum: 0,
-                            maximum: 100,
-                        },
-                    },
-                },
-            },
+db.createCollection('analysis', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['repoUrl', 'owner', 'repo', 'scanDate', 'ruleSet', 'compliance', 'createdAt'],
+      properties: {
+        repoUrl: {
+          bsonType: 'string',
+          pattern: '^https://github.com/',
         },
+        compliance: {
+          bsonType: 'object',
+          required: ['percentage', 'passed', 'issues'],
+          properties: {
+            percentage: {
+              bsonType: 'number',
+              minimum: 0,
+              maximum: 100,
+            },
+          },
+        },
+      },
     },
+  },
 });
 ```
 

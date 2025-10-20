@@ -133,20 +133,20 @@ Comprehensive testing plan for AZD validation feature improvements including art
 
 ```json
 {
-    "status": "completed",
-    "conclusion": "success",
-    "html_url": "https://github.com/test/repo/actions/runs/123",
-    "azdValidation": {
-        "azdUpSuccess": true,
-        "azdUpTime": "45.2s",
-        "azdDownSuccess": true,
-        "azdDownTime": "30.1s",
-        "psRuleErrors": 0,
-        "psRuleWarnings": 0,
-        "securityStatus": "pass",
-        "overallStatus": "success",
-        "resultFileContent": "..."
-    }
+  "status": "completed",
+  "conclusion": "success",
+  "html_url": "https://github.com/test/repo/actions/runs/123",
+  "azdValidation": {
+    "azdUpSuccess": true,
+    "azdUpTime": "45.2s",
+    "azdDownSuccess": true,
+    "azdDownTime": "30.1s",
+    "psRuleErrors": 0,
+    "psRuleWarnings": 0,
+    "securityStatus": "pass",
+    "overallStatus": "success",
+    "resultFileContent": "..."
+  }
 }
 ```
 
@@ -154,14 +154,14 @@ Comprehensive testing plan for AZD validation feature improvements including art
 
 ```json
 {
-    "azdValidation": {
-        "azdUpSuccess": true,
-        "azdDownSuccess": true,
-        "psRuleErrors": 0,
-        "psRuleWarnings": 3,
-        "securityStatus": "warnings",
-        "overallStatus": "warning"
-    }
+  "azdValidation": {
+    "azdUpSuccess": true,
+    "azdDownSuccess": true,
+    "psRuleErrors": 0,
+    "psRuleWarnings": 3,
+    "securityStatus": "warnings",
+    "overallStatus": "warning"
+  }
 }
 ```
 
@@ -169,15 +169,15 @@ Comprehensive testing plan for AZD validation feature improvements including art
 
 ```json
 {
-    "azdValidation": {
-        "azdUpSuccess": false,
-        "azdDownSuccess": false,
-        "psRuleErrors": 5,
-        "psRuleWarnings": 2,
-        "securityStatus": "errors",
-        "overallStatus": "failure",
-        "resultFileContent": "(x) Failed: Region not available\n## Security Requirements:\n- [ ] :x: Missing TLS"
-    }
+  "azdValidation": {
+    "azdUpSuccess": false,
+    "azdDownSuccess": false,
+    "psRuleErrors": 5,
+    "psRuleWarnings": 2,
+    "securityStatus": "errors",
+    "overallStatus": "failure",
+    "resultFileContent": "(x) Failed: Region not available\n## Security Requirements:\n- [ ] :x: Missing TLS"
+  }
 }
 ```
 

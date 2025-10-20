@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+dist
+*.min.js
+*.min.css
+
+# Build outputs
+packages/*/dist
+packages/*/build
+.next
+out
+
+# Data files with invalid JSON
+migration-output/*.json
+data/seed/*.json
+
+# Test snapshots
+**/__snapshots__
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Generated files
+*.d.ts
+coverage
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

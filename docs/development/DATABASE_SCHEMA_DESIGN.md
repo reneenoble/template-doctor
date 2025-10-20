@@ -181,23 +181,23 @@ Template-Doctor performs two types of operations on templates:
 ### Rationale
 
 1. **Access Pattern Analysis:**
-    - **Frequent:** Latest analyses for dashboard (1000x/day)
-    - **Rare:** Test results viewing (10x/day)
-    - **Mismatch:** Embedding tests bloats 99% of queries
+   - **Frequent:** Latest analyses for dashboard (1000x/day)
+   - **Rare:** Test results viewing (10x/day)
+   - **Mismatch:** Embedding tests bloats 99% of queries
 
 2. **Data Growth:**
-    - **Analyses:** ~1 per template per week = 52/year
-    - **Tests:** ~1 per template per month = 12/year
-    - **Result:** Separate collections scale independently
+   - **Analyses:** ~1 per template per week = 52/year
+   - **Tests:** ~1 per template per month = 12/year
+   - **Result:** Separate collections scale independently
 
 3. **Query Performance:**
-    - Dashboard: `db.analyses.find().sort({scanDate: -1}).limit(50)` - Fast, no test data
-    - Leaderboard: `db.analyses.aggregate([...])` - Aggregates compliance only
-    - Template detail: Two queries (analysis + tests) - Total <50ms
+   - Dashboard: `db.analyses.find().sort({scanDate: -1}).limit(50)` - Fast, no test data
+   - Leaderboard: `db.analyses.aggregate([...])` - Aggregates compliance only
+   - Template detail: Two queries (analysis + tests) - Total <50ms
 
 4. **Real-world Usage:**
-    - Users browse analyses frequently (compliance scores, issues)
-    - Users check test results occasionally (deployment validation)
+   - Users browse analyses frequently (compliance scores, issues)
+   - Users check test results occasionally (deployment validation)
 
 ### Collection Relationships
 
@@ -212,17 +212,17 @@ analyses ←→ azdtests
 ```javascript
 // Get template with latest analysis + all test results
 db.analyses.aggregate([
-    { $match: { repoUrl: "https://github.com/owner/repo" } },
-    { $sort: { scanDate: -1 } },
-    { $limit: 1 },
-    {
-        $lookup: {
-            from: "azdtests",
-            localField: "repoUrl",
-            foreignField: "repoUrl",
-            as: "deploymentTests",
-        },
+  { $match: { repoUrl: 'https://github.com/owner/repo' } },
+  { $sort: { scanDate: -1 } },
+  { $limit: 1 },
+  {
+    $lookup: {
+      from: 'azdtests',
+      localField: 'repoUrl',
+      foreignField: 'repoUrl',
+      as: 'deploymentTests',
     },
+  },
 ]);
 ```
 
@@ -279,7 +279,7 @@ Application-wide settings:
 ```javascript
 db.analyses.createIndex({ repoUrl: 1, scanDate: -1 }); // Template history
 db.analyses.createIndex({ scanDate: -1 }); // Latest scans
-db.analyses.createIndex({ "compliance.percentage": -1 }); // Leaderboard
+db.analyses.createIndex({ 'compliance.percentage': -1 }); // Leaderboard
 db.analyses.createIndex({ owner: 1, repo: 1 }); // Lookup by owner/repo
 db.analyses.createIndex({ ruleSet: 1 }); // Filter by ruleset
 ```

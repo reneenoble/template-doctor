@@ -39,12 +39,12 @@ Application configuration key-value pairs.
 1. **Open MongoDB Compass** and connect to `mongodb://localhost:27017`
 2. **Select or create database**: `template_doctor`
 3. **For each collection:**
-    - Click "Create Collection" button
-    - Enter collection name (e.g., `analyses`)
-    - Click "Create Collection"
-    - Click "Add Data" → "Import JSON or CSV file"
-    - Select the corresponding `.json` file from this directory
-    - Click "Import"
+   - Click "Create Collection" button
+   - Enter collection name (e.g., `analyses`)
+   - Click "Create Collection"
+   - Click "Add Data" → "Import JSON or CSV file"
+   - Select the corresponding `.json` file from this directory
+   - Click "Import"
 
 ### Method 2: mongoimport (Command Line)
 

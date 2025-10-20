@@ -19,11 +19,11 @@ This logic lives in `packages/app/js/ruleset-docs/analyzer.js` and currently per
 
 1. Core analyzer ( `packages/app/js/analyzer.js` ) detects `ruleSet === 'docs'`.
 2. It increments a lightweight diagnostics counter and stores metadata:
-    - `window.__TemplateDoctorDocsValidationHits` — total times docs validation invoked this session.
-    - `window.__TemplateDoctorLastDocsValidation` — object containing `{ ts, owner, repo, defaultBranch }`.
+   - `window.__TemplateDoctorDocsValidationHits` — total times docs validation invoked this session.
+   - `window.__TemplateDoctorLastDocsValidation` — object containing `{ ts, owner, repo, defaultBranch }`.
 3. It dispatches a custom DOM event:
-    - Event name: `template-doctor-docs-validation`
-    - Event detail: same metadata object as above.
+   - Event name: `template-doctor-docs-validation`
+   - Event detail: same metadata object as above.
 4. It calls `TemplateAnalyzerDocs.prototype.validateDocConfiguration(...)` which populates `issues` / `compliant` arrays under the `repositoryManagement` category.
 
 ## Diagnostics APIs
@@ -38,8 +38,8 @@ window.__TemplateDoctorDocsValidationHits;
 window.__TemplateDoctorLastDocsValidation;
 
 // Listen for future invocations
-document.addEventListener("template-doctor-docs-validation", (e) => {
-    console.log("Docs validation event:", e.detail);
+document.addEventListener('template-doctor-docs-validation', (e) => {
+  console.log('Docs validation event:', e.detail);
 });
 ```
 

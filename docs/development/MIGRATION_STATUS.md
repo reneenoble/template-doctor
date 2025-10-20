@@ -215,14 +215,14 @@ Test timestamp: 2025-10-06 11:05:45
 
 ```typescript
 // Before (CommonJS)
-const express = require("express");
-const path = require("path");
+const express = require('express');
+const path = require('path');
 const __dirname = path.dirname(__filename);
 
 // After (ESM)
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 ```
 
@@ -348,10 +348,10 @@ All endpoints include:
 
 ```javascript
 // Before
-const config = await fetch("/api/runtime-config");
+const config = await fetch('/api/runtime-config');
 
 // After
-const config = await fetch("/api/v4/client-settings");
+const config = await fetch('/api/v4/client-settings');
 ```
 
 **No breaking changes for:**
@@ -419,24 +419,24 @@ All migrated endpoints are:
 ## 🎓 Lessons Learned
 
 1. **ESM Migration is Worth It**
-    - Modern packages increasingly require ESM
-    - Better long-term compatibility
-    - Cleaner import syntax
+   - Modern packages increasingly require ESM
+   - Better long-term compatibility
+   - Cleaner import syntax
 
 2. **Fork-First Strategy is Critical**
-    - Many organizations use SAML/SSO
-    - Auto-forking provides seamless UX
-    - Clear error messages prevent confusion
+   - Many organizations use SAML/SSO
+   - Auto-forking provides seamless UX
+   - Clear error messages prevent confusion
 
 3. **Comprehensive Smoke Tests Save Time**
-    - Catch integration issues early
-    - Validate CORS, auth, error handling
-    - Document expected behavior
+   - Catch integration issues early
+   - Validate CORS, auth, error handling
+   - Document expected behavior
 
 4. **TypeScript + Express + ESM Works Great**
-    - Type safety throughout
-    - Modern module system
-    - Excellent developer experience
+   - Type safety throughout
+   - Modern module system
+   - Excellent developer experience
 
 ---
 

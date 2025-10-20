@@ -49,12 +49,12 @@ Request JSON:
 
 ```json
 {
-    "ruleId": "missing-readme",
-    "severity": "warning",
-    "message": "Missing README",
-    "errorDetail": "(optional additional detail)",
-    "draftTitle": "Add README",
-    "draftBody": "# Add README\n\nCurrent: none."
+  "ruleId": "missing-readme",
+  "severity": "warning",
+  "message": "Missing README",
+  "errorDetail": "(optional additional detail)",
+  "draftTitle": "Add README",
+  "draftBody": "# Add README\n\nCurrent: none."
 }
 ```
 
@@ -62,12 +62,12 @@ Response JSON:
 
 ```json
 {
-    "provider": "azure",
-    "model": "your-deployment",
-    "title": "Add README",
-    "body": "# Add README... (refined)",
-    "usage": { "prompt_tokens": 123, "completion_tokens": 456 },
-    "_meta": { "rewritten": true, "cache": false }
+  "provider": "azure",
+  "model": "your-deployment",
+  "title": "Add README",
+  "body": "# Add README... (refined)",
+  "usage": { "prompt_tokens": 123, "completion_tokens": 456 },
+  "_meta": { "rewritten": true, "cache": false }
 }
 ```
 

@@ -28,9 +28,9 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 
 - **Added**: Contextual tips appear immediately when validation starts
 - **Tips Include**:
-    - Region Availability (with link to docs)
-    - UnmatchedPrincipalType error (with example fix)
-    - BCP332 maxLength error (with solution)
+  - Region Availability (with link to docs)
+  - UnmatchedPrincipalType error (with example fix)
+  - BCP332 maxLength error (with solution)
 - **Smart Highlighting**: UnmatchedPrincipalType tip shows orange border when error detected
 - **File**: `packages/app/src/scripts/azd-validation.ts` (lines 23-139)
 
@@ -39,11 +39,11 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 - **Before**: Parsed from workflow logs (unreliable)
 - **After**: Structured data from artifact parsing
 - **Features**:
-    - Three-state status (success/warning/failure)
-    - AZD Up/Down execution times
-    - PSRule error/warning counts
-    - Collapsible details panel with full markdown
-    - Security scan status breakdown
+  - Three-state status (success/warning/failure)
+  - AZD Up/Down execution times
+  - PSRule error/warning counts
+  - Collapsible details panel with full markdown
+  - Security scan status breakdown
 - **File**: `packages/app/src/scripts/azd-validation.ts` (lines 141-211)
 
 ### 2. Backend Artifact Parsing
@@ -52,44 +52,44 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 
 - **New Capability**: Download validation artifacts from GitHub Actions
 - **Implementation**:
-    - Fetch artifacts list via GitHub API
-    - Download ZIP archive
-    - Extract markdown result file
-    - Parse validation status
+  - Fetch artifacts list via GitHub API
+  - Download ZIP archive
+  - Extract markdown result file
+  - Parse validation status
 - **Dependencies**: `adm-zip ^0.5.16`
 - **File**: `packages/server/src/routes/validation.ts` (lines 5-120)
 
 #### Markdown Parsing
 
 - **Parses**:
-    - AZD Up/Down success status (checkbox or emoji)
-    - Execution times (e.g., "45.2s")
-    - PSRule warnings (`:warning:` count)
-    - PSRule errors (`:x:` in Security Requirements section)
-    - Security scan overall status
+  - AZD Up/Down success status (checkbox or emoji)
+  - Execution times (e.g., "45.2s")
+  - PSRule warnings (`:warning:` count)
+  - PSRule errors (`:x:` in Security Requirements section)
+  - Security scan overall status
 - **Three-State Logic**:
-    - `success`: AZD up/down passed, no errors, no warnings
-    - `warning`: AZD up/down passed, has warnings, no errors
-    - `failure`: AZD failed OR has security errors
+  - `success`: AZD up/down passed, no errors, no warnings
+  - `warning`: AZD up/down passed, has warnings, no errors
+  - `failure`: AZD failed OR has security errors
 - **File**: `packages/server/src/routes/validation.ts` (lines 122-186)
 
 #### API Response Enhancement
 
 - **New Field**: `azdValidation` in `/api/v4/validation-status` response
 - **Structure**:
-    ```typescript
-    {
-        azdUpSuccess: boolean;
-        azdUpTime: string | null;
-        azdDownSuccess: boolean;
-        azdDownTime: string | null;
-        psRuleErrors: number;
-        psRuleWarnings: number;
-        securityStatus: "pass" | "warnings" | "errors";
-        overallStatus: "success" | "warning" | "failure";
-        resultFileContent: string; // Full markdown
-    }
-    ```
+  ```typescript
+  {
+    azdUpSuccess: boolean;
+    azdUpTime: string | null;
+    azdDownSuccess: boolean;
+    azdDownTime: string | null;
+    psRuleErrors: number;
+    psRuleWarnings: number;
+    securityStatus: 'pass' | 'warnings' | 'errors';
+    overallStatus: 'success' | 'warning' | 'failure';
+    resultFileContent: string; // Full markdown
+  }
+  ```
 - **File**: `packages/server/src/routes/validation.ts` (lines 730-761)
 
 ### 3. GraphQL Issue Creation
@@ -112,8 +112,8 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 
 - **Before**: Used `status.errorSummary` (workflow-level errors)
 - **After**: Extracts from `resultFileContent` markdown:
-    - Deployment failures: `/\(x\) Failed:.*$/gm`
-    - Security issues: `/## Security Requirements:([\s\S]*?)(?=##|$)/`
+  - Deployment failures: `/\(x\) Failed:.*$/gm`
+  - Security issues: `/## Security Requirements:([\s\S]*?)(?=##|$)/`
 - **Impact**: Issue body shows actual validation errors, not generic workflow failures
 - **File**: `packages/app/src/scripts/azd-validation.ts` (lines 902-927)
 
@@ -152,12 +152,12 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 
 ```json
 {
-    "dependencies": {
-        "adm-zip": "^0.5.16"
-    },
-    "devDependencies": {
-        "@types/adm-zip": "^0.5.7"
-    }
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7"
+  }
 }
 ```
 
@@ -166,21 +166,21 @@ Complete refactor of AZD validation feature with artifact-based parsing, GraphQL
 ### Test Files Created
 
 1. **E2E Tests**: `packages/app/tests/azd-validation.spec.js`
-    - UI component tests (spinner, contrast, tips)
-    - Validation results display
-    - GraphQL issue creation flow
-    - Error scenarios and fallbacks
+   - UI component tests (spinner, contrast, tips)
+   - Validation results display
+   - GraphQL issue creation flow
+   - Error scenarios and fallbacks
 
 2. **Unit Tests**: `packages/server/tests/validation-artifact-parsing.test.ts`
-    - Markdown parsing logic
-    - Error extraction
-    - Artifact download handling
+   - Markdown parsing logic
+   - Error extraction
+   - Artifact download handling
 
 3. **Test Plan**: `docs/development/AZD_VALIDATION_TEST_PLAN.md`
-    - Comprehensive test coverage
-    - Manual testing checklist
-    - Performance benchmarks
-    - Success criteria
+   - Comprehensive test coverage
+   - Manual testing checklist
+   - Performance benchmarks
+   - Success criteria
 
 ### Test Execution
 
@@ -266,16 +266,16 @@ If issues arise in production:
 
 1. **Immediate**: Revert commit
 
-    ```bash
-    git revert 9383049
-    npm run build -w packages/app
-    docker-compose up --build
-    ```
+   ```bash
+   git revert 9383049
+   npm run build -w packages/app
+   docker-compose up --build
+   ```
 
 2. **Graceful Degradation**: Frontend handles missing `azdValidation`:
-    - Shows workflow conclusion (success/failure)
-    - Links to logs for manual review
-    - Issue creation still works (URL fallback)
+   - Shows workflow conclusion (success/failure)
+   - Links to logs for manual review
+   - Issue creation still works (URL fallback)
 
 3. **Hot Fix**: Can disable artifact parsing server-side without frontend changes
 
@@ -305,29 +305,29 @@ If issues arise in production:
 ## Next Steps
 
 1. **Manual Testing** (30 min)
-    - Test at http://localhost:3000
-    - Verify all UX improvements
-    - Test GraphQL issue creation
+   - Test at http://localhost:3000
+   - Verify all UX improvements
+   - Test GraphQL issue creation
 
 2. **Complete E2E Tests** (2 hours)
-    - Fill in TODOs in azd-validation.spec.js
-    - Add mocks for GraphQL responses
-    - Test all user flows
+   - Fill in TODOs in azd-validation.spec.js
+   - Add mocks for GraphQL responses
+   - Test all user flows
 
 3. **Complete Unit Tests** (1 hour)
-    - Fix vitest import
-    - Test artifact download
-    - Test error handling
+   - Fix vitest import
+   - Test artifact download
+   - Test error handling
 
 4. **CI/CD Integration** (30 min)
-    - Add test workflows
-    - Configure smoke tests
-    - Set up performance benchmarks
+   - Add test workflows
+   - Configure smoke tests
+   - Set up performance benchmarks
 
 5. **Documentation** (1 hour)
-    - Update user guides
-    - Add troubleshooting docs
-    - Update API documentation
+   - Update user guides
+   - Add troubleshooting docs
+   - Update API documentation
 
 ## Resources
 

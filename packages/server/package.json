@@ -1,37 +1,39 @@
 {
-    "name": "template-doctor-server",
-    "version": "1.0.0",
-    "description": "Express server for Template Doctor API",
-    "type": "module",
-    "main": "dist/index.js",
-    "scripts": {
-        "dev": "tsx watch src/index.ts",
-        "build": "tsc",
-        "start": "node dist/index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "dependencies": {
-        "@azure/identity": "^4.0.0",
-        "@octokit/rest": "^20.0.2",
-        "@types/uuid": "^10.0.0",
-        "adm-zip": "^0.5.16",
-        "cors": "^2.8.5",
-        "dotenv": "^16.3.1",
-        "express": "^4.18.2",
-        "mongodb": "^6.3.0",
-        "node-fetch": "^2.7.0",
-        "pino": "^10.1.0",
-        "pino-http": "^11.0.0",
-        "pino-pretty": "^13.1.2",
-        "uuid": "^13.0.0"
-    },
-    "devDependencies": {
-        "@types/adm-zip": "^0.5.7",
-        "@types/cors": "^2.8.17",
-        "@types/express": "^4.17.21",
-        "@types/node": "^20.10.0",
-        "@types/pino-http": "^5.8.4",
-        "tsx": "^4.7.0",
-        "typescript": "^5.6.3"
-    }
+  "name": "template-doctor-server",
+  "version": "1.0.0",
+  "description": "Express server for Template Doctor API",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.0.0",
+    "@octokit/rest": "^20.0.2",
+    "@types/uuid": "^10.0.0",
+    "adm-zip": "^0.5.16",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "node-fetch": "^2.7.0",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0",
+    "pino-pretty": "^13.1.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/pino-http": "^5.8.4",
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.0.0"
+  }
 }

@@ -251,18 +251,18 @@ docker-compose logs -f combined
 If migrating from Azure Functions:
 
 1. **Ports changed**:
-    - Azure Functions: 7071
-    - Express: 3000 (combined) or 3001 (dev)
+   - Azure Functions: 7071
+   - Express: 3000 (combined) or 3001 (dev)
 
 2. **Update .env**:
-    - Remove `FUNCTIONS_*` variables
-    - Ensure `PORT=3000` (combined) or `PORT=3001` (server)
+   - Remove `FUNCTIONS_*` variables
+   - Ensure `PORT=3000` (combined) or `PORT=3001` (server)
 
 3. **OAuth callback**:
-    - Change from `:7071/api/...` to `:3000/...`
+   - Change from `:7071/api/...` to `:3000/...`
 
 4. **Database**:
-    - Add `MONGODB_URI` or `COSMOS_ENDPOINT`
+   - Add `MONGODB_URI` or `COSMOS_ENDPOINT`
 
 ## Next Steps
 

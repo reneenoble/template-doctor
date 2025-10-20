@@ -166,19 +166,19 @@ az containerapp logs show \
 1. Navigate to Container App
 2. Monitoring → Metrics
 3. Key metrics:
-    - HTTP requests
-    - CPU usage
-    - Memory usage
-    - Active replicas
+   - HTTP requests
+   - CPU usage
+   - Memory usage
+   - Active replicas
 
 **Cosmos DB**:
 
 1. Navigate to Cosmos DB account
 2. Monitoring → Metrics
 3. Key metrics:
-    - Request Units consumed
-    - Total requests
-    - Throttled requests (429s)
+   - Request Units consumed
+   - Total requests
+   - Throttled requests (429s)
 
 ## Cost Optimization
 
@@ -236,10 +236,10 @@ az containerapp logs show \
 
 1. Check Container App logs
 2. Roll back to previous image:
-    ```bash
-    az containerapp revision list --name ca-web-<id> -g rg-<env>
-    az containerapp revision activate --revision <previous-revision>
-    ```
+   ```bash
+   az containerapp revision list --name ca-web-<id> -g rg-<env>
+   az containerapp revision activate --revision <previous-revision>
+   ```
 
 **Complete Environment Failure**:
 
@@ -257,22 +257,22 @@ Example workflow in `.github/workflows/deploy.yml`:
 ```yaml
 name: Deploy to Azure
 on:
-    push:
-        branches: [main]
+  push:
+    branches: [main]
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: Azure/setup-azd@v1
-            - uses: azure/login@v1
-              with:
-                  creds: ${{ secrets.AZURE_CREDENTIALS }}
-            - run: |
-                  azd env refresh -e production
-                  azd env set GITHUB_TOKEN "${{ secrets.GH_TOKEN }}"
-                  azd deploy --no-prompt
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Azure/setup-azd@v1
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - run: |
+          azd env refresh -e production
+          azd env set GITHUB_TOKEN "${{ secrets.GH_TOKEN }}"
+          azd deploy --no-prompt
 ```
 
 ### Azure DevOps

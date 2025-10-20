@@ -12,23 +12,23 @@ Run the server **without** Cosmos DB configured. The application gracefully hand
 
 1. **Don't set `COSMOS_ENDPOINT`** in your `.env` file (or comment it out):
 
-    ```bash
-    # COSMOS_ENDPOINT=  # Leave blank for local dev without DB
-    ```
+   ```bash
+   # COSMOS_ENDPOINT=  # Leave blank for local dev without DB
+   ```
 
 2. **Start the server**:
 
-    ```bash
-    cd packages/server
-    npm run dev
-    ```
+   ```bash
+   cd packages/server
+   npm run dev
+   ```
 
 3. **Expected behavior**:
-    - Server starts successfully
-    - Console shows: `⚠️  COSMOS_ENDPOINT not configured - database features disabled`
-    - Analysis still works and returns results to frontend
-    - Database save operations are skipped (logged as errors but don't crash)
-    - Health check shows `database.connected: false`
+   - Server starts successfully
+   - Console shows: `⚠️  COSMOS_ENDPOINT not configured - database features disabled`
+   - Analysis still works and returns results to frontend
+   - Database save operations are skipped (logged as errors but don't crash)
+   - Health check shows `database.connected: false`
 
 ### Test Endpoints
 
@@ -53,44 +53,44 @@ Use the Cosmos DB emulator for local testing with a real MongoDB-compatible data
 
 1. **Start Cosmos DB Emulator**:
 
-    ```bash
-    docker run -p 8081:8081 -p 10250-10255:10250-10255 \
-      --name cosmosdb-emulator \
-      -e AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10 \
-      -e AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true \
-      mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-    ```
+   ```bash
+   docker run -p 8081:8081 -p 10250-10255:10250-10255 \
+     --name cosmosdb-emulator \
+     -e AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10 \
+     -e AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true \
+     mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+   ```
 
 2. **Wait for emulator to start** (can take 1-2 minutes):
 
-    ```bash
-    # Check logs
-    docker logs -f cosmosdb-emulator
-    ```
+   ```bash
+   # Check logs
+   docker logs -f cosmosdb-emulator
+   ```
 
 3. **Configure connection string** in `.env`:
 
-    ```bash
-    # Use connection string instead of MI for emulator
-    COSMOS_CONNECTION_STRING="mongodb://localhost:10255/?ssl=true&retrywrites=false"
-    COSMOS_DATABASE_NAME="template-doctor"
-    ```
+   ```bash
+   # Use connection string instead of MI for emulator
+   COSMOS_CONNECTION_STRING="mongodb://localhost:10255/?ssl=true&retrywrites=false"
+   COSMOS_DATABASE_NAME="template-doctor"
+   ```
 
 4. **Modify database service** temporarily to support connection string:
 
-    Edit `packages/server/src/services/database.ts`:
+   Edit `packages/server/src/services/database.ts`:
 
-    ```typescript
-    // In connect() method, add this before MI auth:
-    const connStr = process.env.COSMOS_CONNECTION_STRING;
-    if (connStr) {
-      // Use connection string for local testing
-      this.client = new MongoClient(connStr, { ... });
-      await this.client.connect();
-      // ... rest of setup
-      return;
-    }
-    ```
+   ```typescript
+   // In connect() method, add this before MI auth:
+   const connStr = process.env.COSMOS_CONNECTION_STRING;
+   if (connStr) {
+     // Use connection string for local testing
+     this.client = new MongoClient(connStr, { ... });
+     await this.client.connect();
+     // ... rest of setup
+     return;
+   }
+   ```
 
 ### Limitations
 
@@ -106,30 +106,30 @@ For testing with a real Cosmos DB instance **before MI is fully configured**.
 
 1. **Create Cosmos DB** manually or via Bicep:
 
-    ```bash
-    az deployment group create \
-      --resource-group rg-template-doctor-dev \
-      --template-file infra/database.bicep \
-      --parameters principalId="00000000-0000-0000-0000-000000000000"
-    ```
+   ```bash
+   az deployment group create \
+     --resource-group rg-template-doctor-dev \
+     --template-file infra/database.bicep \
+     --parameters principalId="00000000-0000-0000-0000-000000000000"
+   ```
 
 2. **Get connection string** from Azure Portal:
-    - Navigate to Cosmos DB account → Keys
-    - Copy "Primary Connection String"
+   - Navigate to Cosmos DB account → Keys
+   - Copy "Primary Connection String"
 
 3. **Set environment variable** in `.env`:
 
-    ```bash
-    COSMOS_CONNECTION_STRING="mongodb://cosmos-xyz:xxxxx@cosmos-xyz.mongo.cosmos.azure.com:10255/?ssl=true..."
-    COSMOS_DATABASE_NAME="template-doctor"
-    ```
+   ```bash
+   COSMOS_CONNECTION_STRING="mongodb://cosmos-xyz:xxxxx@cosmos-xyz.mongo.cosmos.azure.com:10255/?ssl=true..."
+   COSMOS_DATABASE_NAME="template-doctor"
+   ```
 
 4. **Temporarily modify database service** to use connection string (see Option 2)
 
 5. **Start server**:
-    ```bash
-    npm run dev
-    ```
+   ```bash
+   npm run dev
+   ```
 
 ### ⚠️ Security Warning
 
@@ -143,46 +143,46 @@ Deploy infrastructure and test locally against production database.
 
 1. **Deploy Cosmos DB** to Azure:
 
-    ```bash
-    az deployment group create \
-      --resource-group rg-template-doctor \
-      --template-file infra/database.bicep \
-      --parameters principalId=$(az identity show --name mi-template-doctor --resource-group rg-template-doctor --query principalId -o tsv)
-    ```
+   ```bash
+   az deployment group create \
+     --resource-group rg-template-doctor \
+     --template-file infra/database.bicep \
+     --parameters principalId=$(az identity show --name mi-template-doctor --resource-group rg-template-doctor --query principalId -o tsv)
+   ```
 
 2. **Assign your user account** to Cosmos DB (temporary):
 
-    ```bash
-    # Get your user principal ID
-    MY_PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
+   ```bash
+   # Get your user principal ID
+   MY_PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)
 
-    # Assign Data Contributor role
-    az cosmosdb mongo role assignment create \
-      --account-name cosmos-template-doctor \
-      --resource-group rg-template-doctor \
-      --role-definition-id 00000000-0000-0000-0000-000000000002 \
-      --principal-id $MY_PRINCIPAL_ID \
-      --scope "/"
-    ```
+   # Assign Data Contributor role
+   az cosmosdb mongo role assignment create \
+     --account-name cosmos-template-doctor \
+     --resource-group rg-template-doctor \
+     --role-definition-id 00000000-0000-0000-0000-000000000002 \
+     --principal-id $MY_PRINCIPAL_ID \
+     --scope "/"
+   ```
 
 3. **Authenticate with Azure CLI**:
 
-    ```bash
-    az login
-    ```
+   ```bash
+   az login
+   ```
 
 4. **Set environment variable** in `.env`:
 
-    ```bash
-    COSMOS_ENDPOINT="https://cosmos-template-doctor.mongo.cosmos.azure.com:10255"
-    COSMOS_DATABASE_NAME="template-doctor"
-    ```
+   ```bash
+   COSMOS_ENDPOINT="https://cosmos-template-doctor.mongo.cosmos.azure.com:10255"
+   COSMOS_DATABASE_NAME="template-doctor"
+   ```
 
 5. **Start server**:
 
-    ```bash
-    npm run dev
-    ```
+   ```bash
+   npm run dev
+   ```
 
 6. **DefaultAzureCredential** will use your Azure CLI login for MI token acquisition
 
@@ -252,16 +252,16 @@ Expected response:
 
 ```json
 {
-    "status": "ok",
-    "timestamp": "2025-10-08T...",
-    "database": {
-        "connected": true,
-        "latency": 45
-    },
-    "env": {
-        "hasGitHubToken": true,
-        "hasCosmosEndpoint": true
-    }
+  "status": "ok",
+  "timestamp": "2025-10-08T...",
+  "database": {
+    "connected": true,
+    "latency": 45
+  },
+  "env": {
+    "hasGitHubToken": true,
+    "hasCosmosEndpoint": true
+  }
 }
 ```
 

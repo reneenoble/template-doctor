@@ -14,9 +14,9 @@
 1. Go to https://github.com/settings/developers
 2. Click "New OAuth App"
 3. Fill in:
-    - **Application name**: `Template Doctor Local (Port 3000)`
-    - **Homepage URL**: `http://localhost:3000`
-    - **Authorization callback URL**: `http://localhost:3000/callback.html`
+   - **Application name**: `Template Doctor Local (Port 3000)`
+   - **Homepage URL**: `http://localhost:3000`
+   - **Authorization callback URL**: `http://localhost:3000/callback.html`
 4. Click "Register application"
 5. Copy the **Client ID** (starts with `Ov23...`)
 6. Generate a **Client Secret** and copy it
@@ -40,13 +40,13 @@ GITHUB_TOKEN_ANALYZER=ghp_your_analyzer_token
 
 ```json
 {
-    "githubOAuth": {
-        "clientId": ".YourClientID",
-        "redirectUri": "http://localhost:3000/callback.html"
-    },
-    "backend": {
-        "baseUrl": "http://localhost:3001"
-    }
+  "githubOAuth": {
+    "clientId": ".YourClientID",
+    "redirectUri": "http://localhost:3000/callback.html"
+  },
+  "backend": {
+    "baseUrl": "http://localhost:3001"
+  }
 }
 ```
 
@@ -154,9 +154,9 @@ You should see:
 
 - **Problem**: Backend can't reach GitHub or wrong client credentials
 - **Solution**:
-    1. Check internet connection
-    2. Verify CLIENT_ID and CLIENT_SECRET match GitHub app
-    3. Check backend logs: `docker logs template-doctor-server`
+  1. Check internet connection
+  2. Verify CLIENT_ID and CLIENT_SECRET match GitHub app
+  3. Check backend logs: `docker logs template-doctor-server`
 
 ### Port already in use
 
@@ -223,13 +223,13 @@ curl -X POST http://localhost:3001/api/v4/github-oauth-token
 
 ```json
 {
-    "githubOAuth": {
-        "clientId": "Ov23li6IDVTv9Ml50OKi",
-        "redirectUri": "http://localhost:3000/callback.html"
-    },
-    "backend": {
-        "baseUrl": "http://localhost:3001"
-    }
+  "githubOAuth": {
+    "clientId": "Ov23li6IDVTv9Ml50OKi",
+    "redirectUri": "http://localhost:3000/callback.html"
+  },
+  "backend": {
+    "baseUrl": "http://localhost:3001"
+  }
 }
 ```
 
@@ -237,13 +237,13 @@ curl -X POST http://localhost:3001/api/v4/github-oauth-token
 
 ```json
 {
-    "githubOAuth": {
-        "clientId": "Ov23li6IDVTv9Ml50OKi",
-        "redirectUri": "http://localhost:4000/callback.html"
-    },
-    "backend": {
-        "baseUrl": "http://localhost:3001"
-    }
+  "githubOAuth": {
+    "clientId": "Ov23li6IDVTv9Ml50OKi",
+    "redirectUri": "http://localhost:4000/callback.html"
+  },
+  "backend": {
+    "baseUrl": "http://localhost:3001"
+  }
 }
 ```
 

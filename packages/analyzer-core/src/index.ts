@@ -1,2 +1,2 @@
-export { runAnalyzer } from "./run-analyzer";
-export * from "./types";
+export { runAnalyzer } from './run-analyzer';
+export * from './types';

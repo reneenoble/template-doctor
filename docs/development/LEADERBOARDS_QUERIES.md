@@ -55,23 +55,23 @@ Analysis of 12 leaderboard sections reveals:
 
 ```javascript
 db.analysis.aggregate([
-    {
-        $group: {
-            _id: "$analyzedBy",
-            analyses: { $sum: 1 },
-            collections: { $addToSet: "$collection" },
-        },
+  {
+    $group: {
+      _id: '$analyzedBy',
+      analyses: { $sum: 1 },
+      collections: { $addToSet: '$collection' },
     },
-    {
-        $project: {
-            name: "$_id",
-            analyses: 1,
-            collections: { $size: "$collections" },
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      name: '$_id',
+      analyses: 1,
+      collections: { $size: '$collections' },
+      _id: 0,
     },
-    { $sort: { analyses: -1 } },
-    { $limit: 5 },
+  },
+  { $sort: { analyses: -1 } },
+  { $limit: 5 },
 ]);
 ```
 
@@ -83,24 +83,24 @@ db.analysis.aggregate([
 
 ```javascript
 db.analysis.aggregate([
-    { $match: { collection: "aigallery" } },
-    {
-        $group: {
-            _id: "$analyzedBy",
-            analyses: { $sum: 1 },
-            avgScore: { $avg: "$analysisResult.score" },
-        },
+  { $match: { collection: 'aigallery' } },
+  {
+    $group: {
+      _id: '$analyzedBy',
+      analyses: { $sum: 1 },
+      avgScore: { $avg: '$analysisResult.score' },
     },
-    {
-        $project: {
-            name: "$_id",
-            analyses: 1,
-            score: { $round: ["$avgScore", 1] },
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      name: '$_id',
+      analyses: 1,
+      score: { $round: ['$avgScore', 1] },
+      _id: 0,
     },
-    { $sort: { analyses: -1 } },
-    { $limit: 5 },
+  },
+  { $sort: { analyses: -1 } },
+  { $limit: 5 },
 ]);
 ```
 
@@ -112,25 +112,25 @@ db.analysis.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    {
-        $group: {
-            _id: "$owner",
-            templates: { $sum: 1 },
-            avgScore: { $avg: "$analysisResult.score" },
-            totalStars: { $sum: "$metadata.stars" },
-        },
+  {
+    $group: {
+      _id: '$owner',
+      templates: { $sum: 1 },
+      avgScore: { $avg: '$analysisResult.score' },
+      totalStars: { $sum: '$metadata.stars' },
     },
-    {
-        $project: {
-            name: "$_id",
-            templates: 1,
-            successRate: { $round: ["$avgScore", 1] },
-            totalDownloads: "$totalStars", // Use stars as proxy
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      name: '$_id',
+      templates: 1,
+      successRate: { $round: ['$avgScore', 1] },
+      totalDownloads: '$totalStars', // Use stars as proxy
+      _id: 0,
     },
-    { $sort: { templates: -1 } },
-    { $limit: 5 },
+  },
+  { $sort: { templates: -1 } },
+  { $limit: 5 },
 ]);
 ```
 
@@ -142,43 +142,43 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    {
-        $addFields: {
-            issuesCount: {
-                $reduce: {
-                    input: "$analysisResult.compliance.categories",
-                    initialValue: 0,
-                    in: { $add: ["$$value", { $size: "$$this.checks" }] },
-                },
-            },
-            severity: {
-                $switch: {
-                    branches: [
-                        {
-                            case: { $lt: ["$analysisResult.score", 70] },
-                            then: "high",
-                        },
-                        {
-                            case: { $lt: ["$analysisResult.score", 85] },
-                            then: "medium",
-                        },
-                    ],
-                    default: "low",
-                },
-            },
+  {
+    $addFields: {
+      issuesCount: {
+        $reduce: {
+          input: '$analysisResult.compliance.categories',
+          initialValue: 0,
+          in: { $add: ['$$value', { $size: '$$this.checks' }] },
         },
-    },
-    { $sort: { issuesCount: -1 } },
-    { $limit: 10 },
-    {
-        $project: {
-            name: "$repo",
-            author: "$owner",
-            issues: "$issuesCount",
-            severity: 1,
-            _id: 0,
+      },
+      severity: {
+        $switch: {
+          branches: [
+            {
+              case: { $lt: ['$analysisResult.score', 70] },
+              then: 'high',
+            },
+            {
+              case: { $lt: ['$analysisResult.score', 85] },
+              then: 'medium',
+            },
+          ],
+          default: 'low',
         },
+      },
     },
+  },
+  { $sort: { issuesCount: -1 } },
+  { $limit: 10 },
+  {
+    $project: {
+      name: '$repo',
+      author: '$owner',
+      issues: '$issuesCount',
+      severity: 1,
+      _id: 0,
+    },
+  },
 ]);
 ```
 
@@ -190,24 +190,24 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    { $unwind: "$analysisResult.compliance.categories" },
-    { $unwind: "$analysisResult.compliance.categories.checks" },
-    {
-        $group: {
-            _id: "$analysisResult.compliance.categories.category",
-            count: { $sum: 1 },
-        },
+  { $unwind: '$analysisResult.compliance.categories' },
+  { $unwind: '$analysisResult.compliance.categories.checks' },
+  {
+    $group: {
+      _id: '$analysisResult.compliance.categories.category',
+      count: { $sum: 1 },
     },
-    {
-        $project: {
-            category: "$_id",
-            issue: "$_id",
-            count: 1,
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      category: '$_id',
+      issue: '$_id',
+      count: 1,
+      _id: 0,
     },
-    { $sort: { count: -1 } },
-    { $limit: 8 },
+  },
+  { $sort: { count: -1 } },
+  { $limit: 8 },
 ]);
 ```
 
@@ -219,17 +219,17 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    {
-        $project: {
-            name: "$repo",
-            author: "$owner",
-            activity: "$scanMeta.totalScans",
-            stars: { $ifNull: ["$metadata.stars", 0] },
-            _id: 0,
-        },
+  {
+    $project: {
+      name: '$repo',
+      author: '$owner',
+      activity: '$scanMeta.totalScans',
+      stars: { $ifNull: ['$metadata.stars', 0] },
+      _id: 0,
     },
-    { $sort: { activity: -1 } },
-    { $limit: 10 },
+  },
+  { $sort: { activity: -1 } },
+  { $limit: 10 },
 ]);
 ```
 
@@ -241,18 +241,18 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    { $match: { "metadata.language": "Python" } },
-    {
-        $project: {
-            name: "$repo",
-            author: "$owner",
-            health: "$analysisResult.score",
-            downloads: { $ifNull: ["$metadata.stars", 0] },
-            _id: 0,
-        },
+  { $match: { 'metadata.language': 'Python' } },
+  {
+    $project: {
+      name: '$repo',
+      author: '$owner',
+      health: '$analysisResult.score',
+      downloads: { $ifNull: ['$metadata.stars', 0] },
+      _id: 0,
     },
-    { $sort: { health: -1 } },
-    { $limit: 5 },
+  },
+  { $sort: { health: -1 } },
+  { $limit: 5 },
 ]);
 ```
 
@@ -270,24 +270,24 @@ Same as #7, filter by `"JavaScript"`
 
 ```javascript
 db.repos.aggregate([
-    { $match: { "metadata.aiModel": { $exists: true } } },
-    {
-        $group: {
-            _id: "$metadata.aiModel",
-            success: { $avg: "$analysisResult.score" },
-            templates: { $sum: 1 },
-        },
+  { $match: { 'metadata.aiModel': { $exists: true } } },
+  {
+    $group: {
+      _id: '$metadata.aiModel',
+      success: { $avg: '$analysisResult.score' },
+      templates: { $sum: 1 },
     },
-    {
-        $project: {
-            model: "$_id",
-            success: { $round: ["$success", 1] },
-            templates: 1,
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      model: '$_id',
+      success: { $round: ['$success', 1] },
+      templates: 1,
+      _id: 0,
     },
-    { $sort: { success: -1 } },
-    { $limit: 9 },
+  },
+  { $sort: { success: -1 } },
+  { $limit: 9 },
 ]);
 ```
 
@@ -299,33 +299,33 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    {
-        $match: {
-            "metadata.aiModel": { $exists: true },
-            "metadata.language": { $exists: true },
-        },
+  {
+    $match: {
+      'metadata.aiModel': { $exists: true },
+      'metadata.language': { $exists: true },
     },
-    {
-        $group: {
-            _id: {
-                model: "$metadata.aiModel",
-                language: "$metadata.language",
-            },
-            success: { $avg: "$analysisResult.score" },
-            templates: { $sum: 1 },
-        },
+  },
+  {
+    $group: {
+      _id: {
+        model: '$metadata.aiModel',
+        language: '$metadata.language',
+      },
+      success: { $avg: '$analysisResult.score' },
+      templates: { $sum: 1 },
     },
-    {
-        $project: {
-            model: "$_id.model",
-            language: "$_id.language",
-            success: { $round: ["$success", 1] },
-            templates: 1,
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      model: '$_id.model',
+      language: '$_id.language',
+      success: { $round: ['$success', 1] },
+      templates: 1,
+      _id: 0,
     },
-    { $sort: { success: -1 } },
-    { $limit: 12 },
+  },
+  { $sort: { success: -1 } },
+  { $limit: 12 },
 ]);
 ```
 
@@ -337,19 +337,19 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    { $match: { "deployments.azd": { $exists: true } } },
-    {
-        $project: {
-            name: "$repo",
-            author: "$owner",
-            service: "$deployments.azd.service",
-            deployments: "$deployments.azd.count",
-            successRate: "$deployments.azd.successRate",
-            _id: 0,
-        },
+  { $match: { 'deployments.azd': { $exists: true } } },
+  {
+    $project: {
+      name: '$repo',
+      author: '$owner',
+      service: '$deployments.azd.service',
+      deployments: '$deployments.azd.count',
+      successRate: '$deployments.azd.successRate',
+      _id: 0,
     },
-    { $sort: { deployments: -1 } },
-    { $limit: 5 },
+  },
+  { $sort: { deployments: -1 } },
+  { $limit: 5 },
 ]);
 ```
 
@@ -361,39 +361,36 @@ db.repos.aggregate([
 
 ```javascript
 db.repos.aggregate([
-    { $unwind: "$metadata.technologies" },
-    {
-        $group: {
-            _id: "$metadata.technologies",
-            count: { $sum: 1 },
-        },
+  { $unwind: '$metadata.technologies' },
+  {
+    $group: {
+      _id: '$metadata.technologies',
+      count: { $sum: 1 },
     },
-    {
-        $lookup: {
-            from: "repos",
-            pipeline: [{ $count: "total" }],
-            as: "totalCount",
-        },
+  },
+  {
+    $lookup: {
+      from: 'repos',
+      pipeline: [{ $count: 'total' }],
+      as: 'totalCount',
     },
-    {
-        $project: {
-            tech: "$_id",
-            usage: {
-                $multiply: [
-                    {
-                        $divide: [
-                            "$count",
-                            { $arrayElemAt: ["$totalCount.total", 0] },
-                        ],
-                    },
-                    100,
-                ],
-            },
-            _id: 0,
-        },
+  },
+  {
+    $project: {
+      tech: '$_id',
+      usage: {
+        $multiply: [
+          {
+            $divide: ['$count', { $arrayElemAt: ['$totalCount.total', 0] }],
+          },
+          100,
+        ],
+      },
+      _id: 0,
     },
-    { $sort: { usage: -1 } },
-    { $limit: 6 },
+  },
+  { $sort: { usage: -1 } },
+  { $limit: 6 },
 ]);
 ```
 

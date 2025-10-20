@@ -15,9 +15,9 @@ Deploy Template Doctor to Azure in 5 minutes.
 1. Go to https://github.com/settings/developers
 2. Click **"New OAuth App"**
 3. Fill in:
-    - Application name: `Template Doctor`
-    - Homepage URL: `https://template-doctor.yourdomain.com` (temporary, will update later)
-    - Authorization callback URL: `https://template-doctor.yourdomain.com/callback.html`
+   - Application name: `Template Doctor`
+   - Homepage URL: `https://template-doctor.yourdomain.com` (temporary, will update later)
+   - Authorization callback URL: `https://template-doctor.yourdomain.com/callback.html`
 4. Click **"Register application"**
 5. **Save the Client ID**: `Iv1.xxxxxxxxxxxxxxxx`
 6. Click **"Generate a new client secret"**
@@ -27,12 +27,12 @@ Deploy Template Doctor to Azure in 5 minutes.
 
 1. Go to https://github.com/settings/tokens/new
 2. Fill in:
-    - Token name: `template-doctor-azure`
-    - Expiration: `90 days` (or `No expiration` for production)
+   - Token name: `template-doctor-azure`
+   - Expiration: `90 days` (or `No expiration` for production)
 3. **Select scopes**:
-    - ✅ `repo` (Full control of private repositories)
-    - ✅ `workflow` (Update GitHub Action workflows)
-    - ✅ `read:org` (Read org membership)
+   - ✅ `repo` (Full control of private repositories)
+   - ✅ `workflow` (Update GitHub Action workflows)
+   - ✅ `read:org` (Read org membership)
 4. Click **"Generate token"**
 5. **Save the token**: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
@@ -111,9 +111,9 @@ Now update your GitHub OAuth app:
 1. Go to https://github.com/settings/developers
 2. Click on your OAuth app
 3. Update **Authorization callback URL** to:
-    ```
-    https://ca-web-abc123.azurecontainerapps.io/callback.html
-    ```
+   ```
+   https://ca-web-abc123.azurecontainerapps.io/callback.html
+   ```
 4. Click **"Update application"**
 
 ## Step 5: Test Your Deployment

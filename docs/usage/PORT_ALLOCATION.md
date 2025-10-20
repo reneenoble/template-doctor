@@ -26,9 +26,9 @@
 - **Command**: `npm start` in `packages/server` or Docker
 - **Use Case**: New production backend, replacing Azure Functions
 - **Benefits**:
-    - Standard Node.js port
-    - No conflict with Azure Functions
-    - Can run both servers simultaneously during migration
+  - Standard Node.js port
+  - No conflict with Azure Functions
+  - Can run both servers simultaneously during migration
 
 ### Frontend (4000)
 
@@ -139,17 +139,17 @@ diff azure.json express.json
 ```yaml
 # docker-compose.yml
 services:
-    server:
-        ports:
-            - "3001:3001" # Host:Container
-        environment:
-            - PORT=3001
+  server:
+    ports:
+      - '3001:3001' # Host:Container
+    environment:
+      - PORT=3001
 
-    app:
-        ports:
-            - "4000:4000"
-        environment:
-            - VITE_API_BASE_URL=http://localhost:3001
+  app:
+    ports:
+      - '4000:4000'
+    environment:
+      - VITE_API_BASE_URL=http://localhost:3001
 ```
 
 ### Access from Host
@@ -181,12 +181,12 @@ lsof -ti :7071 | xargs kill -9
 ```javascript
 // ❌ Wrong: pointing to Azure Functions port
 backend: {
-    baseUrl: "http://localhost:7071";
+  baseUrl: 'http://localhost:7071';
 }
 
 // ✅ Correct: pointing to Express port
 backend: {
-    baseUrl: "http://localhost:3001";
+  baseUrl: 'http://localhost:3001';
 }
 ```
 
@@ -247,8 +247,8 @@ External ports can be remapped:
 
 ```yaml
 ports:
-    - "80:3001" # External 80 → Internal 3001
-    - "8080:4000" # External 8080 → Internal 4000
+  - '80:3001' # External 80 → Internal 3001
+  - '8080:4000' # External 8080 → Internal 4000
 ```
 
 ## Quick Reference

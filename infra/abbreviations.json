@@ -1,11 +1,11 @@
 {
-    "resourcesResourceGroups": "rg-",
-    "appManagedEnvironments": "cae-",
-    "appContainerApps": "ca-",
-    "containerRegistryRegistries": "cr",
-    "storageStorageAccounts": "st",
-    "keyVaultVaults": "kv-",
-    "logAnalyticsWorkspaces": "log-",
-    "appInsightsComponents": "appi-",
-    "cosmosDBAccounts": "cosmos-"
+  "resourcesResourceGroups": "rg-",
+  "appManagedEnvironments": "cae-",
+  "appContainerApps": "ca-",
+  "containerRegistryRegistries": "cr",
+  "storageStorageAccounts": "st",
+  "keyVaultVaults": "kv-",
+  "logAnalyticsWorkspaces": "log-",
+  "appInsightsComponents": "appi-",
+  "cosmosDBAccounts": "cosmos-"
 }

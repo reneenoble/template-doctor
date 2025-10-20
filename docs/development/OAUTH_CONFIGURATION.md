@@ -21,7 +21,7 @@ The GitHub OAuth authentication system requires a redirectUri to handle the call
 By default, Template Doctor dynamically builds the redirectUri based on the current environment:
 
 ```javascript
-redirectUri: window.location.origin + getBasePath() + "/callback.html";
+redirectUri: window.location.origin + getBasePath() + '/callback.html';
 ```
 
 This means:
@@ -38,43 +38,43 @@ You can override this behavior in two ways:
 
 1. **Leave it empty in config.json (recommended)**:
 
-    ```json
-    {
-        "githubOAuth": {
-            "redirectUri": ""
-        }
-    }
-    ```
+   ```json
+   {
+     "githubOAuth": {
+       "redirectUri": ""
+     }
+   }
+   ```
 
-    With an empty string, the system will use the dynamic redirectUri based on the current environment.
+   With an empty string, the system will use the dynamic redirectUri based on the current environment.
 
 2. **Specify a custom redirectUri**:
-    ```json
-    {
-        "githubOAuth": {
-            "redirectUri": "https://specific-domain.com/callback.html"
-        }
-    }
-    ```
-    This is useful for scenarios where you need a specific callback URL that differs from the dynamic one.
+   ```json
+   {
+     "githubOAuth": {
+       "redirectUri": "https://specific-domain.com/callback.html"
+     }
+   }
+   ```
+   This is useful for scenarios where you need a specific callback URL that differs from the dynamic one.
 
 ## GitHub OAuth App Setup
 
 When registering your GitHub OAuth App:
 
 1. For local development (Docker/Preview):
-    - Set the callback URL to: `http://localhost:3000/callback.html`
-    - Both frontend and backend will run on port 3000
+   - Set the callback URL to: `http://localhost:3000/callback.html`
+   - Both frontend and backend will run on port 3000
 
 2. For production:
-    - Set the callback URL to match your production environment:
-        - GitHub Pages: `https://your-username.github.io/template-doctor/callback.html`
-        - Azure: `https://your-staticwebapp.azurestaticapps.net/callback.html`
+   - Set the callback URL to match your production environment:
+     - GitHub Pages: `https://your-username.github.io/template-doctor/callback.html`
+     - Azure: `https://your-staticwebapp.azurestaticapps.net/callback.html`
 
 3. For multiple environments:
-    - You can register multiple OAuth apps with different callback URLs
-    - Use environment variables to configure the appropriate client ID for each environment
-    - **Each OAuth app must match the port where your application is served**
+   - You can register multiple OAuth apps with different callback URLs
+   - Use environment variables to configure the appropriate client ID for each environment
+   - **Each OAuth app must match the port where your application is served**
 
 ## Environment Variable Configuration
 

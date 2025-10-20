@@ -54,8 +54,8 @@ This guide walks you through creating a Cosmos DB with MongoDB API in the Azure 
 1. Navigate to your Cosmos DB account
 2. Go to **"Data Explorer"** in left menu
 3. Click **"New Database"**
-    - **Database id**: `template-doctor`
-    - Click **"OK"**
+   - **Database id**: `template-doctor`
+   - Click **"OK"**
 
 ### 2.2 Create Collections
 
@@ -64,9 +64,9 @@ Create these 4 collections in the `template-doctor` database:
 **Collection 1: analysis**
 
 1. Right-click database → **"New Collection"**
-    - **Database id**: Use existing `template-doctor`
-    - **Collection id**: `analysis`
-    - Click **"OK"**
+   - **Database id**: Use existing `template-doctor`
+   - **Collection id**: `analysis`
+   - Click **"OK"**
 
 **Collection 2: azdtests**
 
@@ -89,10 +89,10 @@ Create these 4 collections in the `template-doctor` database:
 1. Search for **"Managed Identities"**
 2. Click **"+ Create"**
 3. **Settings:**
-    - **Subscription**: Your subscription
-    - **Resource group**: `rg-template-doctor`
-    - **Region**: Same as Cosmos DB
-    - **Name**: `mi-template-doctor`
+   - **Subscription**: Your subscription
+   - **Resource group**: `rg-template-doctor`
+   - **Region**: Same as Cosmos DB
+   - **Name**: `mi-template-doctor`
 4. Click **"Review + create"** → **"Create"**
 
 **Via CLI:**
@@ -131,15 +131,15 @@ echo "Principal ID: $PRINCIPAL_ID"
 2. Click **"Access Control (IAM)"** in left menu
 3. Click **"+ Add"** → **"Add role assignment"**
 4. **Role tab:**
-    - Search for **"Cosmos DB Built-in Data Contributor"**
-    - Select it and click **"Next"**
+   - Search for **"Cosmos DB Built-in Data Contributor"**
+   - Select it and click **"Next"**
 5. **Members tab:**
-    - **Assign access to**: Managed Identity
-    - Click **"+ Select members"**
-    - **Subscription**: Your subscription
-    - **Managed identity**: User-assigned managed identity
-    - Select: `mi-template-doctor`
-    - Click **"Select"**
+   - **Assign access to**: Managed Identity
+   - Click **"+ Select members"**
+   - **Subscription**: Your subscription
+   - **Managed identity**: User-assigned managed identity
+   - Select: `mi-template-doctor`
+   - Click **"Select"**
 6. Click **"Review + assign"**
 
 **Via CLI:**
@@ -297,15 +297,15 @@ curl http://localhost:3000/api/health | jq .
 
 ```json
 {
-    "status": "ok",
-    "timestamp": "2025-10-08T...",
-    "database": {
-        "connected": true,
-        "latency": 45
-    },
-    "env": {
-        "hasCosmosEndpoint": true
-    }
+  "status": "ok",
+  "timestamp": "2025-10-08T...",
+  "database": {
+    "connected": true,
+    "latency": 45
+  },
+  "env": {
+    "hasCosmosEndpoint": true
+  }
 }
 ```
 

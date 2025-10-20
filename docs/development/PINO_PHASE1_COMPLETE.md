@@ -10,11 +10,11 @@ Successfully implemented structured logging using Pino for the Template Doctor s
 
 - **Installed**: `pino`, `pino-http`, `pino-pretty`, `@types/pino-http`
 - **Logger Module**: `packages/server/src/shared/logger.ts`
-    - Development: Pretty-printed colorized logs
-    - Production: Structured JSON logs (Azure-ready)
-    - HTTP request/response logging middleware
-    - Sensitive data redaction (tokens, passwords, cookies)
-    - Health check endpoint ignored from logs
+  - Development: Pretty-printed colorized logs
+  - Production: Structured JSON logs (Azure-ready)
+  - HTTP request/response logging middleware
+  - Sensitive data redaction (tokens, passwords, cookies)
+  - Health check endpoint ignored from logs
 
 ### 2. Migrated Services
 
@@ -36,18 +36,18 @@ Successfully implemented structured logging using Pino for the Template Doctor s
 
 - **Automatic logging** for all Express requests/responses
 - **Smart log levels**:
-    - `info`: Successful requests (2xx, 3xx)
-    - `warn`: Client errors (4xx)
-    - `error`: Server errors (5xx)
+  - `info`: Successful requests (2xx, 3xx)
+  - `warn`: Client errors (4xx)
+  - `error`: Server errors (5xx)
 - **Redacted fields**: Authorization, cookies, GitHub tokens
-- **Health check spam filtered**: `/api/v4/health` not logged
+- **Health check spam filtered**: `/api/health` not logged
 
 ## 📊 Migration Progress
 
 - **Total console.\* calls**: 143
 - **Migrated**: 24 (17% complete)
-    - database.ts: 16 calls
-    - index.ts: 8 calls
+  - database.ts: 16 calls
+  - index.ts: 8 calls
 - **Remaining**: 119 calls
 
 ## 🔍 Live Test Results (Docker)
@@ -79,25 +79,25 @@ Successfully implemented structured logging using Pino for the Template Doctor s
 ### Basic Logging
 
 ```typescript
-import { createLogger } from "../shared/logger.js";
-const logger = createLogger("my-service");
+import { createLogger } from '../shared/logger.js';
+const logger = createLogger('my-service');
 
-logger.info("Operation successful");
-logger.warn("Something looks suspicious");
-logger.error({ err: error }, "Operation failed");
+logger.info('Operation successful');
+logger.warn('Something looks suspicious');
+logger.error({ err: error }, 'Operation failed');
 ```
 
 ### Structured Context
 
 ```typescript
 logger.info(
-    {
-        repoUrl: "https://github.com/org/repo",
-        analysisId: "12345",
-        duration: 1234,
-        status: "success",
-    },
-    "Analysis completed",
+  {
+    repoUrl: 'https://github.com/org/repo',
+    analysisId: '12345',
+    duration: 1234,
+    status: 'success',
+  },
+  'Analysis completed',
 );
 ```
 
@@ -105,10 +105,10 @@ logger.info(
 
 ```typescript
 try {
-    await database.connect();
+  await database.connect();
 } catch (error) {
-    logger.error({ err: error, endpoint }, "Connection failed");
-    throw error;
+  logger.error({ err: error, endpoint }, 'Connection failed');
+  throw error;
 }
 ```
 
@@ -139,11 +139,11 @@ NODE_ENV=production   # JSON logs
 
 ```json
 {
-    "level": "INFO",
-    "time": 1760883137524,
-    "service": "template-doctor-server",
-    "module": "startup",
-    "msg": "Connecting to database..."
+  "level": "INFO",
+  "time": 1760883137524,
+  "service": "template-doctor-server",
+  "module": "startup",
+  "msg": "Connecting to database..."
 }
 ```
 
@@ -152,19 +152,19 @@ NODE_ENV=production   # JSON logs
 ### High Priority Services
 
 1. **analysis-storage.ts** (10 console.\* calls)
-    - Save/retrieve analysis results
-    - Leaderboard operations
-    - Error handling
+   - Save/retrieve analysis results
+   - Leaderboard operations
+   - Error handling
 
 2. **azd-validation.ts** (5 console.\* calls)
-    - Artifact download tracking
-    - Parsing error context
-    - Validation workflow
+   - Artifact download tracking
+   - Parsing error context
+   - Validation workflow
 
 3. **Route handlers** (~30 console.\* calls total)
-    - analyze.ts (2 calls)
-    - auth.ts (2 calls)
-    - Other routes
+   - analyze.ts (2 calls)
+   - auth.ts (2 calls)
+   - Other routes
 
 ### Code Quality
 

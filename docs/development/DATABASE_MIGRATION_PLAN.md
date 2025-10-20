@@ -27,16 +27,16 @@ Migrate Template Doctor from filesystem-based result storage to Cosmos DB with M
 
 ```typescript
 interface Template {
-    _id: ObjectId;
-    repoUrl: string; // unique index
-    owner: string; // from repoUrl
-    repo: string; // from repoUrl
-    lastScanned: Date;
-    scanCount: number;
-    ruleSet: string; // 'azd' | 'dod' | 'custom'
-    latestScanId: ObjectId; // ref to scans
-    createdAt: Date;
-    updatedAt: Date;
+  _id: ObjectId;
+  repoUrl: string; // unique index
+  owner: string; // from repoUrl
+  repo: string; // from repoUrl
+  lastScanned: Date;
+  scanCount: number;
+  ruleSet: string; // 'azd' | 'dod' | 'custom'
+  latestScanId: ObjectId; // ref to scans
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
@@ -51,46 +51,46 @@ interface Template {
 
 ```typescript
 interface Scan {
-    _id: ObjectId;
-    templateId: ObjectId; // ref to templates
-    repoUrl: string; // denormalized for queries
-    ruleSet: string;
-    timestamp: Date;
-    compliance: {
-        percentage: number;
-        passed: number;
-        issues: number;
-        errors: number;
-        warnings: number;
-    };
-    issues: Array<{
-        id: string;
-        severity: "error" | "warning" | "info";
-        message: string;
-        error: string;
-        category?: string;
-    }>;
-    compliant: Array<{
-        id: string;
-        category: string;
-        message: string;
-        details?: any;
-    }>;
-    azdValidation?: {
-        // from artifact parsing
-        azdUpSuccess: boolean;
-        azdUpTime: string | null;
-        azdDownSuccess: boolean;
-        azdDownTime: string | null;
-        psRuleErrors: number;
-        psRuleWarnings: number;
-        securityStatus: "pass" | "warnings" | "errors";
-        overallStatus: "success" | "warning" | "failure";
-        resultFileContent?: string; // optional, can be large
-    };
-    dashboardPath: string; // legacy filesystem path
-    dataPath: string; // legacy filesystem path
-    createdAt: Date;
+  _id: ObjectId;
+  templateId: ObjectId; // ref to templates
+  repoUrl: string; // denormalized for queries
+  ruleSet: string;
+  timestamp: Date;
+  compliance: {
+    percentage: number;
+    passed: number;
+    issues: number;
+    errors: number;
+    warnings: number;
+  };
+  issues: Array<{
+    id: string;
+    severity: 'error' | 'warning' | 'info';
+    message: string;
+    error: string;
+    category?: string;
+  }>;
+  compliant: Array<{
+    id: string;
+    category: string;
+    message: string;
+    details?: any;
+  }>;
+  azdValidation?: {
+    // from artifact parsing
+    azdUpSuccess: boolean;
+    azdUpTime: string | null;
+    azdDownSuccess: boolean;
+    azdDownTime: string | null;
+    psRuleErrors: number;
+    psRuleWarnings: number;
+    securityStatus: 'pass' | 'warnings' | 'errors';
+    overallStatus: 'success' | 'warning' | 'failure';
+    resultFileContent?: string; // optional, can be large
+  };
+  dashboardPath: string; // legacy filesystem path
+  dataPath: string; // legacy filesystem path
+  createdAt: Date;
 }
 ```
 
@@ -105,18 +105,18 @@ interface Scan {
 
 ```typescript
 interface ValidationRun {
-    _id: ObjectId;
-    scanId: ObjectId; // ref to scans
-    repoUrl: string;
-    runId: string; // UUID from workflow
-    githubRunId: number;
-    githubRunUrl: string;
-    status: "queued" | "in_progress" | "completed" | "failed" | "cancelled";
-    conclusion: string | null;
-    triggeredBy: string; // user or system
-    startedAt: Date;
-    completedAt: Date | null;
-    createdAt: Date;
+  _id: ObjectId;
+  scanId: ObjectId; // ref to scans
+  repoUrl: string;
+  runId: string; // UUID from workflow
+  githubRunId: number;
+  githubRunUrl: string;
+  status: 'queued' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  conclusion: string | null;
+  triggeredBy: string; // user or system
+  startedAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
 }
 ```
 
@@ -198,78 +198,76 @@ AZURE_CLIENT_ID=<managed-identity-client-id>  # For DefaultAzureCredential
 **File:** `packages/server/src/services/database.ts`
 
 ```typescript
-import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { DefaultAzureCredential } from "@azure/identity";
+import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
+import { DefaultAzureCredential } from '@azure/identity';
 
 class DatabaseService {
-    private client: MongoClient | null = null;
-    private db: Db | null = null;
+  private client: MongoClient | null = null;
+  private db: Db | null = null;
 
-    async connect(): Promise<void> {
-        const endpoint = process.env.COSMOS_ENDPOINT;
-        const dbName = process.env.COSMOS_DATABASE_NAME || "template-doctor";
+  async connect(): Promise<void> {
+    const endpoint = process.env.COSMOS_ENDPOINT;
+    const dbName = process.env.COSMOS_DATABASE_NAME || 'template-doctor';
 
-        if (!endpoint) {
-            throw new Error("COSMOS_ENDPOINT not configured");
-        }
-
-        // Managed Identity authentication
-        const credential = new DefaultAzureCredential();
-        const token = await credential.getToken(
-            "https://cosmos.azure.com/.default",
-        );
-
-        const connectionString = `${endpoint}/?authMechanism=MONGODB-X509&tls=true`;
-
-        this.client = new MongoClient(connectionString, {
-            auth: {
-                username: token.token, // Access token as username
-                password: "", // Empty for token auth
-            },
-            tlsAllowInvalidCertificates: false,
-        });
-
-        await this.client.connect();
-        this.db = this.client.db(dbName);
-
-        // Create indexes on first connect
-        await this.createIndexes();
+    if (!endpoint) {
+      throw new Error('COSMOS_ENDPOINT not configured');
     }
 
-    async createIndexes(): Promise<void> {
-        const templates = this.db!.collection("templates");
-        await templates.createIndex({ repoUrl: 1 }, { unique: true });
-        await templates.createIndex({ owner: 1, repo: 1 });
-        await templates.createIndex({ lastScanned: -1 });
+    // Managed Identity authentication
+    const credential = new DefaultAzureCredential();
+    const token = await credential.getToken('https://cosmos.azure.com/.default');
 
-        const scans = this.db!.collection("scans");
-        await scans.createIndex({ templateId: 1, timestamp: -1 });
-        await scans.createIndex({ repoUrl: 1, timestamp: -1 });
-        await scans.createIndex({ timestamp: -1 });
+    const connectionString = `${endpoint}/?authMechanism=MONGODB-X509&tls=true`;
 
-        const validationRuns = this.db!.collection("validation_runs");
-        await validationRuns.createIndex({ runId: 1 }, { unique: true });
-        await validationRuns.createIndex({ githubRunId: 1 });
-    }
+    this.client = new MongoClient(connectionString, {
+      auth: {
+        username: token.token, // Access token as username
+        password: '', // Empty for token auth
+      },
+      tlsAllowInvalidCertificates: false,
+    });
 
-    get templates(): Collection {
-        if (!this.db) throw new Error("Database not connected");
-        return this.db.collection("templates");
-    }
+    await this.client.connect();
+    this.db = this.client.db(dbName);
 
-    get scans(): Collection {
-        if (!this.db) throw new Error("Database not connected");
-        return this.db.collection("scans");
-    }
+    // Create indexes on first connect
+    await this.createIndexes();
+  }
 
-    get validationRuns(): Collection {
-        if (!this.db) throw new Error("Database not connected");
-        return this.db.collection("validation_runs");
-    }
+  async createIndexes(): Promise<void> {
+    const templates = this.db!.collection('templates');
+    await templates.createIndex({ repoUrl: 1 }, { unique: true });
+    await templates.createIndex({ owner: 1, repo: 1 });
+    await templates.createIndex({ lastScanned: -1 });
 
-    async disconnect(): Promise<void> {
-        await this.client?.close();
-    }
+    const scans = this.db!.collection('scans');
+    await scans.createIndex({ templateId: 1, timestamp: -1 });
+    await scans.createIndex({ repoUrl: 1, timestamp: -1 });
+    await scans.createIndex({ timestamp: -1 });
+
+    const validationRuns = this.db!.collection('validation_runs');
+    await validationRuns.createIndex({ runId: 1 }, { unique: true });
+    await validationRuns.createIndex({ githubRunId: 1 });
+  }
+
+  get templates(): Collection {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('templates');
+  }
+
+  get scans(): Collection {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('scans');
+  }
+
+  get validationRuns(): Collection {
+    if (!this.db) throw new Error('Database not connected');
+    return this.db.collection('validation_runs');
+  }
+
+  async disconnect(): Promise<void> {
+    await this.client?.close();
+  }
 }
 
 export const db = new DatabaseService();
@@ -280,107 +278,97 @@ export const db = new DatabaseService();
 **File:** `packages/server/src/services/result-storage.ts`
 
 ```typescript
-import { db } from "./database";
-import fs from "fs/promises";
-import path from "path";
+import { db } from './database';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class ResultStorageService {
-    async saveAnalysisResult(data: {
-        repoUrl: string;
-        ruleSet: string;
-        compliance: any;
-        issues: any[];
-        compliant: any[];
-        azdValidation?: any;
-    }): Promise<{ scanId: string; templateId: string }> {
-        const { owner, repo } = this.parseRepoUrl(data.repoUrl);
+  async saveAnalysisResult(data: {
+    repoUrl: string;
+    ruleSet: string;
+    compliance: any;
+    issues: any[];
+    compliant: any[];
+    azdValidation?: any;
+  }): Promise<{ scanId: string; templateId: string }> {
+    const { owner, repo } = this.parseRepoUrl(data.repoUrl);
 
-        // 1. Upsert template
-        const templateResult = await db.templates.findOneAndUpdate(
-            { repoUrl: data.repoUrl },
-            {
-                $set: {
-                    owner,
-                    repo,
-                    lastScanned: new Date(),
-                    ruleSet: data.ruleSet,
-                    updatedAt: new Date(),
-                },
-                $inc: { scanCount: 1 },
-                $setOnInsert: { createdAt: new Date() },
-            },
-            { upsert: true, returnDocument: "after" },
-        );
+    // 1. Upsert template
+    const templateResult = await db.templates.findOneAndUpdate(
+      { repoUrl: data.repoUrl },
+      {
+        $set: {
+          owner,
+          repo,
+          lastScanned: new Date(),
+          ruleSet: data.ruleSet,
+          updatedAt: new Date(),
+        },
+        $inc: { scanCount: 1 },
+        $setOnInsert: { createdAt: new Date() },
+      },
+      { upsert: true, returnDocument: 'after' },
+    );
 
-        const templateId = templateResult.value!._id;
+    const templateId = templateResult.value!._id;
 
-        // 2. Insert scan
-        const scan = {
-            templateId,
-            repoUrl: data.repoUrl,
-            ruleSet: data.ruleSet,
-            timestamp: new Date(),
-            compliance: data.compliance,
-            issues: data.issues,
-            compliant: data.compliant,
-            azdValidation: data.azdValidation || null,
-            dashboardPath: "", // populated below
-            dataPath: "", // populated below
-            createdAt: new Date(),
-        };
+    // 2. Insert scan
+    const scan = {
+      templateId,
+      repoUrl: data.repoUrl,
+      ruleSet: data.ruleSet,
+      timestamp: new Date(),
+      compliance: data.compliance,
+      issues: data.issues,
+      compliant: data.compliant,
+      azdValidation: data.azdValidation || null,
+      dashboardPath: '', // populated below
+      dataPath: '', // populated below
+      createdAt: new Date(),
+    };
 
-        const scanResult = await db.scans.insertOne(scan);
-        const scanId = scanResult.insertedId;
+    const scanResult = await db.scans.insertOne(scan);
+    const scanId = scanResult.insertedId;
 
-        // 3. Update template with latest scan reference
-        await db.templates.updateOne(
-            { _id: templateId },
-            { $set: { latestScanId: scanId } },
-        );
+    // 3. Update template with latest scan reference
+    await db.templates.updateOne({ _id: templateId }, { $set: { latestScanId: scanId } });
 
-        // 4. DUAL WRITE: Also save to filesystem (migration period)
-        if (process.env.ENABLE_FILESYSTEM_WRITE !== "false") {
-            await this.saveToFilesystem(data, scanId.toString());
-        }
-
-        return {
-            scanId: scanId.toString(),
-            templateId: templateId.toString(),
-        };
+    // 4. DUAL WRITE: Also save to filesystem (migration period)
+    if (process.env.ENABLE_FILESYSTEM_WRITE !== 'false') {
+      await this.saveToFilesystem(data, scanId.toString());
     }
 
-    async getLatestScans(limit: number = 50): Promise<any[]> {
-        // Try database first
-        try {
-            return await db.scans
-                .find({})
-                .sort({ timestamp: -1 })
-                .limit(limit)
-                .toArray();
-        } catch (error) {
-            console.error(
-                "[ResultStorage] DB query failed, falling back to filesystem",
-                error,
-            );
-            return this.getFromFilesystem();
-        }
-    }
+    return {
+      scanId: scanId.toString(),
+      templateId: templateId.toString(),
+    };
+  }
 
-    private parseRepoUrl(url: string): { owner: string; repo: string } {
-        const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
-        if (!match) throw new Error(`Invalid repo URL: ${url}`);
-        return { owner: match[1], repo: match[2] };
+  async getLatestScans(limit: number = 50): Promise<any[]> {
+    // Try database first
+    try {
+      return await db.scans.find({}).sort({ timestamp: -1 }).limit(limit).toArray();
+    } catch (error) {
+      console.error('[ResultStorage] DB query failed, falling back to filesystem', error);
+      return this.getFromFilesystem();
     }
+  }
 
-    private async saveToFilesystem(data: any, scanId: string): Promise<void> {
-        // Legacy filesystem write (existing implementation)
-        // ... existing code ...
-    }
+  private parseRepoUrl(url: string): { owner: string; repo: string } {
+    const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) throw new Error(`Invalid repo URL: ${url}`);
+    return { owner: match[1], repo: match[2] };
+  }
 
-    private async getFromFilesystem(): Promise<any[]> {
-        // Legacy filesystem read
-        // ... existing code ...
-    }
+  private async saveToFilesystem(data: any, scanId: string): Promise<void> {
+    // Legacy filesystem write (existing implementation)
+    // ... existing code ...
+  }
+
+  private async getFromFilesystem(): Promise<any[]> {
+    // Legacy filesystem read
+    // ... existing code ...
+  }
 }
 
 export const resultStorage = new ResultStorageService();
@@ -391,41 +379,41 @@ export const resultStorage = new ResultStorageService();
 **File:** `packages/server/src/routes/analysis.ts`
 
 ```typescript
-import { resultStorage } from "../services/result-storage";
+import { resultStorage } from '../services/result-storage';
 
 // POST /api/v4/analyze
-router.post("/analyze", async (req, res) => {
-    const { repoUrl, ruleSet } = req.body;
+router.post('/analyze', async (req, res) => {
+  const { repoUrl, ruleSet } = req.body;
 
-    // ... validation ...
+  // ... validation ...
 
-    // Run analysis
-    const analysisResult = await runAnalysis(repoUrl, ruleSet);
+  // Run analysis
+  const analysisResult = await runAnalysis(repoUrl, ruleSet);
 
-    // Save to database (+ filesystem during migration)
-    const { scanId, templateId } = await resultStorage.saveAnalysisResult({
-        repoUrl,
-        ruleSet,
-        compliance: analysisResult.compliance,
-        issues: analysisResult.issues,
-        compliant: analysisResult.compliant,
-    });
+  // Save to database (+ filesystem during migration)
+  const { scanId, templateId } = await resultStorage.saveAnalysisResult({
+    repoUrl,
+    ruleSet,
+    compliance: analysisResult.compliance,
+    issues: analysisResult.issues,
+    compliant: analysisResult.compliant,
+  });
 
-    res.json({
-        success: true,
-        scanId,
-        templateId,
-        compliance: analysisResult.compliance,
-    });
+  res.json({
+    success: true,
+    scanId,
+    templateId,
+    compliance: analysisResult.compliance,
+  });
 });
 
 // GET /api/v4/results
-router.get("/results", async (req, res) => {
-    const limit = parseInt(req.query.limit as string) || 50;
+router.get('/results', async (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 50;
 
-    const scans = await resultStorage.getLatestScans(limit);
+  const scans = await resultStorage.getLatestScans(limit);
 
-    res.json({ scans });
+  res.json({ scans });
 });
 ```
 
@@ -434,41 +422,41 @@ router.get("/results", async (req, res) => {
 **File:** `scripts/migrate-to-database.ts`
 
 ```typescript
-import { db } from "../packages/server/src/services/database";
-import { glob } from "glob";
-import fs from "fs/promises";
+import { db } from '../packages/server/src/services/database';
+import { glob } from 'glob';
+import fs from 'fs/promises';
 
 async function migrateFilesystemToDatabase() {
-    await db.connect();
+  await db.connect();
 
-    const dataFiles = await glob("packages/app/results/**/*-data.js");
+  const dataFiles = await glob('packages/app/results/**/*-data.js');
 
-    console.log(`Found ${dataFiles.length} result files to migrate`);
+  console.log(`Found ${dataFiles.length} result files to migrate`);
 
-    for (const file of dataFiles) {
-        const content = await fs.readFile(file, "utf-8");
+  for (const file of dataFiles) {
+    const content = await fs.readFile(file, 'utf-8');
 
-        // Extract window.reportData = {...}
-        const match = content.match(/window\.reportData\s*=\s*({[\s\S]+?});/);
-        if (!match) continue;
+    // Extract window.reportData = {...}
+    const match = content.match(/window\.reportData\s*=\s*({[\s\S]+?});/);
+    if (!match) continue;
 
-        const data = JSON.parse(match[1]);
+    const data = JSON.parse(match[1]);
 
-        // Migrate to database
-        await resultStorage.saveAnalysisResult({
-            repoUrl: data.repoUrl,
-            ruleSet: data.ruleSet,
-            compliance: data.compliance,
-            issues: data.compliance.issues,
-            compliant: data.compliance.compliant,
-            azdValidation: data.azdValidation,
-        });
+    // Migrate to database
+    await resultStorage.saveAnalysisResult({
+      repoUrl: data.repoUrl,
+      ruleSet: data.ruleSet,
+      compliance: data.compliance,
+      issues: data.compliance.issues,
+      compliant: data.compliance.compliant,
+      azdValidation: data.azdValidation,
+    });
 
-        console.log(`✓ Migrated ${data.repoUrl} (${data.timestamp})`);
-    }
+    console.log(`✓ Migrated ${data.repoUrl} (${data.timestamp})`);
+  }
 
-    console.log("Migration complete!");
-    await db.disconnect();
+  console.log('Migration complete!');
+  await db.disconnect();
 }
 
 migrateFilesystemToDatabase().catch(console.error);

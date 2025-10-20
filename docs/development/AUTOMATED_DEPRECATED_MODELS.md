@@ -79,14 +79,14 @@ To change how often the workflow runs, edit the `cron` expression in the workflo
 
 ```yaml
 schedule:
-    - cron: "0 12 1,15 * *" # Runs on the 1st and 15th at 12:00 UTC
+  - cron: '0 12 1,15 * *' # Runs on the 1st and 15th at 12:00 UTC
 ```
 
 For example, to run monthly on the 1st:
 
 ```yaml
 schedule:
-    - cron: "0 12 1 * *" # Runs on the 1st of each month at 12:00 UTC
+  - cron: '0 12 1 * *' # Runs on the 1st of each month at 12:00 UTC
 ```
 
 ### Modifying Script Parameters

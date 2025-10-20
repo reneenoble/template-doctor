@@ -1,14 +1,14 @@
 {
-    "timestamp": 1628170800000,
-    "dashboardPath": "/results/azure-samples-template-testing-add/index.html",
-    "dataPath": "/results/azure-samples-template-testing-add/data.json",
-    "repoUrl": "https://github.com/azure-samples/template-testing-add",
-    "ruleSet": "default",
-    "compliance": {
-        "percentage": 85,
-        "issues": 3,
-        "passed": 17
-    },
-    "scannedBy": ["Template Doctor"],
-    "relativePath": "azure-samples-template-testing-add"
+  "timestamp": 1628170800000,
+  "dashboardPath": "/results/azure-samples-template-testing-add/index.html",
+  "dataPath": "/results/azure-samples-template-testing-add/data.json",
+  "repoUrl": "https://github.com/azure-samples/template-testing-add",
+  "ruleSet": "default",
+  "compliance": {
+    "percentage": 85,
+    "issues": 3,
+    "passed": 17
+  },
+  "scannedBy": ["Template Doctor"],
+  "relativePath": "azure-samples-template-testing-add"
 }

@@ -1,61 +1,64 @@
 {
-    "name": "template-doctor",
-    "version": "1.0.0",
-    "description": "An Azure template analysis and healing app",
-    "main": "bin/cli.js",
-    "private": true,
-    "workspaces": [
-        "packages/*"
-    ],
-    "bin": {
-        "template-doctor": "dist/cli.js"
-    },
-    "scripts": {
-        "pretest": "node scripts/verify-playwright-browsers.js",
-        "setup:uami": "bash ./scripts/setup.sh",
-        "build:all": "npm run build:analyzer-core && npm run build:api --if-present && npm run build:app",
-        "build:analyzer-core": "npm run -w packages/analyzer-core build",
-        "build:api": "npm run -w packages/api build --if-present || true",
-        "build:app": "npm run -w packages/app build",
-        "clean:all": "npm run -w packages/analyzer-core clean && npm run -w packages/api clean --if-present || true && npm run -w packages/app clean || true",
-        "rebuild:all": "npm run clean:all && npm run build:all",
-        "dev:app": "npm run -w packages/app dev",
-        "dev:api": "npm run -w packages/api start --if-present || true",
-        "test": "npm run -w packages/app test --",
-        "test:ui": "npm run -w packages/app test:ui --",
-        "test:debug": "npm run -w packages/app test:debug --",
-        "test:unit": "vitest run --reporter=basic",
-        "test:unit:watch": "vitest",
-        "pretest:unit": "npm run -w packages/api build --if-present || true",
-        "test:all": "npm run test:unit && npm test",
-        "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js",
-        "analyze": "node scripts/analyzer-node.js",
-        "db:seed": "node scripts/seed-database.mjs",
-        "db:seed:force": "FORCE_SEED=true node scripts/seed-database.mjs",
-        "migrate:export": "node scripts/migrate-to-database.mjs export",
-        "migrate:import": "node scripts/migrate-to-database.mjs import",
-        "migrate:v1-to-v2": "node scripts/migrate-v1-to-v2.mjs",
-        "typecheck": "npm run -w packages/app typecheck && npm run -w packages/api typecheck --if-present || true"
-    },
-    "keywords": [
-        "azd",
-        "azure",
-        "templates"
-    ],
-    "author": "",
-    "license": "MIT",
-    "engines": {
-        "node": ">=20.0.0"
-    },
-    "devDependencies": {
-        "@playwright/test": "^1.54.1",
-        "@types/node": "^24.0.14",
-        "jsdom": "^27.0.1",
-        "vitest": "^1.0.0"
-    },
-    "dependencies": {
-        "@actions/core": "^1.11.1",
-        "dotenv": "^17.2.0",
-        "open": "^10.2.0"
-    }
+  "name": "template-doctor",
+  "version": "1.0.0",
+  "description": "An Azure template analysis and healing app",
+  "main": "bin/cli.js",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "bin": {
+    "template-doctor": "dist/cli.js"
+  },
+  "scripts": {
+    "pretest": "node scripts/verify-playwright-browsers.js",
+    "setup:uami": "bash ./scripts/setup.sh",
+    "format": "prettier --write \"**/*.{js,ts,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\"",
+    "build:all": "npm run build:analyzer-core && npm run build:api --if-present && npm run build:app",
+    "build:analyzer-core": "npm run -w packages/analyzer-core build",
+    "build:api": "npm run -w packages/api build --if-present || true",
+    "build:app": "npm run -w packages/app build",
+    "clean:all": "npm run -w packages/analyzer-core clean && npm run -w packages/api clean --if-present || true && npm run -w packages/app clean || true",
+    "rebuild:all": "npm run clean:all && npm run build:all",
+    "dev:app": "npm run -w packages/app dev",
+    "dev:api": "npm run -w packages/api start --if-present || true",
+    "test": "npm run -w packages/app test --",
+    "test:ui": "npm run -w packages/app test:ui --",
+    "test:debug": "npm run -w packages/app test:debug --",
+    "test:unit": "vitest run --reporter=basic",
+    "test:unit:watch": "vitest",
+    "pretest:unit": "npm run -w packages/api build --if-present || true",
+    "test:all": "npm run test:unit && npm test",
+    "generate:scan-meta-backfill": "node scripts/generate-scan-meta-backfill.js",
+    "analyze": "node scripts/analyzer-node.js",
+    "db:seed": "node scripts/seed-database.mjs",
+    "db:seed:force": "FORCE_SEED=true node scripts/seed-database.mjs",
+    "migrate:export": "node scripts/migrate-to-database.mjs export",
+    "migrate:import": "node scripts/migrate-to-database.mjs import",
+    "migrate:v1-to-v2": "node scripts/migrate-v1-to-v2.mjs",
+    "typecheck": "npm run -w packages/app typecheck && npm run -w packages/api typecheck --if-present || true"
+  },
+  "keywords": [
+    "azd",
+    "azure",
+    "templates"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.0.14",
+    "jsdom": "^27.0.1",
+    "prettier": "^3.6.2",
+    "vitest": "^1.0.0"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "dotenv": "^17.2.0",
+    "open": "^10.2.0"
+  }
 }

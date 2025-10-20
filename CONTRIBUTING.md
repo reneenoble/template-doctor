@@ -14,9 +14,9 @@ Thanks for your interest in contributing! This document explains how to propose 
 - Frontend lives in `packages/app` (TypeScript modules bundled by Vite; legacy JS under `packages/app/js` is being removed).
 - API lives in `packages/api` (Azure Functions).
 - Local run:
-    - API: `npm run -w packages/api start`
-    - Frontend (dev with hot reload): `npm run -w packages/app dev`
-    - Production build (optional): `npm run -w packages/app build`
+  - API: `npm run -w packages/api start`
+  - Frontend (dev with hot reload): `npm run -w packages/app dev`
+  - Production build (optional): `npm run -w packages/app build`
 
 ## Testing
 
@@ -65,9 +65,9 @@ Scope is optional but encouraged, e.g. `feat(frontend): ...` or `fx(api): ...`.
 
 - Fill in the PR template and link related issues.
 - Ensure:
-    - All tests pass locally
-    - Formatting checks pass
-    - No generated artifacts or backups are committed (`results/`, `src/frontend/_backup_unused/`, `playwright-report/`, `node_modules/`)
+  - All tests pass locally
+  - Formatting checks pass
+  - No generated artifacts or backups are committed (`results/`, `src/frontend/_backup_unused/`, `playwright-report/`, `node_modules/`)
 - Update docs (README/spec) when behavior or configuration changes.
 
 ## Code Review

@@ -15,8 +15,8 @@ The enhancement adds better detection of SAML/SSO errors and modifies how the ap
 
 1. Enhanced the GitHub client's `forkRepository` method to detect SAML/SSO errors
 2. Modified the `checkAndUpdateRepoUrl` function to:
-    - Accept a `isBatchMode` parameter to handle errors differently based on the context
-    - Continue with the original repository URL in batch mode when SAML/SSO errors occur
+   - Accept a `isBatchMode` parameter to handle errors differently based on the context
+   - Continue with the original repository URL in batch mode when SAML/SSO errors occur
 3. Created a patch loader that automatically applies these enhancements when the application loads
 
 ## Files Added
@@ -61,9 +61,9 @@ You can test the enhancement using the `saml-batch-test.js` script:
 2. Open the browser developer console
 3. Copy and paste the contents of `saml-batch-test.js` into the console
 4. Run the test functions:
-    - `testIndividualSamlRepo()` - Tests individual scan with SAML-protected repo
-    - `testBatchSamlRepo()` - Tests batch scan with SAML-protected repo
-    - `testBatchProcessingWithMixedRepos()` - Tests batch processing with mixed repos
+   - `testIndividualSamlRepo()` - Tests individual scan with SAML-protected repo
+   - `testBatchSamlRepo()` - Tests batch scan with SAML-protected repo
+   - `testBatchProcessingWithMixedRepos()` - Tests batch processing with mixed repos
 
 ## Expected Behavior
 

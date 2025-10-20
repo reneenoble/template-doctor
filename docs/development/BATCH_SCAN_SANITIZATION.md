@@ -20,21 +20,18 @@ This document describes the input sanitization and XSS prevention measures appli
 
 ```typescript
 const repos = ta.value
-    .split(/\n|,/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((url) => {
-        const sanitized = sanitizeGitHubUrl(url);
-        if (!sanitized) {
-            showError(
-                "Invalid URL",
-                `Skipping invalid URL: ${sanitizeHtml(url)}`,
-            );
-            return null;
-        }
-        return sanitized;
-    })
-    .filter((url): url is string => url !== null);
+  .split(/\n|,/)
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((url) => {
+    const sanitized = sanitizeGitHubUrl(url);
+    if (!sanitized) {
+      showError('Invalid URL', `Skipping invalid URL: ${sanitizeHtml(url)}`);
+      return null;
+    }
+    return sanitized;
+  })
+  .filter((url): url is string => url !== null);
 ```
 
 ### 2. Repository Name Display (`createBatchItem()`)
@@ -50,9 +47,7 @@ const repos = ta.value
 **Code**:
 
 ```typescript
-const repoName = url.includes("github.com/")
-    ? url.split("github.com/")[1]
-    : url;
+const repoName = url.includes('github.com/') ? url.split('github.com/')[1] : url;
 const safeRepoName = sanitizeHtml(repoName);
 const safeRepoNameAttr = sanitizeAttribute(repoName);
 
@@ -77,14 +72,13 @@ item.innerHTML = `
 **Code**:
 
 ```typescript
-const repoName =
-    result.repoUrl?.split("github.com/")[1] || result.repoUrl || "Repository";
+const repoName = result.repoUrl?.split('github.com/')[1] || result.repoUrl || 'Repository';
 const safeRepoName = sanitizeHtml(repoName);
-const safeRepoUrl = sanitizeHtml(result.repoUrl || "");
+const safeRepoUrl = sanitizeHtml(result.repoUrl || '');
 
-const rnEl = document.getElementById("repo-name");
+const rnEl = document.getElementById('repo-name');
 if (rnEl) rnEl.textContent = safeRepoName;
-const ruEl = document.getElementById("repo-url");
+const ruEl = document.getElementById('repo-url');
 if (ruEl) ruEl.textContent = safeRepoUrl;
 ```
 
@@ -122,33 +116,33 @@ if (ruEl) ruEl.textContent = safeRepoUrl;
 **17 Tests** covering:
 
 1. **Repository URL Validation** (3 tests)
-    - Accept valid GitHub URLs
-    - Reject malicious URLs
-    - Reject injection attempts
+   - Accept valid GitHub URLs
+   - Reject malicious URLs
+   - Reject injection attempts
 
 2. **Repository Name Display** (3 tests)
-    - Sanitize HTML characters
-    - Sanitize attribute values
-    - Prevent event handler injection
+   - Sanitize HTML characters
+   - Sanitize attribute values
+   - Prevent event handler injection
 
 3. **Batch Item Creation Security** (2 tests)
-    - Safe batch item creation
-    - Prevent script execution
+   - Safe batch item creation
+   - Prevent script execution
 
 4. **Result Display Security** (3 tests)
-    - Sanitize repository names
-    - Sanitize repository URLs
-    - Prevent innerHTML XSS
+   - Sanitize repository names
+   - Sanitize repository URLs
+   - Prevent innerHTML XSS
 
 5. **URL Input Processing** (3 tests)
-    - Filter invalid URLs
-    - Handle delimiter variations
-    - Reject malicious input
+   - Filter invalid URLs
+   - Handle delimiter variations
+   - Reject malicious input
 
 6. **Edge Cases** (3 tests)
-    - Empty input handling
-    - Missing path handling
-    - Long name handling
+   - Empty input handling
+   - Missing path handling
+   - Long name handling
 
 ### Running Tests
 

@@ -1,75 +1,75 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "metadata": {
-        "_generator": {
-            "name": "bicep",
-            "version": "0.15.31.15270",
-            "templateHash": "1207494717434154942"
-        }
-    },
-    "parameters": {
-        "name": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string",
-            "defaultValue": "[resourceGroup().location]"
-        },
-        "tags": {
-            "type": "object",
-            "defaultValue": {}
-        }
-    },
-    "resources": [
-        {
-            "type": "Microsoft.OperationalInsights/workspaces",
-            "apiVersion": "2022-10-01",
-            "name": "[format('{0}-logs', parameters('name'))]",
-            "location": "[parameters('location')]",
-            "tags": "[parameters('tags')]",
-            "properties": {
-                "sku": {
-                    "name": "PerGB2018"
-                },
-                "retentionInDays": 30,
-                "features": {
-                    "searchVersion": 1
-                }
-            }
-        },
-        {
-            "type": "Microsoft.App/managedEnvironments",
-            "apiVersion": "2023-05-01",
-            "name": "[parameters('name')]",
-            "location": "[parameters('location')]",
-            "tags": "[parameters('tags')]",
-            "properties": {
-                "appLogsConfiguration": {
-                    "destination": "log-analytics",
-                    "logAnalyticsConfiguration": {
-                        "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
-                        "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
-                    }
-                }
-            },
-            "dependsOn": [
-                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
-            ]
-        }
-    ],
-    "outputs": {
-        "id": {
-            "type": "string",
-            "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
-        },
-        "name": {
-            "type": "string",
-            "value": "[parameters('name')]"
-        },
-        "logAnalyticsWorkspaceId": {
-            "type": "string",
-            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.15.31.15270",
+      "templateHash": "1207494717434154942"
     }
+  },
+  "parameters": {
+    "name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[format('{0}-logs', parameters('name'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30,
+        "features": {
+          "searchVersion": 1
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name'))), '2022-10-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('name'))]"
+    },
+    "name": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('name')))]"
+    }
+  }
 }

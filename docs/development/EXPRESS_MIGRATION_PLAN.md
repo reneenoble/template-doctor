@@ -28,65 +28,65 @@ We have successfully migrated 3 of 20 Azure Functions to Express endpoints (15% 
 #### Functions to Migrate:
 
 1. **`validate-template`** → `/api/v4/validate-template`
-    - Triggers GitHub workflow dispatch for validation
-    - Uses repository dispatch API
-    - Required by all other validation endpoints
+   - Triggers GitHub workflow dispatch for validation
+   - Uses repository dispatch API
+   - Required by all other validation endpoints
 2. **`validation-status`** → `/api/v4/validation-status`
-    - Polls GitHub workflow run status
-    - Returns progress and completion state
+   - Polls GitHub workflow run status
+   - Returns progress and completion state
 3. **`validation-callback`** → `/api/v4/validation-callback`
-    - Webhook endpoint for workflow completion
-    - Processes validation results
+   - Webhook endpoint for workflow completion
+   - Processes validation results
 4. **`validation-cancel`** → `/api/v4/validation-cancel`
-    - Cancels running validation workflows
-    - Cleanup logic for interrupted validations
+   - Cancels running validation workflows
+   - Cleanup logic for interrupted validations
 5. **`validation-docker-image`** → `/api/v4/validation-docker-image`
-    - Validates Dockerfile and image configurations
-    - Checks for security best practices
+   - Validates Dockerfile and image configurations
+   - Checks for security best practices
 6. **`validation-ossf`** → `/api/v4/validation-ossf`
-    - OSSF scorecard validation
-    - Security posture assessment
+   - OSSF scorecard validation
+   - Security posture assessment
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/validation.ts
-import { Router } from "express";
-import { GitHubClient } from "../shared/github-client";
+import { Router } from 'express';
+import { GitHubClient } from '../shared/github-client';
 
 const router = Router();
 
 // Validate template endpoint
-router.post("/validate-template", async (req, res, next) => {
-    try {
-        const { repoUrl, token } = req.body;
-        // Trigger GitHub workflow dispatch
-        // Return workflow run ID
-    } catch (error) {
-        next(error);
-    }
+router.post('/validate-template', async (req, res, next) => {
+  try {
+    const { repoUrl, token } = req.body;
+    // Trigger GitHub workflow dispatch
+    // Return workflow run ID
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Status polling endpoint
-router.get("/validation-status/:runId", async (req, res, next) => {
-    try {
-        const { runId } = req.params;
-        // Poll GitHub API for workflow status
-        // Return progress/completion state
-    } catch (error) {
-        next(error);
-    }
+router.get('/validation-status/:runId', async (req, res, next) => {
+  try {
+    const { runId } = req.params;
+    // Poll GitHub API for workflow status
+    // Return progress/completion state
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Webhook callback
-router.post("/validation-callback", async (req, res, next) => {
-    try {
-        // Verify webhook signature
-        // Process validation results
-        // Emit events to frontend
-    } catch (error) {
-        next(error);
-    }
+router.post('/validation-callback', async (req, res, next) => {
+  try {
+    // Verify webhook signature
+    // Process validation results
+    // Emit events to frontend
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -103,54 +103,51 @@ export default router;
 #### Functions to Migrate:
 
 1. **`action-trigger`** → `/api/v4/action-trigger`
-    - Triggers GitHub Actions workflows
-    - Generic workflow dispatch
+   - Triggers GitHub Actions workflows
+   - Generic workflow dispatch
 2. **`action-run-status`** → `/api/v4/action-run-status`
-    - Polls GitHub Actions run status
-    - Similar to validation-status but for general actions
+   - Polls GitHub Actions run status
+   - Similar to validation-status but for general actions
 3. **`action-run-artifacts`** → `/api/v4/action-run-artifacts`
-    - Retrieves workflow artifacts
-    - Downloads and exposes artifact URLs
+   - Retrieves workflow artifacts
+   - Downloads and exposes artifact URLs
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/actions.ts
-import { Router } from "express";
-import { Octokit } from "@octokit/rest";
+import { Router } from 'express';
+import { Octokit } from '@octokit/rest';
 
 const router = Router();
 
-router.post("/action-trigger", async (req, res, next) => {
-    try {
-        const { repo, workflow, inputs, token } = req.body;
-        // Trigger workflow dispatch
-        // Return run ID
-    } catch (error) {
-        next(error);
-    }
+router.post('/action-trigger', async (req, res, next) => {
+  try {
+    const { repo, workflow, inputs, token } = req.body;
+    // Trigger workflow dispatch
+    // Return run ID
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get("/action-run-status/:owner/:repo/:runId", async (req, res, next) => {
-    try {
-        // Poll run status
-        // Return status, conclusion, logs
-    } catch (error) {
-        next(error);
-    }
+router.get('/action-run-status/:owner/:repo/:runId', async (req, res, next) => {
+  try {
+    // Poll run status
+    // Return status, conclusion, logs
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.get(
-    "/action-run-artifacts/:owner/:repo/:runId",
-    async (req, res, next) => {
-        try {
-            // List artifacts
-            // Return artifact URLs
-        } catch (error) {
-            next(error);
-        }
-    },
-);
+router.get('/action-run-artifacts/:owner/:repo/:runId', async (req, res, next) => {
+  try {
+    // List artifacts
+    // Return artifact URLs
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;
 ```
@@ -166,53 +163,53 @@ export default router;
 #### Functions to Migrate:
 
 1. **`submit-analysis-dispatch`** → `/api/v4/submit-analysis-dispatch`
-    - Dispatches workflow to submit analysis results
-    - Triggers PR creation workflow
+   - Dispatches workflow to submit analysis results
+   - Triggers PR creation workflow
 2. **`add-template-pr`** → `/api/v4/add-template-pr`
-    - Creates PR with analysis dashboard
-    - Generates HTML dashboard from template
-    - Commits results files
+   - Creates PR with analysis dashboard
+   - Generates HTML dashboard from template
+   - Commits results files
 3. **`archive-collection`** → `/api/v4/archive-collection`
-    - Archives scan metadata to central repo
-    - Maintains historical scan index
+   - Archives scan metadata to central repo
+   - Maintains historical scan index
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/submission.ts
-import { Router } from "express";
-import { generateDashboard } from "../shared/dashboard-generator";
+import { Router } from 'express';
+import { generateDashboard } from '../shared/dashboard-generator';
 
 const router = Router();
 
-router.post("/submit-analysis-dispatch", async (req, res, next) => {
-    try {
-        const { repoUrl, analysisData, token } = req.body;
-        // Dispatch workflow
-    } catch (error) {
-        next(error);
-    }
+router.post('/submit-analysis-dispatch', async (req, res, next) => {
+  try {
+    const { repoUrl, analysisData, token } = req.body;
+    // Dispatch workflow
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/add-template-pr", async (req, res, next) => {
-    try {
-        const { repoUrl, analysisData, token } = req.body;
-        // Generate dashboard HTML
-        // Create branch
-        // Commit files
-        // Open PR
-    } catch (error) {
-        next(error);
-    }
+router.post('/add-template-pr', async (req, res, next) => {
+  try {
+    const { repoUrl, analysisData, token } = req.body;
+    // Generate dashboard HTML
+    // Create branch
+    // Commit files
+    // Open PR
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/archive-collection", async (req, res, next) => {
-    try {
-        const { metadata, token } = req.body;
-        // Archive to central repo
-    } catch (error) {
-        next(error);
-    }
+router.post('/archive-collection', async (req, res, next) => {
+  try {
+    const { metadata, token } = req.body;
+    // Archive to central repo
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -229,39 +226,39 @@ export default router;
 #### Functions to Migrate:
 
 1. **`repo-fork`** → `/api/v4/repo-fork`
-    - Creates fork for SAML-protected repos
-    - Handles fork creation and sync
+   - Creates fork for SAML-protected repos
+   - Handles fork creation and sync
 2. **`batch-scan-start`** → `/api/v4/batch-scan-start`
-    - Initiates batch scanning operations
-    - Queues multiple repository analyses
+   - Initiates batch scanning operations
+   - Queues multiple repository analyses
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/repository.ts
-import { Router } from "express";
+import { Router } from 'express';
 
 const router = Router();
 
-router.post("/repo-fork", async (req, res, next) => {
-    try {
-        const { repoUrl, token } = req.body;
-        // Create fork
-        // Wait for fork completion
-        // Return fork URL
-    } catch (error) {
-        next(error);
-    }
+router.post('/repo-fork', async (req, res, next) => {
+  try {
+    const { repoUrl, token } = req.body;
+    // Create fork
+    // Wait for fork completion
+    // Return fork URL
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/batch-scan-start", async (req, res, next) => {
-    try {
-        const { repos, token } = req.body;
-        // Queue batch scan
-        // Return batch ID
-    } catch (error) {
-        next(error);
-    }
+router.post('/batch-scan-start', async (req, res, next) => {
+  try {
+    const { repos, token } = req.body;
+    // Queue batch scan
+    // Return batch ID
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -278,39 +275,39 @@ export default router;
 #### Functions to Migrate:
 
 1. **`issue-create`** → `/api/v4/issue-create`
-    - Creates GitHub issues with proper labels
-    - Formats issue body with metadata
+   - Creates GitHub issues with proper labels
+   - Formats issue body with metadata
 2. **`issue-ai-proxy`** → `/api/v4/issue-ai-proxy`
-    - Proxies AI enrichment requests
-    - Enhances issue descriptions with AI
+   - Proxies AI enrichment requests
+   - Enhances issue descriptions with AI
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/issues.ts
-import { Router } from "express";
+import { Router } from 'express';
 
 const router = Router();
 
-router.post("/issue-create", async (req, res, next) => {
-    try {
-        const { repo, title, body, labels, token } = req.body;
-        // Create issue
-        // Apply labels
-        // Return issue URL
-    } catch (error) {
-        next(error);
-    }
+router.post('/issue-create', async (req, res, next) => {
+  try {
+    const { repo, title, body, labels, token } = req.body;
+    // Create issue
+    // Apply labels
+    // Return issue URL
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/issue-ai-proxy", async (req, res, next) => {
-    try {
-        const { prompt, context } = req.body;
-        // Call AI provider
-        // Return enriched content
-    } catch (error) {
-        next(error);
-    }
+router.post('/issue-ai-proxy', async (req, res, next) => {
+  try {
+    const { prompt, context } = req.body;
+    // Call AI provider
+    // Return enriched content
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -327,25 +324,25 @@ export default router;
 #### Functions to Migrate:
 
 1. **`setup`** → `/api/v4/setup`
-    - Initial configuration endpoint
-    - May be obsolete in Express architecture
+   - Initial configuration endpoint
+   - May be obsolete in Express architecture
 
 #### Implementation Strategy:
 
 ```typescript
 // packages/server/src/routes/setup.ts
-import { Router } from "express";
+import { Router } from 'express';
 
 const router = Router();
 
-router.post("/setup", async (req, res, next) => {
-    try {
-        // Validate environment
-        // Initialize configuration
-        // Return setup status
-    } catch (error) {
-        next(error);
-    }
+router.post('/setup', async (req, res, next) => {
+  try {
+    // Validate environment
+    // Initialize configuration
+    // Return setup status
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -383,58 +380,53 @@ export default router;
 
 1. **Extract common GitHub client:**
 
-    ```typescript
-    // packages/server/src/shared/github-client.ts
-    export class GitHubClient {
-        constructor(token: string) {}
-        async forkRepository(owner: string, repo: string) {}
-        async dispatchWorkflow(
-            owner: string,
-            repo: string,
-            workflow: string,
-            inputs: any,
-        ) {}
-        async getWorkflowRun(owner: string, repo: string, runId: number) {}
-        async createIssue(owner: string, repo: string, issue: IssueParams) {}
-        // ... more methods
-    }
-    ```
+   ```typescript
+   // packages/server/src/shared/github-client.ts
+   export class GitHubClient {
+     constructor(token: string) {}
+     async forkRepository(owner: string, repo: string) {}
+     async dispatchWorkflow(owner: string, repo: string, workflow: string, inputs: any) {}
+     async getWorkflowRun(owner: string, repo: string, runId: number) {}
+     async createIssue(owner: string, repo: string, issue: IssueParams) {}
+     // ... more methods
+   }
+   ```
 
 2. **Reuse analyzer-core:**
-    - Keep `packages/api/analyzer-core/` as shared package
-    - Import from Express routes as needed
-    - No duplication of analysis logic
+   - Keep `packages/api/analyzer-core/` as shared package
+   - Import from Express routes as needed
+   - No duplication of analysis logic
 
 3. **Shared utilities:**
-    - Error handling
-    - Token validation
-    - Response formatting
-    - Logging
+   - Error handling
+   - Token validation
+   - Response formatting
+   - Logging
 
 ### Error Handling Pattern
 
 ```typescript
 // Consistent error handling across all routes
 export class AppError extends Error {
-    constructor(
-        public statusCode: number,
-        public message: string,
-        public isOperational = true,
-    ) {
-        super(message);
-    }
+  constructor(
+    public statusCode: number,
+    public message: string,
+    public isOperational = true,
+  ) {
+    super(message);
+  }
 }
 
 // Route example
-router.post("/validate-template", async (req, res, next) => {
-    try {
-        if (!req.body.repoUrl) {
-            throw new AppError(400, "Repository URL is required");
-        }
-        // ... logic
-    } catch (error) {
-        next(error); // Let error middleware handle it
+router.post('/validate-template', async (req, res, next) => {
+  try {
+    if (!req.body.repoUrl) {
+      throw new AppError(400, 'Repository URL is required');
     }
+    // ... logic
+  } catch (error) {
+    next(error); // Let error middleware handle it
+  }
 });
 ```
 
@@ -443,24 +435,24 @@ router.post("/validate-template", async (req, res, next) => {
 For each phase:
 
 1. **Unit tests:**
-    - Test route handlers in isolation
-    - Mock GitHub API calls
-    - Test error cases
+   - Test route handlers in isolation
+   - Mock GitHub API calls
+   - Test error cases
 
 2. **Integration tests:**
-    - Test with real GitHub API (test repos)
-    - Verify end-to-end workflows
-    - Test CORS and auth
+   - Test with real GitHub API (test repos)
+   - Verify end-to-end workflows
+   - Test CORS and auth
 
 3. **Parity tests:**
-    - Compare Express responses to Azure Functions
-    - Ensure identical behavior
-    - Document intentional differences
+   - Compare Express responses to Azure Functions
+   - Ensure identical behavior
+   - Document intentional differences
 
 4. **Smoke tests:**
-    - Update `scripts/smoke-api.sh` with new endpoints
-    - Run after each phase
-    - Automated in CI/CD
+   - Update `scripts/smoke-api.sh` with new endpoints
+   - Run after each phase
+   - Automated in CI/CD
 
 ---
 
@@ -469,19 +461,19 @@ For each phase:
 ### High-Risk Areas
 
 1. **Workflow dispatch timing:**
-    - GitHub API may have delays
-    - Implement retry logic with exponential backoff
-    - Timeout handling
+   - GitHub API may have delays
+   - Implement retry logic with exponential backoff
+   - Timeout handling
 
 2. **Webhook validation:**
-    - Verify GitHub webhook signatures
-    - Replay protection
-    - Rate limiting
+   - Verify GitHub webhook signatures
+   - Replay protection
+   - Rate limiting
 
 3. **SAML/SSO fork handling:**
-    - Complex token management
-    - Fork sync delays
-    - Permission issues
+   - Complex token management
+   - Fork sync delays
+   - Permission issues
 
 ### Rollback Strategy
 
@@ -513,20 +505,20 @@ Each phase must meet:
 
 1. **Review and approve this migration plan**
 2. **Set up testing infrastructure:**
-    - Create test GitHub repositories
-    - Configure test workflows
-    - Set up monitoring dashboards
+   - Create test GitHub repositories
+   - Configure test workflows
+   - Set up monitoring dashboards
 
 3. **Start Phase 1 (Validation Workflow):**
-    - Create `packages/server/src/routes/validation.ts`
-    - Implement `validate-template` endpoint
-    - Write tests
-    - Update smoke script
+   - Create `packages/server/src/routes/validation.ts`
+   - Implement `validate-template` endpoint
+   - Write tests
+   - Update smoke script
 
 4. **Prepare shared utilities:**
-    - Extract GitHub client from analyzer-core
-    - Create common error types
-    - Set up logging infrastructure
+   - Extract GitHub client from analyzer-core
+   - Create common error types
+   - Set up logging infrastructure
 
 ### Tracking & Reporting:
 

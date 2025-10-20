@@ -33,18 +33,18 @@ This publishes the current default branch to production using the same workflow.
 ## User-facing message after Save Results
 
 - After clicking “Save Results” and a successful dispatch, the UI shows a notification:
-    - “A pull request is being created with your analysis results. Once the PR is merged, results will appear on the site after the nightly deployment. If you are an admin, you can deploy the site manually to publish immediately.”
+  - “A pull request is being created with your analysis results. Once the PR is merged, results will appear on the site after the nightly deployment. If you are an admin, you can deploy the site manually to publish immediately.”
 - This clarifies that merging the PR and then deploying are required for the results to show up on the site.
 
 ## Troubleshooting
 
 - No changes after the nightly run:
-    - Ensure the PR was merged to the branch the site deploys from (usually `main`).
-    - Confirm `SWA_CLI_DEPLOYMENT_TOKEN` is present and valid.
-    - Check the Actions logs for the nightly deploy job.
+  - Ensure the PR was merged to the branch the site deploys from (usually `main`).
+  - Confirm `SWA_CLI_DEPLOYMENT_TOKEN` is present and valid.
+  - Check the Actions logs for the nightly deploy job.
 - Manual deploy fails:
-    - Verify the token and that `swa-cli.config.json` points to the correct app/api locations.
-    - Confirm you have permissions to run the workflow.
+  - Verify the token and that `swa-cli.config.json` points to the correct app/api locations.
+  - Confirm you have permissions to run the workflow.
 
 ## Related docs
 
