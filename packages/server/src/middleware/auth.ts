@@ -9,6 +9,11 @@ import { createLogger } from '../shared/logger.js';
 
 const authLogger = createLogger('auth');
 
+// Log warning once if auth is disabled
+if (process.env.DISABLE_AUTH === 'true') {
+  authLogger.warn('⚠️  AUTH DISABLED - All requests will use mock test user. NEVER use in production!');
+}
+
 // Extend Express Request to include user info
 declare global {
   namespace Express {
@@ -58,6 +63,8 @@ async function getGitHubUserInfo(token: string): Promise<{
  * Middleware: Require authentication via GitHub token
  * Adds req.user and req.githubToken if authenticated
  *
+ * Can be disabled for testing by setting DISABLE_AUTH=true environment variable
+ *
  * @example
  * router.post('/protected', requireAuth, async (req, res) => {
  *   const { user, githubToken } = req;
@@ -65,6 +72,20 @@ async function getGitHubUserInfo(token: string): Promise<{
  * });
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // FOR TESTING ONLY: Allow disabling auth with environment variable
+  if (process.env.DISABLE_AUTH === 'true') {
+    req.user = {
+      login: 'test-user',
+      id: 1,
+      name: 'Test User',
+      email: 'test@example.com',
+      avatar_url: 'https://avatars.githubusercontent.com/u/0',
+    };
+    req.githubToken = 'mock-token';
+    req.githubUser = 'test-user';
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
