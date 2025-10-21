@@ -11,7 +11,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'template_doctor';
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'template-doctor';
 
 console.log('🔌 Connecting to Azure Cosmos DB...');
 console.log(`   Database: ${MONGODB_DATABASE}\n`);

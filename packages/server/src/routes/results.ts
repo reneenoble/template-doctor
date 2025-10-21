@@ -122,6 +122,7 @@ router.get('/results/latest', async (req: Request, res: Response, next: NextFunc
               compliancePercentage: r.latestAnalysis.compliancePercentage,
               passed: r.latestAnalysis.passed,
               issues: r.latestAnalysis.issues,
+              createdBy: r.latestAnalysis.createdBy,
             }
           : null,
         tags: r.tags || [],

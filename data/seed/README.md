@@ -37,7 +37,7 @@ Application configuration key-value pairs.
 ### Method 1: MongoDB Compass GUI (Recommended for Learning)
 
 1. **Open MongoDB Compass** and connect to `mongodb://localhost:27017`
-2. **Select or create database**: `template_doctor`
+2. **Select or create database**: `template-doctor`
 3. **For each collection:**
    - Click "Create Collection" button
    - Enter collection name (e.g., `analyses`)
@@ -53,17 +53,17 @@ Application configuration key-value pairs.
 cd data/seed
 
 # Import each collection
-mongoimport --db template_doctor --collection analyses --file analyses.json --jsonArray
-mongoimport --db template_doctor --collection azdtests --file azdtests.json --jsonArray
-mongoimport --db template_doctor --collection rulesets --file rulesets.json --jsonArray
-mongoimport --db template_doctor --collection configuration --file configuration.json --jsonArray
+mongoimport --db template-doctor --collection analyses --file analyses.json --jsonArray
+mongoimport --db template-doctor --collection azdtests --file azdtests.json --jsonArray
+mongoimport --db template-doctor --collection rulesets --file rulesets.json --jsonArray
+mongoimport --db template-doctor --collection configuration --file configuration.json --jsonArray
 ```
 
 ### Method 3: MongoDB Shell (mongosh)
 
 ```javascript
 // Connect to MongoDB
-mongosh mongodb://localhost:27017/template_doctor
+mongosh mongodb://localhost:27017/template-doctor
 
 // Load and insert data for each collection
 load('analyses.json')
@@ -95,7 +95,7 @@ After importing, verify the data:
 
 ```bash
 # Using mongosh
-mongosh mongodb://localhost:27017/template_doctor
+mongosh mongodb://localhost:27017/template-doctor
 
 # Check document counts
 db.analyses.countDocuments()      // Should return: 2
@@ -200,6 +200,6 @@ db.configuration.deleteMany({});
 Or drop the entire database:
 
 ```javascript
-use template_doctor
+use template-doctor
 db.dropDatabase()
 ```

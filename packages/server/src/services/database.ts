@@ -84,6 +84,7 @@ export interface Repo {
     passed: number;
     issues: number;
     analysisId: ObjectId; // Reference to full analysis document
+    createdBy?: string; // GitHub username of last scanner
   };
 
   // Latest AZD test result (embedded, only keep most recent)
@@ -195,7 +196,7 @@ class DatabaseService {
     const mongoUri = process.env.MONGODB_URI;
     const cosmosEndpoint = process.env.COSMOS_ENDPOINT;
     const databaseName =
-      process.env.COSMOS_DATABASE_NAME || process.env.MONGODB_DATABASE || 'template_doctor';
+      process.env.COSMOS_DATABASE_NAME || process.env.MONGODB_DATABASE || 'template-doctor';
 
     // Local MongoDB (e.g., MongoDB Compass)
     if (mongoUri) {

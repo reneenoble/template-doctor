@@ -30,7 +30,7 @@ class DatabaseService {
     const mongoUri = process.env.MONGODB_URI;
     const cosmosEndpoint = process.env.COSMOS_ENDPOINT;
     const databaseName =
-      process.env.COSMOS_DATABASE_NAME || process.env.MONGODB_DATABASE || 'template_doctor';
+      process.env.COSMOS_DATABASE_NAME || process.env.MONGODB_DATABASE || 'template-doctor';
     // Local MongoDB (e.g., MongoDB Compass)
     if (mongoUri) {
       console.log(

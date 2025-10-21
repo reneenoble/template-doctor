@@ -10,7 +10,7 @@ if [ -z "$MONGODB_URI" ]; then
   exit 1
 fi
 
-DB_NAME="${MONGODB_DATABASE:-template_doctor}"
+DB_NAME="${MONGODB_DATABASE:-template-doctor}"
 
 echo "🔌 Connecting to Azure Cosmos DB..."
 echo "   Database: $DB_NAME"

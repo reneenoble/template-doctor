@@ -37,28 +37,26 @@ router.get('/:section', async (req: Request, res: Response, next: NextFunction) 
         data = await database.repos
           .aggregate([
             {
+              $match: {
+                'latestAnalysis.issues': { $exists: true, $ne: null },
+              },
+            },
+            {
               $addFields: {
-                issuesCount: {
-                  $reduce: {
-                    input: '$analysisResult.compliance.categories',
-                    initialValue: 0,
-                    in: {
-                      $add: ['$$value', { $size: '$$this.checks' }],
-                    },
-                  },
-                },
+                issuesCount: { $ifNull: ['$latestAnalysis.issues', 0] },
+                compliancePercentage: { $ifNull: ['$latestAnalysis.compliancePercentage', 0] },
                 severity: {
                   $switch: {
                     branches: [
                       {
                         case: {
-                          $lt: ['$analysisResult.score', 70],
+                          $lt: [{ $ifNull: ['$latestAnalysis.compliancePercentage', 0] }, 70],
                         },
                         then: 'high',
                       },
                       {
                         case: {
-                          $lt: ['$analysisResult.score', 85],
+                          $lt: [{ $ifNull: ['$latestAnalysis.compliancePercentage', 0] }, 85],
                         },
                         then: 'medium',
                       },
@@ -84,18 +82,27 @@ router.get('/:section', async (req: Request, res: Response, next: NextFunction) 
         break;
 
       case 'prevalent-issues':
-        data = await database.repos
+        // For this aggregation, we need to query the analysis collection (not repos)
+        // because repos doesn't store detailed category/check information
+        data = await database.analysis
           .aggregate([
             {
-              $unwind: '$analysisResult.compliance.categories',
+              $match: {
+                categories: { $exists: true, $ne: null },
+              },
             },
             {
-              $unwind: '$analysisResult.compliance.categories.checks',
+              $unwind: { path: '$categories', preserveNullAndEmptyArrays: false },
             },
             {
               $group: {
-                _id: '$analysisResult.compliance.categories.category',
+                _id: '$categories.category',
                 count: { $sum: 1 },
+              },
+            },
+            {
+              $match: {
+                _id: { $ne: null },
               },
             },
             {
@@ -113,21 +120,29 @@ router.get('/:section', async (req: Request, res: Response, next: NextFunction) 
         break;
 
       case 'active-templates':
-        data = await database.repos
+        // Count analyses per repo from analysis collection
+        const activityCounts = await database.analysis
           .aggregate([
             {
-              $project: {
-                name: '$repo',
-                author: '$owner',
-                activity: '$scanMeta.totalScans',
-                stars: { $ifNull: ['$metadata.stars', 0] },
-                _id: 0,
+              $group: {
+                _id: '$repoUrl',
+                totalScans: { $sum: 1 },
+                owner: { $first: '$owner' },
+                repo: { $first: '$repo' },
               },
             },
-            { $sort: { activity: -1 } },
+            { $sort: { totalScans: -1 } },
             { $limit: parseInt(limit as string) || 10 },
           ])
           .toArray();
+
+        data = activityCounts.map((a) => ({
+          name: a.repo,
+          author: a.owner,
+          activity: a.totalScans,
+          stars: 0, // Future: get from GitHub API
+          _id: 0,
+        }));
         break;
 
       // ========================================

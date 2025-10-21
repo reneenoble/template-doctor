@@ -4,8 +4,8 @@ import {
   downloadValidationArtifact,
   parseAzdValidationResult,
   AzdValidationResult,
-} from '../services/azd-validation';
-import { requireAuth } from '../middleware/auth';
+} from '../services/azd-validation.js';
+import { requireAuth } from '../middleware/auth.js';
 import { strictRateLimit } from '../middleware/rate-limit.js';
 
 /**

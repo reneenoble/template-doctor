@@ -40,9 +40,14 @@ const backendEnabled = () => true; // Hard-enable backend path for deterministic
 const apiBase = () => (window as any).TemplateDoctorConfig?.apiBase || '/api';
 
 async function httpJson(path: string, init: RequestInit): Promise<any> {
+  const token = localStorage.getItem('gh_access_token');
   const res = await fetch(apiBase().replace(/\/$/, '') + path, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(init.headers || {}),
+    },
   });
   if (!res.ok) {
     let detail: any = undefined;

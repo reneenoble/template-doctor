@@ -1171,12 +1171,19 @@
                 };
                 
                 try {
+                    // Get OAuth token for authenticated API requests
+                    const token = localStorage.getItem('gh_access_token');
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        ...(token && { Authorization: `Bearer ${token}` }),
+                    };
+                    
                     // Fetch the sections that ARE implemented in the API
                     const [mostIssues, prevalentIssues, activeTemplates, globalStats] = await Promise.all([
-                        fetch('/api/v4/leaderboards/most-issues?limit=10').then(r => r.ok ? r.json() : null),
-                        fetch('/api/v4/leaderboards/prevalent-issues?limit=8').then(r => r.ok ? r.json() : null),
-                        fetch('/api/v4/leaderboards/active-templates?limit=10').then(r => r.ok ? r.json() : null),
-                        fetch('/api/v4/leaderboards/global/stats').then(r => r.ok ? r.json() : null)
+                        fetch('/api/v4/leaderboards/most-issues?limit=10', { headers }).then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/prevalent-issues?limit=8', { headers }).then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/active-templates?limit=10', { headers }).then(r => r.ok ? r.json() : null),
+                        fetch('/api/v4/leaderboards/global/stats', { headers }).then(r => r.ok ? r.json() : null)
                     ]);
                     
                     // Update with real data where available

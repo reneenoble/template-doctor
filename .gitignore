@@ -45,3 +45,6 @@ analysis.json
 deploy.log
 smoke-test-output.log
 *.log
+
+# Archived legacy filesystem results
+.archive/

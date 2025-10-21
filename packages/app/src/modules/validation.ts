@@ -309,9 +309,13 @@ async function startValidation(ctx: InternalContext) {
     log(ctx, `Trigger URL: ${triggerUrl}`);
     const abort = new AbortController();
     ctx.abortController = abort;
+    const token = localStorage.getItem('gh_access_token');
     const resp = await fetch(triggerUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
       body: JSON.stringify({
         templateName: templateNormalized,
         templateUrl: ctx.opts.templateRef,
@@ -346,9 +350,13 @@ async function cancelValidation(ctx: InternalContext) {
   transition(ctx, 'cancelling', 'Cancelling…');
   try {
     const cancelUrl = buildApiRoute('validation-cancel');
+    const token = localStorage.getItem('gh_access_token');
     const resp = await fetch(cancelUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
       body: JSON.stringify({ runId: ctx.runId, githubRunId: ctx.githubRunId }),
     });
     if (!resp.ok) {
@@ -395,7 +403,13 @@ async function pollStatus(ctx: InternalContext) {
     if (features.jobLogs) qs.includeJobLogs = '1';
     qs.includeLogsUrl = '1';
     const statusUrl = buildApiRoute('validation-status', qs);
-    const resp = await fetch(statusUrl, { headers: { 'Content-Type': 'application/json' } });
+    const token = localStorage.getItem('gh_access_token');
+    const resp = await fetch(statusUrl, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
     if (!resp.ok) throw new Error(`Status ${resp.status}`);
     const data = await resp.json();
     if (data.githubRunId && !ctx.githubRunId) {

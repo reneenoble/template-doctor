@@ -62,8 +62,8 @@ function createCard(t: ScannedTemplateEntry): HTMLElement {
     /[^a-zA-Z0-9-]/g,
     '-',
   );
-  const lastScanner =
-    t.scannedBy && t.scannedBy.length ? t.scannedBy[t.scannedBy.length - 1] : 'Unknown';
+  // Display creator from database (createdBy field from API)
+  const lastScanner = t.createdBy || 'Unknown';
   const ruleSet = t.ruleSet || 'dod';
   const ruleSetDisplay =
     ruleSet === 'dod'

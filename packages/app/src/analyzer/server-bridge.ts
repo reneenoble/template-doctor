@@ -35,17 +35,11 @@ export {};
         const payload = { repoUrl: repoUrl, ruleSet: ruleSet };
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (cfg.functionKey) headers['x-functions-key'] = cfg.functionKey;
-        if (
-          (window as any).GitHubClient &&
-          (window as any).GitHubClient.auth &&
-          (window as any).GitHubClient.auth.isAuthenticated()
-        ) {
-          try {
-            const token = (window as any).GitHubClient.auth.getToken();
-            if (token) headers['Authorization'] = 'Bearer ' + token;
-          } catch (_) {
-            /* ignore */
-          }
+        
+        // Add GitHub OAuth token if available
+        const token = localStorage.getItem('gh_access_token');
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
         }
 
         // Dev fallback: if frontend is running on a different port (e.g. 4000 or 5173) and no reverse proxy is configured,

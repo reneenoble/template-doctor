@@ -122,25 +122,14 @@ async function loadEnvironmentVariables(): Promise<EnvironmentVariablesShape> {
 async function loadConfigJson(): Promise<ConfigJsonShape> {
   const tried: string[] = [];
   // For local development, try config.local.json first for localhost-specific settings
-  const isLocalhost =
-    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  const candidates = isLocalhost
-    ? [
-        '/config.local.json', // local development config first for localhost
-        './config.local.json',
-        'config.local.json',
-        '/config.json', // fallback to production config
-        './config.json',
-        'config.json',
-        '/app/config.json', // fallback in container if mounted differently
-      ]
-    : [
-        '/config.json', // absolute root (dist places at /index.html ; our deploy copies config.json alongside index if we add it)
-        './config.json', // relative
-        'config.json',
-        '/app/config.json', // fallback in container if mounted differently
-      ];
+  // Note: config.local.json support removed to prevent browser console 404 errors
+  // that confuse users. Use environment variables or config.json for configuration.
+  const candidates = [
+    '/config.json', // absolute root
+    './config.json', // relative
+    'config.json',
+    '/app/config.json', // fallback in container if mounted differently
+  ];
   for (const url of candidates) {
     if (tried.includes(url)) continue;
     tried.push(url);

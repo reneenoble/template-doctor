@@ -491,10 +491,12 @@ async function runValidation(templateUrl: string) {
     const endpoint = `${apiBase}/api/v4/validation-template`;
     appendLog(logElement, `Calling: POST ${endpoint}`);
 
+    const token = localStorage.getItem('gh_access_token');
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: JSON.stringify({
         targetRepoUrl: templateUrl,
@@ -619,9 +621,13 @@ async function runValidation(templateUrl: string) {
     // Save initial test status to database
     try {
       appendLog(logElement, '💾 Saving test status to database...');
+      const token = localStorage.getItem('gh_access_token');
       await fetch(`${apiBase}/api/v4/azd-test`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify({
           repoUrl: templateUrl,
           status: 'running',
@@ -679,9 +685,13 @@ async function cancelValidation() {
     const apiBase = cfg.apiBase || window.location.origin;
     const endpoint = `${apiBase}/api/v4/validation-cancel`;
 
+    const token = localStorage.getItem('gh_access_token');
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
       body: JSON.stringify({
         runId: currentRunId,
         githubRunId: currentGithubRunId,
@@ -751,8 +761,12 @@ function startStatusPolling(apiBase: string, runId: string) {
         url.searchParams.set('githubRunId', currentGithubRunId);
       }
 
+      const token = localStorage.getItem('gh_access_token');
       const response = await fetch(url.toString(), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
       });
 
       if (!response.ok) {
@@ -826,9 +840,13 @@ function startStatusPolling(apiBase: string, runId: string) {
             const startTime = localStorage.getItem('lastValidationStartTime');
             const duration = startTime ? Date.now() - parseInt(startTime, 10) : undefined;
 
+            const token = localStorage.getItem('gh_access_token');
             await fetch(`${apiBase}/api/v4/azd-test`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token && { Authorization: `Bearer ${token}` }),
+              },
               body: JSON.stringify({
                 repoUrl: currentTemplateUrl,
                 status: azdValidation.overallStatus === 'success' ? 'success' : 'failed',

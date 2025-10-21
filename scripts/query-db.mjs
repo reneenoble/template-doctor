@@ -12,7 +12,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'template_doctor';
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'template-doctor';
 
 if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI not found in .env file');

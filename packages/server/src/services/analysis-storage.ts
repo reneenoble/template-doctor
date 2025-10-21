@@ -30,6 +30,7 @@ export interface AnalysisData {
   >;
   analysisResult: any;
   scannedBy?: string[];
+  createdBy?: string;
   upstreamTemplate?: string;
   archiveRequested?: boolean;
 }
@@ -64,6 +65,12 @@ class AnalysisStorageService {
         ? data.compliance.compliant
         : [];
 
+      // Extract createdBy from scannedBy array (last scanner is the creator)
+      const createdBy =
+        data.createdBy || (data.scannedBy && data.scannedBy.length > 0)
+          ? data.scannedBy![data.scannedBy!.length - 1]
+          : undefined;
+
       // Step 1: Insert full analysis document
       const analysis: Analysis = {
         repoUrl: data.repoUrl,
@@ -82,6 +89,7 @@ class AnalysisStorageService {
         compliant: compliantArray,
         analysisResult: data.analysisResult,
         scannedBy: data.scannedBy,
+        createdBy: createdBy,
         upstreamTemplate: data.upstreamTemplate,
         archiveRequested: data.archiveRequested,
         createdAt: now,
@@ -107,6 +115,7 @@ class AnalysisStorageService {
               passed: passedCount,
               issues: issuesCount,
               analysisId: analysisId,
+              createdBy: createdBy,
             },
             upstreamTemplate: data.upstreamTemplate,
             archiveRequested: data.archiveRequested,

@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DATABASE_NAME = process.env.MONGODB_DATABASE || 'template_doctor';
+const DATABASE_NAME = process.env.MONGODB_DATABASE || 'template-doctor';
 const SEED_DATA_DIR = path.join(__dirname, '../data/seed');
 
 // Collections to seed

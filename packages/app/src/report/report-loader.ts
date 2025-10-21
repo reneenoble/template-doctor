@@ -115,9 +115,13 @@ declare global {
 
             if (owner && repo) {
               debug('report-loader', `Attempting API load for ${owner}/${repo}`);
+              const token = localStorage.getItem('gh_access_token');
               const response = await fetch(`/api/v4/results/repo/${owner}/${repo}`, {
                 cache: 'no-store',
-                headers: { Accept: 'application/json' },
+                headers: {
+                  Accept: 'application/json',
+                  ...(token && { Authorization: `Bearer ${token}` }),
+                },
               });
 
               if (response.ok) {
@@ -159,285 +163,47 @@ declare global {
           return null;
         };
 
-        // Try API first, then fall back to existing filesystem logic
+        // Load from database API only (no filesystem fallback)
         tryApiLoad()
           .then((apiData) => {
             if (apiData) {
               return resolve(apiData);
             }
-
-            // Fall back to existing filesystem loading logic...
-            let templateName: string | undefined,
-              templatePath: string | undefined,
-              directData: ReportData | undefined,
-              dataJsPath: string | undefined,
-              folderName: string | undefined;
-            if (typeof template === 'object' && template !== null && !Array.isArray(template)) {
-              debug('report-loader', 'Template is an object', template);
-              if (template.relativePath) {
-                const parts = template.relativePath.split('/');
-                if (parts.length > 0) {
-                  folderName = parts[0];
-                  debug('report-loader', `Extracted folder name from relativePath: ${folderName}`);
-                }
-                let pathPrefix = folderName;
-                if (template.folderPath) {
-                  pathPrefix = template.folderPath;
-                  debug('report-loader', `Using provided folderPath: ${pathPrefix}`);
-                } else if (template.scannedBy && template.scannedBy.length > 0) {
-                  const lastScanner = template.scannedBy[template.scannedBy.length - 1];
-                  pathPrefix = `${lastScanner}-${folderName}`;
-                  debug('report-loader', `Created folderPath with scanner prefix: ${pathPrefix}`);
-                }
-                if (template.dataPath) {
-                  dataJsPath = `${pathPrefix}/${template.dataPath}`;
-                  debug('report-loader', `Found data.js path: ${dataJsPath}`);
-                }
-                templatePath = template.relativePath;
-                debug('report-loader', `Using relative path: ${templatePath}`);
-              }
-              if (template.repoUrl) {
-                const repoUrlParts = template.repoUrl.split('/');
-                templateName = repoUrlParts[repoUrlParts.length - 1].replace(/\.git$/, '');
-                debug('report-loader', `Extracted template name from URL: ${templateName}`);
-                if (!folderName) {
-                  const repoOwner = repoUrlParts[repoUrlParts.length - 2] || '';
-                  folderName = `${repoOwner}-${templateName}`.toLowerCase();
-                  debug('report-loader', `Constructed folder name from URL: ${folderName}`);
-                }
-              }
-              if (template.result) {
-                directData = template.result;
-                debug('report-loader', 'Using direct result data');
-              }
-            } else if (typeof template === 'string') {
-              templateName = template;
-            }
-            debug(
-              'report-loader',
-              `Loading report data for template: ${templateName || 'unknown'}`,
-            );
-            if (directData) {
-              debug('report-loader', 'Using direct data from template object');
-              return resolve(directData);
-            }
-
-            const afterFallback = (promise: Promise<ReportData>) => {
-              promise
-                .then((d) => {
-                  if (d) resolve(d);
-                  else reject(new Error('Failed to load report data'));
-                })
-                .catch((error) => {
-                  debug('report-loader', 'All report loading strategies failed', error);
-                  reject(new Error((error as Error).message || 'Failed to load report data'));
-                });
-            };
-
-            if (dataJsPath) {
-              debug('report-loader', `Attempting to load data.js file: ${dataJsPath}`);
-              this._loadDataJsFile(dataJsPath)
-                .then((data: ReportData) => {
-                  debug('report-loader', 'Successfully loaded data from data.js file', data);
-                  resolve(data);
-                })
-                .catch((err: any) => {
-                  debug('report-loader', `Failed data.js, falling back: ${err.message}`);
-                  afterFallback(this._tryLoadReport(templateName, templatePath, folderName));
-                });
-            } else {
-              afterFallback(this._tryLoadReport(templateName, templatePath, folderName));
-            }
+            // No filesystem fallback - database-first architecture
+            reject(new Error('Could not load report data from database API'));
           })
-          .catch(reject); // Close tryApiLoad().then() and handle errors
+          .catch(reject);
       });
     },
+
+    // Legacy filesystem methods - DEPRECATED (database-first architecture)
     _loadDataJsFile: function (dataJsPath: string) {
-      return new Promise<ReportData>((resolve, reject) => {
-        debug('report-loader', `Loading data.js file: ${dataJsPath}`);
-        const script = document.createElement('script');
-        script.src = `/${RESULTS_DIR}/${dataJsPath}`;
-        script.id = `data-js-${Date.now()}`;
-        script.async = true;
-        script.onload = function () {
-          debug('report-loader', 'Data.js script loaded, checking for reportData');
-          if ((window as any).reportData) {
-            const data = (window as any).reportData as ReportData;
-            debug('report-loader', 'Found window.reportData', data);
-            const copy: ReportData = { ...data };
-            (window as any).reportData = null;
-            try {
-              script.remove();
-            } catch (_) {}
-            resolve(copy);
-          } else {
-            reject(new Error('Data.js loaded but did not set window.reportData'));
-          }
-        };
-        script.onerror = function () {
-          reject(new Error(`Failed to load data.js file: ${dataJsPath}`));
-        };
-        document.head.appendChild(script);
-        setTimeout(() => {
-          if ((window as any).reportData) {
-            const data = (window as any).reportData as ReportData;
-            const copy: ReportData = { ...data };
-            (window as any).reportData = null;
-            try {
-              script.remove();
-            } catch (_) {}
-            resolve(copy);
-          } else {
-            fetch(`/${RESULTS_DIR}/${dataJsPath}`)
-              .then((r) => {
-                if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                return r.text();
-              })
-              .then(() => reject(new Error('Timed out waiting for reportData, but file exists')))
-              .catch((err) =>
-                reject(
-                  new Error(
-                    `Timed out waiting for reportData and couldn't fetch file: ${(err as Error).message}`,
-                  ),
-                ),
-              );
-          }
-        }, 3000);
-      });
+      return Promise.reject(
+        new Error('Filesystem loading deprecated - use database API'),
+      );
     },
     _tryLoadReport: function (templateName?: string, templatePath?: string, folderName?: string) {
-      return new Promise<ReportData>((resolve, reject) => {
-        debug('report-loader', 'Starting report loading sequence');
-        const tryStandardStrategies = () => {
-          const templateId =
-            folderName || (typeof templateName === 'string' ? templateName : 'unknown');
-          debug('report-loader', `Trying standard strategies for template: ${templateId}`);
-          this._fetchReportFile(`/${RESULTS_DIR}/${templateId}/latest.json`)
-            .then((data: ReportData) => {
-              if (isValidObject(data)) {
-                if (data.dataPath) {
-                  const dataPath = (data as any).dataPath;
-                  debug(
-                    'report-loader',
-                    `Found dataPath in latest.json: ${dataPath}, loading that file`,
-                  );
-                  return this._loadDataJsFile(`${templateId}/${dataPath}`).catch((err: any) => {
-                    debug(
-                      'report-loader',
-                      `Failed to load data.js file: ${(err as Error).message}, using latest.json metadata`,
-                    );
-                    return data;
-                  });
-                }
-                return data;
-              }
-              throw new Error('Invalid data format in latest.json');
-            })
-            .then((data: ReportData) => {
-              if (isValidObject(data)) resolve(data);
-              else throw new Error('Invalid data after latest.json');
-            })
-            .catch(() => this._findMostRecentAnalysisFile(templateId))
-            .then((data: ReportData) => {
-              if (data && isValidObject(data)) resolve(data);
-              else throw new Error('Could not find a valid analysis file');
-            })
-            .catch(() => {
-              reject(new Error(`Failed to load report data for template: ${templateId}`));
-            });
-        };
-        if (templatePath) {
-          debug('report-loader', `Trying specific path: ${templatePath}`);
-          this._fetchReportFile(`/${RESULTS_DIR}/${templatePath}`)
-            .then((data: ReportData) => {
-              if (isValidObject(data)) {
-                resolve(data);
-              } else throw new Error('Invalid data format from specific path');
-            })
-            .catch(() => {
-              tryStandardStrategies();
-            });
-        } else {
-          tryStandardStrategies();
-        }
-      });
+      return Promise.reject(
+        new Error('Filesystem loading deprecated - use database API'),
+      );
     },
     _fetchReportFile: function (path: string) {
-      debug('report-loader', `Fetching report file: ${path}`);
-      return fetch(path).then((response) => {
-        if (!response.ok) throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        return response.json() as Promise<ReportData>;
-      });
+      return Promise.reject(
+        new Error('Filesystem loading deprecated - use database API'),
+      );
     },
     _findMostRecentAnalysisFile: function (template: string | TemplateDescriptor) {
-      debug('report-loader', 'Finding most recent analysis file for template', template);
-      let folderPath: string;
-      if (typeof template === 'object' && template !== null) {
-        if (template.folderPath) folderPath = template.folderPath;
-        else if (template.relativePath) {
-          const folderName = template.relativePath.split('/')[0];
-          if (template.scannedBy && template.scannedBy.length > 0) {
-            const lastScanner = template.scannedBy[template.scannedBy.length - 1];
-            folderPath = `${lastScanner}-${folderName}`;
-          } else {
-            folderPath = folderName;
-          }
-        } else {
-          folderPath = String(template as any);
-        }
-      } else {
-        folderPath = String(template);
-      }
-      debug('report-loader', `Using folder path: ${folderPath}`);
-      return this._fetchReportFile(`/${RESULTS_DIR}/${folderPath}/index.json`)
-        .then((indexData: unknown) => {
-          const idx = indexData as IndexJson;
-          if (idx && Array.isArray(idx.timestamps) && idx.timestamps.length > 0) {
-            debug('report-loader', `Found index.json with ${idx.timestamps.length} timestamps`);
-            return this._tryTimestamps(template, idx.timestamps as number[]);
-          } else {
-            debug('report-loader', 'No index.json or invalid format, using generated timestamps');
-            const timestamps = [Date.now(), Date.now() - 60000, Date.now() - 120000];
-            return this._tryTimestamps(template, timestamps);
-          }
-        })
-        .catch(() => {
-          debug('report-loader', 'Error fetching index.json, using generated timestamps');
-          const timestamps = [Date.now(), Date.now() - 60000, Date.now() - 120000];
-          return this._tryTimestamps(template, timestamps);
-        });
+      return Promise.reject(
+        new Error('Filesystem loading deprecated - use database API'),
+      );
     },
     _tryTimestamps: function (template: string | TemplateDescriptor, timestamps: number[]) {
-      if (!timestamps || timestamps.length === 0) {
-        return Promise.reject(new Error('No more timestamps to try'));
-      }
-      let folderPath: string;
-      if (typeof template === 'object' && template !== null) {
-        if (template.folderPath) folderPath = template.folderPath;
-        else if (template.relativePath) {
-          const folderName = template.relativePath.split('/')[0];
-          if (template.scannedBy && template.scannedBy.length > 0) {
-            const lastScanner = template.scannedBy[template.scannedBy.length - 1];
-            folderPath = `${lastScanner}-${folderName}`;
-          } else {
-            folderPath = folderName;
-          }
-        } else {
-          folderPath = String(template as any);
-        }
-      } else {
-        folderPath = String(template);
-      }
-      debug('report-loader', `Using folder path for timestamps: ${folderPath}`);
-      const timestamp = timestamps[0];
-      const path = `/${RESULTS_DIR}/${folderPath}/${timestamp}-analysis.json`;
-      debug('report-loader', `Trying timestamp ${timestamp} for template at path ${path}`);
-      return this._fetchReportFile(path).catch(() =>
-        this._tryTimestamps(template, timestamps.slice(1)),
+      return Promise.reject(
+        new Error('Filesystem loading deprecated - use database API'),
       );
     },
   };
 
   window.ReportLoader = ReportLoader;
-  debug('report-loader', 'Report Loader module initialized (TS migration)', ReportLoader);
+  debug('report-loader', 'Report Loader initialized (database-first)', ReportLoader);
 })(window);

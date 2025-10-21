@@ -410,7 +410,13 @@ class DashboardRenderer {
     let history: any[] = [];
     try {
       // Load from MongoDB API instead of filesystem
-      const resp = await fetch(`/api/v4/results/repo/${owner}/${repo}`, { cache: 'no-store' });
+      const token = localStorage.getItem('gh_access_token');
+      const resp = await fetch(`/api/v4/results/repo/${owner}/${repo}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const apiData = await resp.json();
 

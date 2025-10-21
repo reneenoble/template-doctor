@@ -19,6 +19,7 @@ interface ScannedTemplateEntry {
   compliance: { percentage: number; issues: number; passed: number };
   timestamp: string;
   scannedBy?: string[];
+  createdBy?: string;
   ruleSet?: string;
   customConfig?: { gistUrl?: string; [key: string]: any };
   description?: string;

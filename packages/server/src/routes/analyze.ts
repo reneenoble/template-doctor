@@ -109,28 +109,15 @@ export async function analyzeSingleRepository(
 
   const gh = createGitHubClient(token);
 
-  // Extract user from Authorization header if present (for fork-first strategy)
-  const authHeader = req.headers.authorization || '';
-  console.log(
-    `[analyze] Authorization header present: ${!!authHeader}, length: ${authHeader.length}`,
-  );
-  const userToken = authHeader.replace(/^Bearer\s+/i, '') || undefined;
-  console.log(
-    `[analyze] User token extracted: ${!!userToken}, same as server token: ${userToken === token}`,
-  );
-  let authenticatedUser: string | undefined;
-
-  // Always try to get username from user token if provided
-  if (userToken) {
-    try {
-      const userInfo = await gh('/user', userToken);
-      authenticatedUser = userInfo.login;
-      console.log(`[analyze] ✅ Authenticated user: ${authenticatedUser}`);
-    } catch (e: any) {
-      console.log(`[analyze] ❌ Failed to get authenticated user: ${e?.message}`);
-    }
+  // Get authenticated user from requireAuth middleware
+  // The middleware already validated the token and set req.user and req.githubToken
+  const authenticatedUser = req.user?.login;
+  const userToken = req.githubToken; // User's GitHub token from Authorization header
+  
+  if (authenticatedUser) {
+    console.log(`[analyze] ✅ Authenticated user: ${authenticatedUser}`);
   } else {
-    console.log(`[analyze] ⚠️  No user token provided - scannedBy will be undefined`);
+    console.log(`[analyze] ⚠️  No authenticated user - this should not happen with requireAuth middleware`);
   }
 
   let owner: string;

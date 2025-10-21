@@ -68,11 +68,15 @@
     log('Loading template data from MongoDB API (auth confirmed)');
 
     try {
+      // Get GitHub token for authenticated API requests
+      const token = localStorage.getItem('gh_access_token');
+      
       // Load from MongoDB-backed API instead of filesystem
       const response = await fetch('/api/v4/results/latest?limit=200', {
         cache: 'no-store',
         headers: {
           Accept: 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
 
@@ -100,6 +104,7 @@
             issues: r.latestAnalysis?.issues || 0,
             passed: r.latestAnalysis?.passed || 0,
           },
+          createdBy: r.latestAnalysis?.createdBy,
           tags: r.tags || [],
           // AZD test data (if available)
           azdTest: r.latestAzdTest

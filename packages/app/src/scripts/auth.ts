@@ -555,7 +555,12 @@ class GitHubAuth {
 
     try {
       const apiUrl = buildApiUrl(`/setup/check-access?username=${encodeURIComponent(username)}`);
-      const response = await fetch(apiUrl);
+      const token = localStorage.getItem('gh_access_token');
+      const response = await fetch(apiUrl, {
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
 
       if (!response.ok) {
         this.hideSetupLink();
