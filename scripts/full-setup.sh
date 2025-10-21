@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
 #
-# Template Doctor - Full Setup Script
-# ====================================
-# This script guides you through the complete setup process for Template Doctor:
-# 1. Prerequisites check
-# 2. GitHub OAuth App creation
-# 3. GitHub PAT creation
-# 4. MongoDB setup
-# 5. Environment configuration
-# 6. UAMI setup (optional, for GitHub Actions)
-# 7. Azure deployment with azd
+# Template Doctor - Full Setup Script (Improved)
+# ===============================================
+# This script guides you through the complete setup process for Template Doctor.
 #
-# Usage: ./scripts/full-setup.sh
+# Usage: ./scripts/full-setup-improved.sh
 #
 
 set -euo pipefail
@@ -35,7 +28,6 @@ GITHUB_OAUTH_DONE=false
 GITHUB_PAT_DONE=false
 MONGODB_DONE=false
 ENV_CONFIGURED=false
-UAMI_DONE=false
 
 # =============================================================================
 # Helper Functions
@@ -106,28 +98,6 @@ check_prerequisites() {
     
     local all_good=true
     
-    # Check Azure CLI
-    print_step "Checking Azure CLI..."
-    if command -v az &> /dev/null; then
-        local az_version=$(az version --query '"azure-cli"' -o tsv 2>/dev/null || echo "unknown")
-        print_success "Azure CLI installed (version: $az_version)"
-    else
-        print_error "Azure CLI not found"
-        print_info "Install: https://learn.microsoft.com/cli/azure/install-azure-cli"
-        all_good=false
-    fi
-    
-    # Check Azure Developer CLI
-    print_step "Checking Azure Developer CLI (azd)..."
-    if command -v azd &> /dev/null; then
-        local azd_version=$(azd version 2>/dev/null | head -1 || echo "unknown")
-        print_success "Azure Developer CLI installed ($azd_version)"
-    else
-        print_error "Azure Developer CLI (azd) not found"
-        print_info "Install: curl -fsSL https://aka.ms/install-azd.sh | bash"
-        all_good=false
-    fi
-    
     # Check Docker
     print_step "Checking Docker..."
     if command -v docker &> /dev/null; then
@@ -172,7 +142,7 @@ check_prerequisites() {
 setup_github_oauth() {
     print_section "Step 2: GitHub OAuth App Setup"
     
-    print_info "You need to create a GitHub OAuth App for user authentication."
+    print_info "You need a GitHub OAuth App for user authentication."
     echo ""
     echo "This will be used for:"
     echo "  • User login to Template Doctor"
@@ -180,53 +150,79 @@ setup_github_oauth() {
     echo "  • User-specific repository access"
     echo ""
     
-    if ask_yes_no "Have you already created a GitHub OAuth App?"; then
-        echo ""
-        print_step "Great! Enter your OAuth App credentials:"
-        echo ""
-        
-        read -p "GitHub Client ID (starts with Ov or Iv): " GITHUB_CLIENT_ID
-        read -sp "GitHub Client Secret: " GITHUB_CLIENT_SECRET
-        echo ""
-        
-        if [[ -z "$GITHUB_CLIENT_ID" || -z "$GITHUB_CLIENT_SECRET" ]]; then
-            print_error "Both Client ID and Secret are required"
+    echo "Choose an option:"
+    echo -e "  ${BOLD}1)${NC} Create new GitHub OAuth App (guided setup)"
+    echo -e "  ${BOLD}2)${NC} I already have OAuth credentials"
+    echo -e "  ${BOLD}3)${NC} I will add values manually to .env later"
+    echo ""
+    
+    read -p "Your choice [1-3]: " -r
+    
+    case "$REPLY" in
+        1)
+            echo ""
+            print_info "Let's create a GitHub OAuth App:"
+            echo ""
+            echo -e "1. Open: ${CYAN}https://github.com/settings/developers${NC}"
+            echo -e "2. Click '${BOLD}New OAuth App${NC}'"
+            echo -e "3. Fill in:"
+            echo -e "   ${BOLD}Application name:${NC} Template Doctor"
+            echo -e "   ${BOLD}Homepage URL:${NC} http://localhost:3000 (for local dev)"
+            echo -e "   ${BOLD}Authorization callback URL:${NC} http://localhost:3000/callback.html"
+            echo -e "4. Click '${BOLD}Register application${NC}'"
+            echo -e "5. Copy the ${BOLD}Client ID${NC} (starts with Ov or Iv)"
+            echo -e "6. Click '${BOLD}Generate a new client secret${NC}'"
+            echo -e "7. Copy the ${BOLD}Client Secret${NC} (you won't see it again!)"
+            echo ""
+            print_warning "NOTE: For production, create a separate OAuth app with production URL"
+            echo ""
+            
+            wait_for_enter
+            
+            echo ""
+            read -p "GitHub Client ID: " GITHUB_CLIENT_ID
+            read -sp "GitHub Client Secret: " GITHUB_CLIENT_SECRET
+            echo ""
+            
+            if [[ -z "$GITHUB_CLIENT_ID" || -z "$GITHUB_CLIENT_SECRET" ]]; then
+                print_error "Both Client ID and Secret are required"
+                exit 1
+            fi
+            
+            GITHUB_OAUTH_DONE=true
+            print_success "OAuth App configured!"
+            ;;
+            
+        2)
+            echo ""
+            print_step "Great! Enter your OAuth App credentials:"
+            echo ""
+            
+            read -p "GitHub Client ID (starts with Ov or Iv): " GITHUB_CLIENT_ID
+            read -sp "GitHub Client Secret: " GITHUB_CLIENT_SECRET
+            echo ""
+            
+            if [[ -z "$GITHUB_CLIENT_ID" || -z "$GITHUB_CLIENT_SECRET" ]]; then
+                print_error "Both Client ID and Secret are required"
+                exit 1
+            fi
+            
+            GITHUB_OAUTH_DONE=true
+            print_success "OAuth credentials saved!"
+            ;;
+            
+        3)
+            GITHUB_CLIENT_ID="<add-manually>"
+            GITHUB_CLIENT_SECRET="<add-manually>"
+            GITHUB_OAUTH_DONE=true
+            print_info "Skipping OAuth setup - remember to add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env"
+            ;;
+            
+        *)
+            print_error "Invalid choice"
             exit 1
-        fi
-        
-        GITHUB_OAUTH_DONE=true
-        print_success "OAuth credentials saved!"
-    else
-        echo ""
-        print_info "Let's create a GitHub OAuth App:"
-        echo ""
-        echo "1. Open: ${CYAN}https://github.com/settings/developers${NC}"
-        echo "2. Click '${BOLD}New OAuth App${NC}'"
-        echo "3. Fill in:"
-        echo "   ${BOLD}Application name:${NC} Template Doctor (Production)"
-        echo "   ${BOLD}Homepage URL:${NC} https://your-app-url (update after deployment)"
-        echo "   ${BOLD}Authorization callback URL:${NC} https://your-app-url/callback.html"
-        echo "4. Click '${BOLD}Register application${NC}'"
-        echo "5. Copy the ${BOLD}Client ID${NC} (starts with Ov or Iv)"
-        echo "6. Click '${BOLD}Generate a new client secret${NC}'"
-        echo "7. Copy the ${BOLD}Client Secret${NC} (you won't see it again!)"
-        echo ""
-        
-        wait_for_enter
-        
-        echo ""
-        read -p "GitHub Client ID: " GITHUB_CLIENT_ID
-        read -sp "GitHub Client Secret: " GITHUB_CLIENT_SECRET
-        echo ""
-        
-        if [[ -z "$GITHUB_CLIENT_ID" || -z "$GITHUB_CLIENT_SECRET" ]]; then
-            print_error "Both Client ID and Secret are required"
-            exit 1
-        fi
-        
-        GITHUB_OAUTH_DONE=true
-        print_success "OAuth App configured!"
-    fi
+            ;;
+    esac
     
     wait_for_enter
 }
@@ -236,77 +232,135 @@ setup_github_oauth() {
 # =============================================================================
 
 setup_github_pat() {
-    print_section "Step 3: GitHub Personal Access Token (PAT)"
+    print_section "Step 3: GitHub Personal Access Tokens"
     
-    print_info "You need a GitHub PAT for backend operations."
+    print_info "Template Doctor needs GitHub PATs for backend operations."
     echo ""
-    echo "This will be used for:"
-    echo "  • Repository cloning and analysis"
-    echo "  • Creating PRs to save results"
-    echo "  • Workflow dispatch (azd validation)"
-    echo "  • Handling SAML/SSO repositories"
+    echo "We need tokens for:"
+    echo "  • ${BOLD}GITHUB_TOKEN${NC} - General repository access (clone, analyze, PR creation)"
+    echo "  • ${BOLD}GITHUB_TOKEN_ANALYZER${NC} - Analyzer-specific operations"
+    echo "  • ${BOLD}GH_WORKFLOW_TOKEN${NC} - Workflow dispatch for validations"
+    echo ""
+    echo "Required scopes: ${BOLD}repo${NC}, ${BOLD}workflow${NC}, ${BOLD}read:org${NC}"
+    echo ""
+    print_info "${BOLD}NOTE:${NC} You can use the same token for all three variables unless you need different scopes."
     echo ""
     
-    if ask_yes_no "Do you already have a suitable GitHub PAT?"; then
-        echo ""
-        read -sp "GitHub Personal Access Token (ghp_...): " GITHUB_TOKEN
-        echo ""
-        
-        if [[ ! "$GITHUB_TOKEN" =~ ^ghp_ ]]; then
-            print_warning "Token doesn't start with 'ghp_' - are you sure it's correct?"
-            if ! ask_yes_no "Continue anyway?"; then
+    echo "Choose an option:"
+    echo -e "  ${BOLD}1)${NC} Create new GitHub PAT (guided setup)"
+    echo -e "  ${BOLD}2)${NC} I already have a GitHub PAT"
+    echo -e "  ${BOLD}3)${NC} I will add values manually to .env later"
+    echo ""
+    
+    read -p "Your choice [1-3]: " -r
+    
+    case "$REPLY" in
+        1)
+            echo ""
+            print_info "Let's create a GitHub Personal Access Token:"
+            echo ""
+            echo -e "1. Open: ${CYAN}https://github.com/settings/tokens/new${NC}"
+            echo -e "2. Give it a name: ${BOLD}Template Doctor${NC}"
+            echo -e "3. Set expiration: ${BOLD}90 days${NC} or longer"
+            echo -e "4. Select these scopes:"
+            echo -e "   ${BOLD}☑ repo${NC} - Full control of private repositories"
+            echo -e "   ${BOLD}☑ workflow${NC} - Update GitHub Action workflows"
+            echo -e "   ${BOLD}☑ read:org${NC} - Read org and team membership"
+            echo -e "5. Click '${BOLD}Generate token${NC}'"
+            echo -e "6. Copy the token (starts with ghp_)"
+            echo ""
+            print_warning "You won't be able to see this token again!"
+            echo ""
+            
+            wait_for_enter
+            
+            echo ""
+            read -sp "GitHub Personal Access Token: " GITHUB_TOKEN
+            echo ""
+            
+            if [[ -z "$GITHUB_TOKEN" ]]; then
+                print_error "GitHub token is required"
                 exit 1
             fi
-        fi
-        
-        GITHUB_PAT_DONE=true
-        print_success "GitHub PAT saved!"
-    else
-        echo ""
-        print_info "Let's create a GitHub Personal Access Token:"
-        echo ""
-        echo "1. Open: ${CYAN}https://github.com/settings/tokens/new${NC}"
-        echo "2. Give it a name: ${BOLD}Template Doctor Azure Deployment${NC}"
-        echo "3. Set expiration: ${BOLD}90 days${NC} or longer"
-        echo "4. Select these scopes:"
-        echo "   ${BOLD}☑ repo${NC} - Full control of private repositories"
-        echo "   ${BOLD}☑ workflow${NC} - Update GitHub Action workflows"
-        echo "   ${BOLD}☑ read:org${NC} - Read org and team membership"
-        echo "5. Click '${BOLD}Generate token${NC}'"
-        echo "6. Copy the token (starts with ghp_)"
-        echo ""
-        print_warning "You won't be able to see this token again!"
-        echo ""
-        
-        wait_for_enter
-        
-        echo ""
-        read -sp "GitHub Personal Access Token: " GITHUB_TOKEN
-        echo ""
-        
-        if [[ -z "$GITHUB_TOKEN" ]]; then
-            print_error "GitHub token is required"
+            
+            # Use same token for all three by default
+            echo ""
+            if ask_yes_no "Use the same token for GITHUB_TOKEN_ANALYZER and GH_WORKFLOW_TOKEN?" "y"; then
+                GITHUB_TOKEN_ANALYZER="$GITHUB_TOKEN"
+                GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
+                print_info "Using same token for all GitHub operations"
+            else
+                echo ""
+                print_step "Enter separate tokens (or press Enter to use same):"
+                echo ""
+                read -sp "GITHUB_TOKEN_ANALYZER (Enter for same): " GITHUB_TOKEN_ANALYZER
+                echo ""
+                if [[ -z "$GITHUB_TOKEN_ANALYZER" ]]; then
+                    GITHUB_TOKEN_ANALYZER="$GITHUB_TOKEN"
+                fi
+                
+                read -sp "GH_WORKFLOW_TOKEN (Enter for same): " GH_WORKFLOW_TOKEN
+                echo ""
+                if [[ -z "$GH_WORKFLOW_TOKEN" ]]; then
+                    GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
+                fi
+            fi
+            
+            GITHUB_PAT_DONE=true
+            print_success "GitHub PATs configured!"
+            ;;
+            
+        2)
+            echo ""
+            print_step "Enter your GitHub PAT:"
+            echo ""
+            
+            read -sp "GitHub Personal Access Token (ghp_...): " GITHUB_TOKEN
+            echo ""
+            
+            if [[ ! "$GITHUB_TOKEN" =~ ^ghp_ ]]; then
+                print_warning "Token doesn't start with 'ghp_' - are you sure it's correct?"
+                if ! ask_yes_no "Continue anyway?"; then
+                    exit 1
+                fi
+            fi
+            
+            echo ""
+            if ask_yes_no "Use the same token for GITHUB_TOKEN_ANALYZER and GH_WORKFLOW_TOKEN?" "y"; then
+                GITHUB_TOKEN_ANALYZER="$GITHUB_TOKEN"
+                GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
+            else
+                echo ""
+                read -sp "GITHUB_TOKEN_ANALYZER (Enter for same): " GITHUB_TOKEN_ANALYZER
+                echo ""
+                if [[ -z "$GITHUB_TOKEN_ANALYZER" ]]; then
+                    GITHUB_TOKEN_ANALYZER="$GITHUB_TOKEN"
+                fi
+                
+                read -sp "GH_WORKFLOW_TOKEN (Enter for same): " GH_WORKFLOW_TOKEN
+                echo ""
+                if [[ -z "$GH_WORKFLOW_TOKEN" ]]; then
+                    GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
+                fi
+            fi
+            
+            GITHUB_PAT_DONE=true
+            print_success "GitHub PATs saved!"
+            ;;
+            
+        3)
+            GITHUB_TOKEN="<add-manually>"
+            GITHUB_TOKEN_ANALYZER="<add-manually>"
+            GH_WORKFLOW_TOKEN="<add-manually>"
+            GITHUB_PAT_DONE=true
+            print_info "Skipping GitHub PAT setup - remember to add tokens to .env"
+            ;;
+            
+        *)
+            print_error "Invalid choice"
             exit 1
-        fi
-        
-        # Ask if they want to use the same token for workflow dispatch
-        echo ""
-        if ask_yes_no "Use the same token for workflow dispatch (azd validation)?" "y"; then
-            GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
-        else
-            echo ""
-            read -sp "Workflow Token (ghp_...): " GH_WORKFLOW_TOKEN
-            echo ""
-        fi
-        
-        GITHUB_PAT_DONE=true
-        print_success "GitHub PAT configured!"
-    fi
-    
-    # Default GH_WORKFLOW_TOKEN to GITHUB_TOKEN if not set
-    if [[ -z "${GH_WORKFLOW_TOKEN:-}" ]]; then
-        GH_WORKFLOW_TOKEN="$GITHUB_TOKEN"
-    fi
+            ;;
+    esac
     
     wait_for_enter
 }
@@ -320,39 +374,88 @@ setup_mongodb() {
     
     print_info "Template Doctor requires MongoDB for storing analysis results."
     echo ""
-    echo "Choose one of these options:"
-    echo "  ${BOLD}A)${NC} Use existing MongoDB (Atlas, Cosmos DB, etc.)"
-    echo "  ${BOLD}B)${NC} Create new Azure Cosmos DB (MongoDB API) - automated by azd"
+    echo "Choose your deployment target:"
+    echo -e "  ${BOLD}1)${NC} Local development (Docker Compose) - ${CYAN}Recommended${NC}"
+    echo -e "  ${BOLD}2)${NC} Production (Azure Cosmos DB with Managed Identity)"
+    echo -e "  ${BOLD}3)${NC} Custom MongoDB (provide connection string)"
+    echo -e "  ${BOLD}4)${NC} I will configure manually later"
     echo ""
     
-    read -p "Your choice [A/b]: " -r
+    read -p "Your choice [1-4]: " -r
     
-    if [[ "$REPLY" =~ ^[Bb]$ ]]; then
-        print_step "Will create new Cosmos DB during 'azd provision'"
-        print_info "Uncomment the Cosmos DB section in infra/main.bicep before provisioning"
-        MONGODB_URI="<will-be-created-by-azd>"
-        MONGODB_DONE=true
-    else
-        echo ""
-        print_step "Using existing MongoDB"
-        echo ""
-        print_info "Enter your MongoDB connection string:"
-        echo "Format: mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/?options"
-        echo ""
-        print_warning "NOTE: For local dev, docker-compose.yml will respect this MONGODB_URI from .env"
-        echo "      For production, set it as an environment variable in your Container App"
-        echo ""
-        
-        read -p "MongoDB URI: " MONGODB_URI
-        
-        if [[ ! "$MONGODB_URI" =~ ^mongodb ]]; then
-            print_error "MongoDB URI must start with 'mongodb://' or 'mongodb+srv://'"
+    case "$REPLY" in
+        1)
+            print_step "Configuring for local development..."
+            echo ""
+            print_info "For local development, Template Doctor uses:"
+            echo -e "  • MongoDB container via docker-compose"
+            echo -e "  • Database: ${BOLD}template-doctor${NC}"
+            echo -e "  • Connection: ${CYAN}mongodb://mongodb:27017/template-doctor${NC}"
+            echo ""
+            print_success "No configuration needed - docker-compose handles this automatically!"
+            echo ""
+            print_info "To start local development:"
+            echo -e "  ${BOLD}docker-compose --profile combined up${NC}"
+            echo ""
+            
+            # Don't set MONGODB_URI for local - let docker-compose default handle it
+            MONGODB_URI=""
+            MONGODB_DONE=true
+            ;;
+            
+        2)
+            print_step "Configuring for Azure Cosmos DB (Production)..."
+            echo ""
+            print_info "Production deployment uses Azure Cosmos DB with Managed Identity (MI)."
+            echo ""
+            echo "Steps:"
+            echo -e "  1. Create Azure Cosmos DB account (MongoDB API) in Azure Portal"
+            echo -e "  2. Create database: ${BOLD}template-doctor${NC}"
+            echo -e "  3. Enable Managed Identity on your Container App"
+            echo -e "  4. Grant Container App's MI these roles on Cosmos DB:"
+            echo -e "     • ${BOLD}Cosmos DB Built-in Data Contributor${NC}"
+            echo -e "  5. DO NOT use connection strings - MI handles authentication"
+            echo ""
+            print_warning "IMPORTANT: Use Managed Identity, NOT connection strings for production!"
+            echo ""
+            print_info "Documentation:"
+            echo "  • Cosmos DB setup: docs/deployment/COSMOS_DB_PORTAL_SETUP.md"
+            echo "  • MI configuration: https://learn.microsoft.com/azure/container-apps/managed-identity"
+            echo ""
+            
+            MONGODB_URI="<use-managed-identity-in-production>"
+            MONGODB_DONE=true
+            ;;
+            
+        3)
+            print_step "Using custom MongoDB..."
+            echo ""
+            print_info "Enter your MongoDB connection string:"
+            echo -e "Format: ${CYAN}mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/?options${NC}"
+            echo ""
+            
+            read -p "MongoDB URI: " MONGODB_URI
+            
+            if [[ ! "$MONGODB_URI" =~ ^mongodb ]]; then
+                print_error "MongoDB URI must start with 'mongodb://' or 'mongodb+srv://'"
+                exit 1
+            fi
+            
+            MONGODB_DONE=true
+            print_success "MongoDB configured!"
+            ;;
+            
+        4)
+            MONGODB_URI="<add-manually>"
+            MONGODB_DONE=true
+            print_info "Skipping MongoDB setup - remember to configure in .env"
+            ;;
+            
+        *)
+            print_error "Invalid choice"
             exit 1
-        fi
-        
-        MONGODB_DONE=true
-        print_success "MongoDB configured!"
-    fi
+            ;;
+    esac
     
     wait_for_enter
 }
@@ -372,65 +475,93 @@ setup_admin_user() {
     echo "  • Manage system configuration"
     echo ""
     
-    read -p "Enter your GitHub username: " ADMIN_GITHUB_USER
+    echo "Choose an option:"
+    echo -e "  ${BOLD}1)${NC} Enter admin usernames now"
+    echo -e "  ${BOLD}2)${NC} I will configure manually later"
+    echo ""
     
-    if [[ -z "$ADMIN_GITHUB_USER" ]]; then
-        print_error "Admin username is required"
-        exit 1
-    fi
+    read -p "Your choice [1-2]: " -r
     
-    # Ask if they want to add more admins
-    ADMIN_GITHUB_USERS="$ADMIN_GITHUB_USER"
+    case "$REPLY" in
+        1)
+            echo ""
+            print_step "Enter GitHub usernames (comma-separated):"
+            print_info "Example: user1,user2,user3"
+            echo ""
+            
+            read -p "Admin GitHub users: " ADMIN_GITHUB_USERS
+            
+            if [[ -z "$ADMIN_GITHUB_USERS" ]]; then
+                print_warning "No admin users specified - you can add them to .env later"
+                ADMIN_GITHUB_USERS=""
+            else
+                print_success "Admin users: $ADMIN_GITHUB_USERS"
+            fi
+            ;;
+            
+        2)
+            ADMIN_GITHUB_USERS="<add-manually>"
+            print_info "Skipping admin setup - remember to add ADMIN_GITHUB_USERS to .env"
+            ;;
+            
+        *)
+            print_error "Invalid choice"
+            exit 1
+            ;;
+    esac
     
-    if ask_yes_no "Add more admin users?"; then
-        echo ""
-        print_info "Enter additional usernames separated by commas (e.g., user1,user2,user3)"
-        read -p "Additional admins: " ADDITIONAL_ADMINS
-        
-        if [[ -n "$ADDITIONAL_ADMINS" ]]; then
-            ADMIN_GITHUB_USERS="$ADMIN_GITHUB_USER,$ADDITIONAL_ADMINS"
-        fi
-    fi
-    
-    print_success "Admin users: $ADMIN_GITHUB_USERS"
     wait_for_enter
 }
 
 # =============================================================================
-# Azure Location Selection
+# Workflow Dispatch Repository
 # =============================================================================
 
-select_azure_location() {
-    print_section "Step 6: Azure Region Selection"
+setup_dispatch_repo() {
+    print_section "Step 6: GitHub Actions Workflow Configuration"
     
-    print_info "Select an Azure region for deployment:"
+    print_info "Where should GitHub Actions workflows run?"
     echo ""
-    echo "  1) swedencentral (recommended - low cost)"
-    echo "  2) eastus"
-    echo "  3) westus2"
-    echo "  4) westeurope"
-    echo "  5) northeurope"
-    echo "  6) Other (manual entry)"
+    echo "Template Doctor triggers GitHub Actions workflows for:"
+    echo "  • Template validation (azd-validation)"
+    echo "  • Docker image scanning"
+    echo "  • OSSF scorecard checks"
+    echo ""
+    echo -e "The ${BOLD}DISPATCH_TARGET_REPO${NC} is where these workflows execute."
+    echo ""
+    print_info "This should typically be YOUR fork or the repository you're working with."
+    echo ""
+    echo "Choose an option:"
+    echo -e "  ${BOLD}1)${NC} Enter repository now (format: owner/repo)"
+    echo -e "  ${BOLD}2)${NC} I will configure manually later"
     echo ""
     
-    read -p "Your choice [1-6]: " -r
+    read -p "Your choice [1-2]: " -r
     
     case "$REPLY" in
-        1) AZURE_LOCATION="swedencentral" ;;
-        2) AZURE_LOCATION="eastus" ;;
-        3) AZURE_LOCATION="westus2" ;;
-        4) AZURE_LOCATION="westeurope" ;;
-        5) AZURE_LOCATION="northeurope" ;;
-        6) 
-            read -p "Enter Azure location: " AZURE_LOCATION
+        1)
+            echo ""
+            read -p "Repository (format: owner/repo): " DISPATCH_TARGET_REPO
+            
+            if [[ ! "$DISPATCH_TARGET_REPO" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+                print_error "Invalid format - must be owner/repo"
+                exit 1
+            fi
+            
+            print_success "Dispatch target: $DISPATCH_TARGET_REPO"
             ;;
-        *) 
-            AZURE_LOCATION="swedencentral"
-            print_info "Using default: swedencentral"
+            
+        2)
+            DISPATCH_TARGET_REPO="<add-manually>"
+            print_info "Skipping dispatch repo setup - remember to add DISPATCH_TARGET_REPO to .env"
+            ;;
+            
+        *)
+            print_error "Invalid choice"
+            exit 1
             ;;
     esac
     
-    print_success "Azure location: $AZURE_LOCATION"
     wait_for_enter
 }
 
@@ -453,6 +584,13 @@ create_env_file() {
     
     print_step "Creating .env file with your configuration..."
     
+    # Prepare MongoDB line based on whether URI was set
+    if [[ -n "$MONGODB_URI" ]]; then
+        MONGODB_LINE="MONGODB_URI=$MONGODB_URI"
+    else
+        MONGODB_LINE="# MONGODB_URI - Leave unset for local dev (docker-compose default)"
+    fi
+    
     cat > "$ENV_FILE" << EOF
 ###################################################################################################
 # Template Doctor - Environment Configuration
@@ -465,29 +603,43 @@ create_env_file() {
 GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID
 GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET
 GITHUB_TOKEN=$GITHUB_TOKEN
+GITHUB_TOKEN_ANALYZER=$GITHUB_TOKEN_ANALYZER
 GH_WORKFLOW_TOKEN=$GH_WORKFLOW_TOKEN
 
-# Admin Access Control
+# Admin Access Control (comma-separated GitHub usernames)
 ADMIN_GITHUB_USERS=$ADMIN_GITHUB_USERS
 
 # Database
-MONGODB_URI=$MONGODB_URI
+$MONGODB_LINE
+MONGODB_DATABASE=template-doctor
 
 ############################################
-# Azure Configuration
+# Server Configuration
 ############################################
-AZURE_LOCATION=$AZURE_LOCATION
+# Express Server Port (backend + frontend combined)
+PORT=3000
+
+# Frontend Vite Dev Server Port (if running separately)
+VITE_PORT=3000
+
+# Legacy compatibility
+SERVE_FRONTEND=true
+BASE=http://localhost:7071
 
 ############################################
-# Optional Settings (defaults)
+# Application Defaults
 ############################################
 DEFAULT_RULE_SET=dod
 REQUIRE_AUTH_FOR_RESULTS=true
 AUTO_SAVE_RESULTS=false
-ARCHIVE_ENABLED=false
-ARCHIVE_COLLECTION=aigallery
-DISPATCH_TARGET_REPO=Template-Doctor/template-doctor
+ARCHIVE_ENABLED=true
+ARCHIVE_COLLECTION=gallery
+ARCHIVE_REPO_SLUG=Template-Doctor/centralized-collections-archive
 ISSUE_AI_ENABLED=false
+DEPRECATED_MODELS=gpt-3.5-turbo,model-old-x
+
+# Target repository for GitHub Actions workflow dispatch
+DISPATCH_TARGET_REPO=$DISPATCH_TARGET_REPO
 
 EOF
     
@@ -495,239 +647,15 @@ EOF
     print_success ".env file created successfully!"
     print_info "Location: $ENV_FILE"
     
-    # Validate the env file
-    echo ""
-    print_step "Validating configuration..."
-    if "$REPO_ROOT/scripts/validate-env.sh"; then
-        print_success "Configuration is valid!"
-    else
-        print_warning "Validation had warnings - review above"
-    fi
-    
-    wait_for_enter
-}
-
-# =============================================================================
-# UAMI Setup (Optional for GitHub Actions)
-# =============================================================================
-
-setup_uami() {
-    print_section "Step 8: User Assigned Managed Identity (Optional)"
-    
-    print_info "UAMI enables GitHub Actions workflows to deploy to Azure without storing credentials."
-    echo ""
-    echo "This is optional and only needed if you plan to:"
-    echo "  • Use GitHub Actions for CI/CD"
-    echo "  • Deploy to Azure from workflows"
-    echo ""
-    
-    if ! ask_yes_no "Set up UAMI for GitHub Actions?"; then
-        print_info "Skipping UAMI setup"
-        return
-    fi
-    
-    echo ""
-    print_step "Checking Azure login status..."
-    
-    if ! az account show &> /dev/null; then
-        print_warning "Not logged into Azure"
-        print_step "Logging in to Azure..."
-        az login
-    else
-        local account_name=$(az account show --query name -o tsv)
-        print_success "Logged in to Azure as: $account_name"
-    fi
-    
-    echo ""
-    print_step "UAMI requires additional information:"
-    echo ""
-    
-    read -p "Azure Subscription ID: " AZURE_SUBSCRIPTION_ID
-    read -p "Azure Resource Group (where Container App will be): " AZURE_RESOURCE_GROUP
-    read -p "GitHub Owner (org or user): " GITHUB_OWNER
-    read -p "GitHub Repository name: " GITHUB_REPO
-    
-    # Update .env with these values
-    cat >> "$ENV_FILE" << EOF
-
-############################################
-# UAMI Configuration (for GitHub Actions)
-############################################
-AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID
-AZURE_RESOURCE_GROUP=$AZURE_RESOURCE_GROUP
-GITHUB_OWNER=$GITHUB_OWNER
-GITHUB_REPO=$GITHUB_REPO
-EOF
-    
-    # Run the UAMI setup script
-    print_step "Running UAMI setup script..."
-    
-    if [[ -f "$REPO_ROOT/scripts/setup.sh" ]]; then
-        bash "$REPO_ROOT/scripts/setup.sh"
-        UAMI_DONE=true
-        
+    # Show what needs manual configuration
+    if grep -q "<add-manually>" "$ENV_FILE"; then
         echo ""
-        print_success "UAMI setup complete!"
-        print_info "Remember to add these GitHub Secrets to your repository:"
-        echo "  • AZURE_CLIENT_ID"
-        echo "  • AZURE_TENANT_ID"
-        echo "  • AZURE_SUBSCRIPTION_ID"
-    else
-        print_error "UAMI setup script not found at scripts/setup.sh"
-    fi
-    
-    wait_for_enter
-}
-
-# =============================================================================
-# Azure Deployment
-# =============================================================================
-
-deploy_to_azure() {
-    print_section "Step 9: Azure Deployment"
-    
-    print_info "Ready to deploy Template Doctor to Azure using azd!"
-    echo ""
-    echo "This will:"
-    echo "  1. Initialize azd environment"
-    echo "  2. Provision Azure resources (Container Apps, Container Registry, Log Analytics)"
-    echo "  3. Build and deploy the Docker image"
-    echo ""
-    
-    if ! ask_yes_no "Proceed with Azure deployment?" "y"; then
-        print_info "Skipping deployment - you can run it later with: azd up"
-        return
-    fi
-    
-    # Check if already logged in to Azure
-    print_step "Checking Azure authentication..."
-    if ! azd auth login --check-status &> /dev/null; then
-        print_warning "Not logged in to Azure via azd"
-        print_step "Logging in..."
-        azd auth login
-    else
-        print_success "Already logged in to azd"
-    fi
-    
-    # Initialize azd if needed
-    echo ""
-    print_step "Initializing azd environment..."
-    
-    if [[ ! -d "$REPO_ROOT/.azure" ]]; then
-        print_info "First time setup - creating environment"
-        azd init
-    else
-        print_info "azd environment already exists"
-        if ask_yes_no "Create a new environment?"; then
-            read -p "Environment name (e.g., production, staging): " ENV_NAME
-            azd env new "$ENV_NAME"
-        fi
-    fi
-    
-    # Run azd provision
-    echo ""
-    print_step "Provisioning Azure resources..."
-    print_warning "This may take 5-10 minutes..."
-    
-    if azd provision; then
-        print_success "Azure resources provisioned successfully!"
-        
-        # Get the deployed URL
-        SERVICE_WEB_URI=$(azd env get-values | grep SERVICE_WEB_URI | cut -d'=' -f2 | tr -d '"')
-        
+        print_warning "The following values need manual configuration:"
+        grep "<add-manually>" "$ENV_FILE" | sed 's/=.*//' | while read -r var; do
+            echo "  • $var"
+        done
         echo ""
-        print_success "Deployment URL: $SERVICE_WEB_URI"
-        echo ""
-        print_warning "IMPORTANT: Update your GitHub OAuth App callback URL!"
-        echo ""
-        echo "  1. Go to: ${CYAN}https://github.com/settings/developers${NC}"
-        echo "  2. Select your OAuth App"
-        echo "  3. Update ${BOLD}Authorization callback URL${NC} to:"
-        echo "     ${GREEN}${SERVICE_WEB_URI}/callback.html${NC}"
-        echo ""
-        
-        wait_for_enter
-        
-        # Deploy the application
-        echo ""
-        print_step "Building and deploying application..."
-        
-        if [[ -f "$REPO_ROOT/scripts/deploy.sh" ]]; then
-            bash "$REPO_ROOT/scripts/deploy.sh"
-            print_success "Application deployed!"
-        else
-            print_warning "deploy.sh script not found - you'll need to deploy manually"
-        fi
-        
-    else
-        print_error "Provisioning failed - check errors above"
-        exit 1
-    fi
-    
-    wait_for_enter
-}
-
-# =============================================================================
-# Post-Deployment Verification
-# =============================================================================
-
-verify_deployment() {
-    print_section "Step 10: Post-Deployment Verification"
-    
-    print_info "Let's verify your deployment is working correctly."
-    echo ""
-    
-    SERVICE_WEB_URI=$(azd env get-values 2>/dev/null | grep SERVICE_WEB_URI | cut -d'=' -f2 | tr -d '"' || echo "")
-    
-    if [[ -z "$SERVICE_WEB_URI" ]]; then
-        print_warning "Could not get deployed URL - skipping verification"
-        return
-    fi
-    
-    print_step "Testing deployment..."
-    echo ""
-    echo "  URL: $SERVICE_WEB_URI"
-    echo ""
-    
-    # Test if the site is accessible
-    if curl -sf "$SERVICE_WEB_URI" > /dev/null 2>&1; then
-        print_success "Site is accessible!"
-    else
-        print_warning "Site may not be ready yet (can take a few minutes)"
-    fi
-    
-    echo ""
-    print_info "Manual verification steps:"
-    echo ""
-    echo "  ${BOLD}1. Test OAuth Login:${NC}"
-    echo "     • Open: $SERVICE_WEB_URI"
-    echo "     • Click 'Sign in with GitHub'"
-    echo "     • Verify you can log in"
-    echo ""
-    echo "  ${BOLD}2. Test Template Analysis:${NC}"
-    echo "     • Enter a GitHub repo URL"
-    echo "     • Click 'Scan Template'"
-    echo "     • Wait for analysis to complete"
-    echo ""
-    echo "  ${BOLD}3. Test Database:${NC}"
-    echo "     • Verify scan results appear without hard refresh"
-    echo "     • Check that tiles show up on homepage"
-    echo ""
-    echo "  ${BOLD}4. Test Leaderboards (Admin):${NC}"
-    echo "     • Navigate to /leaderboards"
-    echo "     • Verify toggle switch appears (Demo Data ↔ Live Database)"
-    echo "     • Demo mode: Shows sample data from JSON"
-    echo "     • Live mode: Shows real database data or placeholders if empty"
-    echo ""
-    
-    if ask_yes_no "Open the deployed site in your browser?"; then
-        if command -v open &> /dev/null; then
-            open "$SERVICE_WEB_URI"
-        elif command -v xdg-open &> /dev/null; then
-            xdg-open "$SERVICE_WEB_URI"
-        else
-            print_info "Please open manually: $SERVICE_WEB_URI"
-        fi
+        print_info "Edit $ENV_FILE to add these values"
     fi
     
     wait_for_enter
@@ -740,54 +668,82 @@ verify_deployment() {
 print_summary() {
     print_section "Setup Complete! 🎉"
     
-    echo -e "${GREEN}${BOLD}Congratulations! Template Doctor is now set up.${NC}"
+    echo -e "${GREEN}${BOLD}Template Doctor setup is complete!${NC}"
+    echo ""
+    
+    print_info "What's configured:"
     echo ""
     
     if [[ "$GITHUB_OAUTH_DONE" == true ]]; then
-        print_success "GitHub OAuth App configured"
+        print_success "GitHub OAuth App"
     fi
     
     if [[ "$GITHUB_PAT_DONE" == true ]]; then
-        print_success "GitHub Personal Access Token configured"
+        print_success "GitHub Personal Access Tokens"
     fi
     
     if [[ "$MONGODB_DONE" == true ]]; then
-        print_success "MongoDB database configured"
+        print_success "MongoDB Database"
     fi
     
     if [[ "$ENV_CONFIGURED" == true ]]; then
-        print_success ".env file created and validated"
-    fi
-    
-    if [[ "$UAMI_DONE" == true ]]; then
-        print_success "UAMI configured for GitHub Actions"
+        print_success ".env file created"
     fi
     
     echo ""
-    print_info "Next steps:"
+    print_info "Next steps for LOCAL DEVELOPMENT:"
     echo ""
-    echo "  ${BOLD}For local development:${NC}"
-    echo "    docker-compose up                  # Recommended: runs Express + Vite in containers"
+    echo -e "  ${BOLD}1. Start with Docker Compose (Recommended):${NC}"
+    echo -e "     ${CYAN}docker-compose --profile combined up${NC}"
     echo ""
-    echo "    # Or manually (two terminals required):"
-    echo "    # Terminal 1: cd packages/server && npm run dev     # Express on port 3001"
-    echo "    # Terminal 2: cd packages/app && npm run dev        # Vite on port 4000"
+    echo "     This starts:"
+    echo "       • MongoDB container"
+    echo "       • Express backend + Vite frontend on port 3000"
     echo ""
-    echo "  ${BOLD}For Azure updates:${NC}"
-    echo "    ./scripts/deploy.sh      # Runs pre-deploy checks, builds & deploys (recommended)"
-    echo "    azd provision            # Update infrastructure only"
+    echo -e "  ${BOLD}2. Access the application:${NC}"
+    echo -e "     ${GREEN}http://localhost:3000${NC}"
     echo ""
-    echo "  ${BOLD}Documentation:${NC}"
-    echo "    docs/deployment/DEPLOYMENT_CHECKLIST.md"
-    echo "    docs/deployment/AZD_DEPLOYMENT.md"
-    echo "    docs/usage/README.md"
+    echo -e "  ${BOLD}3. Test OAuth login:${NC}"
+    echo "     • Click 'Sign in with GitHub'"
+    echo "     • Authorize the app"
     echo ""
     
-    if [[ -n "${SERVICE_WEB_URI:-}" ]]; then
-        echo "  ${BOLD}Your deployment:${NC}"
-        echo "    ${GREEN}$SERVICE_WEB_URI${NC}"
-        echo ""
-    fi
+    echo ""
+    print_info "For PRODUCTION deployment:"
+    echo ""
+    echo -e "  ${BOLD}1. Set up User-Assigned Managed Identity (UAMI):${NC}"
+    echo "     • Create UAMI in Azure Portal"
+    echo "     • Grant UAMI access to your Azure subscription"
+    echo "     • Grant UAMI 'Contributor' role on target resource group"
+    echo ""
+    print_warning "  ${BOLD}CRITICAL:${NC} Without UAMI, azd deployment will FAIL!"
+    echo "     • azd uses UAMI to provision Azure resources"
+    echo "     • Container App uses UAMI to access Cosmos DB (no connection strings)"
+    echo "     • See: https://learn.microsoft.com/azure/container-apps/managed-identity"
+    echo ""
+    echo -e "  ${BOLD}2. Set up Azure Cosmos DB:${NC}"
+    echo "     • Create Cosmos DB account (MongoDB API) in Azure Portal"
+    echo "     • Create database: template-doctor"
+    echo "     • Grant UAMI 'Cosmos DB Built-in Data Contributor' role"
+    echo "     • See: docs/deployment/COSMOS_DB_PORTAL_SETUP.md"
+    echo ""
+    echo -e "  ${BOLD}3. Create production OAuth app:${NC}"
+    echo "     • New GitHub OAuth app with production URL"
+    echo "     • Update callback URL after deployment"
+    echo "     • Add credentials to .env before azd deploy"
+    echo ""
+    echo -e "  ${BOLD}4. Deploy to Azure:${NC}"
+    echo "     • azd init"
+    echo "     • azd up (will use UAMI for authentication)"
+    echo "     • Monitor deployment logs for any UAMI permission issues"
+    echo ""
+    
+    echo ""
+    print_info "Documentation:"
+    echo "  • docs/usage/DOCKER.md"
+    echo "  • docs/deployment/COSMOS_DB_PORTAL_SETUP.md"
+    echo "  • README.md"
+    echo ""
     
     print_success "Happy template analyzing! 🚀"
     echo ""
@@ -809,17 +765,8 @@ main() {
     setup_github_pat
     setup_mongodb
     setup_admin_user
-    select_azure_location
+    setup_dispatch_repo
     create_env_file
-    
-    # Optional UAMI setup
-    setup_uami
-    
-    # Deploy to Azure
-    deploy_to_azure
-    
-    # Verify deployment
-    verify_deployment
     
     # Print summary
     print_summary
