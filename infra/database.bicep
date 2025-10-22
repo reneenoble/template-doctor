@@ -3,7 +3,6 @@
 
 param location string = resourceGroup().location
 param environmentName string
-param principalId string = ''
 
 // Generate unique resource name
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
@@ -72,20 +71,8 @@ resource mongoDatabase 'Microsoft.DocumentDB/databaseAccounts/mongodbDatabases@2
 // - scans  
 // - validation_runs
 
-// Built-in Cosmos DB Data Contributor Role Definition
-// Reference: https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/how-to-setup-rbac
-var cosmosDataContributorRoleId = '00000000-0000-0000-0000-000000000002' // Built-in MongoDB contributor
-
-// Role Assignment for Container App Managed Identity
-resource roleAssignment 'Microsoft.DocumentDB/databaseAccounts/mongodbRoleAssignments@2024-05-15' = if (principalId != '') {
-  parent: cosmosAccount
-  name: guid(cosmosAccount.id, principalId, 'mongo-contributor')
-  properties: {
-    roleDefinitionId: '${cosmosAccount.id}/mongodbRoleDefinitions/${cosmosDataContributorRoleId}'
-    principalId: principalId
-    scope: cosmosAccount.id
-  }
-}
+// NOTE: Role assignment is done in a separate module (cosmos-role-assignment.bicep)
+// to avoid circular dependency between Cosmos DB and Container App
 
 // Diagnostic Settings for Monitoring
 resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {

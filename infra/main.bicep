@@ -12,9 +12,6 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-@description('Id of the principal (user or service principal) to grant database access')
-param principalId string = ''
-
 // GitHub configuration (read from .env file by azd)
 @secure()
 @description('GitHub OAuth Client ID - set in .env as GITHUB_CLIENT_ID')
@@ -31,10 +28,6 @@ param githubToken string = ''
 @secure()
 @description('GitHub Workflow Token - set in .env as GH_WORKFLOW_TOKEN (for workflow dispatch)')
 param ghWorkflowToken string = ''
-
-@secure()
-@description('MongoDB connection string - set in .env as MONGODB_URI')
-param mongodbUri string
 
 @description('Comma-separated list of GitHub usernames with admin access')
 param adminGitHubUsers string = ''
@@ -56,19 +49,15 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
-// Cosmos DB Module - COMMENTED OUT: Using existing database
-// Uncomment this section if you want azd to provision a new Cosmos DB
-/*
+// Cosmos DB Module - Deploy FIRST (no dependencies)
 module cosmos './database.bicep' = {
   name: 'cosmos-db-deployment'
   scope: rg
   params: {
     location: location
     environmentName: environmentName
-    principalId: principalId
   }
 }
-*/
 
 // Container Apps Environment
 module containerAppsEnvironment 'core/host/container-apps-environment.bicep' = {
@@ -108,12 +97,12 @@ module containerApp 'core/host/container-app.bicep' = {
     ghWorkflowToken: ghWorkflowToken
     env: concat([
       {
-        name: 'MONGODB_URI'
-        value: mongodbUri
+        name: 'COSMOS_ENDPOINT'
+        value: 'https://${cosmos.outputs.cosmosAccountName}.documents.azure.com'
       }
       {
-        name: 'MONGODB_DATABASE'
-        value: 'template-doctor'
+        name: 'COSMOS_DATABASE_NAME'
+        value: cosmos.outputs.cosmosDatabaseName
       }
       {
         name: 'NODE_ENV'
@@ -183,6 +172,17 @@ module containerApp 'core/host/container-app.bicep' = {
   }
 }
 
+// Grant Container App's Managed Identity access to Cosmos DB
+// This must be a separate module to avoid circular dependency
+module cosmosRoleAssignment './cosmos-role-assignment.bicep' = {
+  name: 'cosmos-role-assignment'
+  scope: rg
+  params: {
+    cosmosAccountName: cosmos.outputs.cosmosAccountName
+    principalId: containerApp.outputs.principalId
+  }
+}
+
 // Outputs
 output AZURE_LOCATION string = location
 output AZURE_RESOURCE_GROUP string = rg.name
@@ -194,4 +194,6 @@ output SERVICE_WEB_NAME string = containerApp.outputs.name
 output SERVICE_WEB_URI string = containerApp.outputs.uri
 output SERVICE_WEB_IMAGE_NAME string = '${containerRegistry.outputs.loginServer}/template-doctor/web-${environmentName}:latest'
 output SERVICE_WEB_IDENTITY_PRINCIPAL_ID string = containerApp.outputs.principalId
-// Using existing MongoDB database - connection string from MONGODB_URI parameter
+output COSMOS_ACCOUNT_NAME string = cosmos.outputs.cosmosAccountName
+output COSMOS_DATABASE_NAME string = cosmos.outputs.cosmosDatabaseName
+output COSMOS_ENDPOINT string = 'https://${cosmos.outputs.cosmosAccountName}.documents.azure.com'
