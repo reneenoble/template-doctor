@@ -8,6 +8,8 @@ node_modules
 .env.*.local
 .env.consolidated
 .env.bak
+.env.backup
+*.backup
 
 dist/
 
@@ -48,3 +50,6 @@ smoke-test-output.log
 
 # Archived legacy filesystem results
 .archive/
+
+# Archived documentation (local only)
+docs/archive/

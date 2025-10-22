@@ -17,67 +17,69 @@ Template Doctor analyzes and validates samples and templates, including but not 
 
 # Overview
 
-Template Doctor is a containerized application that analyzes and validates samples and templates, with a focus on Azure Developer CLI (azd) templates. It provides:
-
-- **Web UI**: TypeScript-based Vite SPA for viewing analysis results and managing templates
-- **REST API**: Express backend for validation, OAuth, and GitHub integration
-- **Containerized Deployment**: Docker-based architecture for consistent development and production environments
-- **One-Click Actions**: GitHub issue creation with AI-powered suggestions and automated PR updates
+Template Doctor analyzes and validates samples and templates, with a focus on Azure Developer CLI (azd) templates. It provides a web UI to view analysis results, create GitHub issues with AI-powered suggestions, and automate PR updates with scan results.
 
 ## Features
 
 - **Template Analysis**: Validate templates against organization standards and best practices
-- **Interactive Web UI**: TypeScript-based Vite SPA for viewing and managing analysis results
 - **Security Analysis**: Bicep security checks for Managed Identity, insecure auth patterns, and anonymous access
 - **AI Integration**: One-click GitHub issue creation with AI-powered suggestions
 - **Automated Workflows**: PR updates with scan results and deployment testing
-- **Azure Developer CLI (azd)**: AZD deployment validation and testing
+- **AZD Validation**: Azure Developer CLI deployment validation and testing
 - **AI Model Checks**: Automated deprecation checking for AI models
-- **Centralized Archive**: Metadata storage for analysis results
-- **CI/CD Integration**: Automated API smoke tests and deployment workflows
+- **OAuth 2.0 Authentication**: Secure API access with GitHub OAuth
+- **Database Storage**: MongoDB (local) or Cosmos DB (production) for persistent storage
 
 ## Architecture
 
-Template Doctor is a **containerized monorepo** with independently deployable packages:
-
-### Current Architecture (Express-based)
+Template Doctor is a **containerized monorepo** with the following structure:
 
 - **packages/app**: Vite SPA (TypeScript frontend)
-  - Built with Vite for fast development and optimized production builds
-  - Development server at http://localhost:4000 with HMR
-  - Production served by Express at http://localhost:3000
-  - Loads scan results from database via REST API
+  - Production: Served by Express on port 3000
 
 - **packages/server**: Express backend (TypeScript REST API)
-  - RESTful API and frontend hosting at http://localhost:3000 (OAuth-compatible)
-  - Handles OAuth token exchange, template validation, and GitHub integration
-  - CORS-enabled for cross-origin development
+  - OAuth token exchange, template validation, GitHub integration
   - Serves static frontend assets in production
-  - MongoDB/Cosmos DB for persistent storage
+  - Port 3000 (matches OAuth callback URL)
 
 - **packages/analyzer-core**: Core analyzer functionality (shared library)
-  - Shared validation logic used by both server and legacy API
-  - Bundled into dependent packages during build
 
 - **Docker**: Containerized deployment
-  - `docker-compose.yml`: Multi-container development setup
-  - `Dockerfile.combined`: Single-container production build
-  - Includes all services (frontend + backend) in one deployable unit
+  - `docker-compose.yml`: Local development setup
+  - `Dockerfile.combined`: Production single-container build
 
-### Legacy Architecture (Azure Functions)
+**Database**: Results stored in MongoDB (local) or Cosmos DB (production) via REST API endpoints
 
-- **packages/api**: Azure Functions (maintained in `legacy/azure-functions` branch)
-  - Original serverless implementation
-  - Preserved for reference and migration comparison
-  - Optional build with `--if-present` flag
+## Features
 
-### Results Storage
+- **Template Analysis**: Validate templates against organization standards and best practices
+- **Security Analysis**: Bicep security checks for Managed Identity, insecure auth patterns, and anonymous access
+- **AI Integration**: One-click GitHub issue creation with AI-powered suggestions
+- **Automated Workflows**: PR updates with scan results and deployment testing
+- **AZD Validation**: Azure Developer CLI deployment validation and testing
+- **AI Model Checks**: Automated deprecation checking for AI models
+- **OAuth 2.0 Authentication**: Secure API access with GitHub OAuth
+- **Database Storage**: MongoDB (local) or Cosmos DB (production) for persistent storage
 
-Results are stored in MongoDB/Cosmos DB and served via the Express API:
+## Architecture
 
-- `/api/v4/results/latest` — Latest scan results for all templates
-- `/api/v4/results/:owner/:repo` — All results for a specific template
-- Frontend fetches data dynamically from the database instead of static files
+Template Doctor is a **containerized monorepo** with the following structure:
+
+- **packages/app**: Vite SPA (TypeScript frontend)
+  - Production: Served by Express on port 3000
+
+- **packages/server**: Express backend (TypeScript REST API)
+  - OAuth token exchange, template validation, GitHub integration
+  - Serves static frontend assets in production
+  - Port 3000 (matches OAuth callback URL)
+
+- **packages/analyzer-core**: Core analyzer functionality (shared library)
+
+- **Docker**: Containerized deployment
+  - `docker-compose.yml`: Local development setup
+  - `Dockerfile.combined`: Production single-container build
+
+**Database**: Results stored in MongoDB (local) or Cosmos DB (production) via REST API endpoints
 
 # Installation and Setup
 
@@ -187,10 +189,11 @@ If you prefer running services without Docker:
    npm run dev
    ```
 
-4. **Access the application**: http://localhost:4000
+> [!WARNING]
+> **OAuth Not Supported**: This manual setup is NOT RECOMMENDED. The frontend (port 4000) and backend (port 3000) run on different ports, breaking OAuth authentication. **Use Docker Compose instead** - it runs both services on port 3000, matching the recommended OAuth configuration.
 
 > [!WARNING]
-> **OAuth Limitation**: This manual setup runs frontend (port 4000) and backend (port 3000) on different ports. OAuth authentication will NOT work correctly unless you create a separate GitHub OAuth app configured for `http://localhost:4000/oauth-callback`. For OAuth functionality, use the Docker Compose setup instead (port 3000 for both services).
+> **OAuth Not Supported**: This manual setup is NOT RECOMMENDED. The frontend (port 4000) and backend (port 3000) run on different ports, breaking OAuth authentication. **Use Docker Compose instead** - it runs both services on port 3000, matching the recommended OAuth configuration.
 
 > [!IMPORTANT]
 > The Express backend MUST be running before using OAuth login or analysis features.
@@ -198,12 +201,12 @@ If you prefer running services without Docker:
 
 ### Port Allocation
 
-| Service         | Development | Production/Docker |
-| --------------- | ----------- | ----------------- |
-| Vite Dev Server | 4000        | -                 |
-| Express Backend | 3000        | 3000              |
+| Service                  | Port | Notes                                      |
+| ------------------------ | ---- | ------------------------------------------ |
+| Docker (Recommended)     | 3000 | Frontend + Backend (OAuth compatible)      |
+| Production               | 3000 | Frontend + Backend served by Express       |
 
-**Note**: In production and Docker, both frontend and backend run on port 3000 for OAuth compatibility. The Express server serves both the API and static frontend assets.
+**Note**: Port 3000 is required for OAuth authentication to work correctly.
 
 ## Authentication Setup
 
@@ -253,8 +256,8 @@ If you prefer running services without Docker:
 
 **For detailed instructions**, see:
 
-- [OAuth API Authentication](docs/development/OAUTH_API_AUTHENTICATION.md) - Complete authentication guide
-- [OAuth Configuration](docs/development/OAUTH_CONFIGURATION.md) - OAuth app setup details
+- [OAuth API Authentication](docs/reference/oauth-api.md) - Complete authentication guide
+- [OAuth Configuration](docs/reference/oauth-setup.md) - OAuth app setup details
 
 **Endpoint Protection:**
 
@@ -296,7 +299,7 @@ Template Doctor uses a consolidated approach to environment variables. All varia
    - **Frontend** (`packages/app/config.json`): Client configuration with backend URLs
    - **Environment** (`.env` at repo root): Single source of truth for shared config
 
-See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIABLES.md) for a complete reference of all available variables.
+See the [Environment Variables Documentation](docs/reference/environment-variables.md) for a complete reference of all available variables.
 
 # Usage
 
@@ -350,11 +353,8 @@ See the [Environment Variables Documentation](docs/development/ENVIRONMENT_VARIA
    npm run dev
    ```
 
-5. **Open browser**: http://localhost:4000
-
 > [!NOTE]
-> The Vite dev server provides hot module replacement (HMR) for fast TypeScript development.
-> The Express backend must be running before using OAuth or analysis features.
+> This setup is for development without OAuth. The Express backend must be running (port 3000) before the frontend (port 4000) will work. **For OAuth functionality, use Docker Compose instead.**
 
 ## Testing
 
@@ -498,9 +498,9 @@ Access at http://localhost:3000
 
 ### Common Issues
 
-- **OAuth redirect issues**: Ensure ports match between GitHub OAuth app settings and local server
-  - Development: Frontend 4000, Backend 3000
-  - Docker/Production: Both services on port 3000
+- **OAuth redirect issues**: Both frontend and backend MUST run on port 3000
+  - ✅ Docker/Production: Both services on port 3000 (recommended)
+  - ❌ Manual development: Different ports, OAuth won't work
 
 - **Express server not starting**:
   - Check `.env` file exists with required variables
@@ -513,11 +513,33 @@ Access at http://localhost:3000
 - **Port conflicts**: Kill processes if needed:
 
   ```bash
-  lsof -ti :3000 | xargs kill -9  # Express server / frontend
-  lsof -ti :4000 | xargs kill -9  # Vite dev server
+  lsof -ti :3000 | xargs kill -9  # Docker container or Express server
   ```
 
 - **Configuration mismatch**: Verify `config.json` has correct `githubOAuth.clientId` matching `.env`
+
+## Deployments
+
+### GitHub Actions Workflows
+
+- **validate-docker-images.yml**: Docker image build validation
+- **Nightly Deploy**: Automated deployment (runs at 02:15 UTC, manual trigger available)
+- **Submit Template Analysis**: repository_dispatch workflow for saving scan results via PR
+
+### Publishing Results
+
+- Results appear after PR merge + nightly deploy
+- Admins can trigger manual deploy for immediate publishing
+- UI notifications inform users of timing
+
+### Centralized Archive (Optional)
+
+Archive analysis metadata to a central repository:
+
+- **Setup**: See [Environment Variables](docs/reference/environment-variables.md) and [GitHub Action Setup](docs/guides/github-actions.md)
+- **Configuration**: Set `archiveEnabled: true` or check "save to archive" per-analysis
+
+## Documentation
 
 ## Deployments (CI/CD)
 
@@ -536,7 +558,7 @@ Located in `.github/workflows/`:
 
 - **Submit Template Analysis**: repository_dispatch workflow
   - Saves scan results and opens a PR using `peter-evans/create-pull-request`
-  - See setup guide: [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
+  - See setup guide: [docs/guides/github-actions.md](docs/guides/github-actions.md)
 
 ### Publishing Results
 
@@ -561,7 +583,7 @@ Workflows under `.github/workflows/`:
 
 - Submit Template Analysis (repository_dispatch):
   - Saves scan results and opens a PR using `peter-evans/create-pull-request`
-  - See setup guide (including bot token fallback): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md)
+  - See setup guide (including bot token fallback): [docs/guides/github-actions.md](docs/guides/github-actions.md)
 
 Publishing results
 
@@ -572,8 +594,8 @@ Publishing results
 Template Doctor can also archive a small JSON metadata file to a central repository for each analysis.
 
 - How to enable and required variables: see
-  - Env vars reference: [docs/development/ENVIRONMENT_VARIABLES.md](docs/development/ENVIRONMENT_VARIABLES.md)
-  - Action setup (archive section): [docs/usage/GITHUB_ACTION_SETUP.md](docs/usage/GITHUB_ACTION_SETUP.md#6-centralized-archive-of-analysis-metadata-optional)
+  - Env vars reference: [docs/reference/environment-variables.md](docs/reference/environment-variables.md)
+  - Action setup (archive section): [docs/guides/github-actions.md](docs/guides/github-actions.md#6-centralized-archive-of-analysis-metadata-optional)
 
 Quick checklist
 
@@ -586,41 +608,88 @@ Quick checklist
   - Globally: set `archiveEnabled: true` in runtime-config, or
   - Per-run: check the “Also save metadata to the centralized archive for this analysis” box in the analyze modal when global is off.
 
+## Documentation
+
+### Getting Started
+- [Deployment Guide](DEPLOYMENT_GUIDE.md) - Simple steps for local and production deployment
+- [Quick Start](QUICKSTART.md) - 5-minute setup guide
+- [Troubleshooting](docs/guides/troubleshooting.md) - Common issues and solutions
+
+### Deployment
+- [AZD Deployment](docs/setup/azure-deployment.md) - Deploy with Azure Developer CLI
+- [Production Database Setup](docs/setup/database-setup.md) - Cosmos DB with Managed Identity
+- [Infrastructure Guide](infra/README.md) - Bicep templates and deployment
+
+### Development
+- [Architecture](docs/reference/architecture.md) - System architecture and flows
+- [AGENTS.md](AGENTS.md) - AI agent development guide
+- [Environment Variables](docs/reference/environment-variables.md) - Complete configuration reference
+- [OAuth Configuration](docs/reference/oauth-setup.md) - OAuth app setup
+- [OAuth API Authentication](docs/reference/oauth-api.md) - API authentication guide
+- [Database Schema](docs/reference/database-schema.md) - MongoDB/Cosmos DB schema
+
+### Usage
+- [GitHub Action Setup](docs/guides/github-actions.md) - CI/CD integration
+- [Batch Scanning](docs/guides/batch-scanning.md) - Bulk template analysis
+- [Security Analysis](docs/features/security-analysis.md) - Bicep security checks
+- [Docker Guide](docs/guides/docker.md) - Docker deployment
+
+### Testing
+- [Test Coverage](docs/reference/testing.md) - Testing strategy and coverage
+
 ## Contributing
 
-- Add/update tests for features and fixes. Frontend E2E tests live in the app package; run from root via `npm test`.
-- Avoid native browser dialogs; use notifications to keep tests stable.
-- Format code before committing (packages may include prettier configs and scripts).
-- Don't commit generated artifacts like `node_modules/` or large reports.
-- Update docs and workflows when changing paths or behavior.
+- Add/update tests for features and fixes
+- Avoid native browser dialogs; use notifications to keep tests stable
+- Format code before committing: `npm run format`
+- Don't commit generated artifacts like `node_modules/` or large reports
+- Update docs and workflows when changing paths or behavior
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
 
 ## Security Analysis Features
 
-Template Doctor now includes enhanced security analysis for Bicep files:
+Template Doctor includes enhanced security analysis for Bicep files:
 
-1. **Managed Identity Detection**: Identifies when Managed Identity is properly used in Azure resources.
-2. **Insecure Authentication Detection**: Identifies and flags insecure authentication methods like:
-   - Connection strings with embedded credentials
-   - Access keys
-   - SAS tokens
-   - Storage account keys
-   - KeyVault secrets accessed without Managed Identity
+1. **Managed Identity Detection**: Identifies when Managed Identity is properly used
+2. **Insecure Authentication Detection**: Flags connection strings, access keys, SAS tokens
+3. **Anonymous Access Detection**: Identifies resources that may allow anonymous access
 
-3. **Anonymous Access Detection**: Identifies Azure resources that typically require authentication but may be configured for anonymous access.
+Configure in rule sets via `bicepChecks.securityBestPractices` properties.
 
-These security checks can be enabled/disabled in each rule set configuration by setting the `bicepChecks.securityBestPractices` properties:
+## Documentation
 
-```json
-"bicepChecks": {
-  "requiredResources": [...],
-  "securityBestPractices": {
-    "preferManagedIdentity": true,
-    "detectInsecureAuth": true,
-    "checkAnonymousAccess": true
-  }
-}
-```
+### Getting Started
+- [Deployment Guide](DEPLOYMENT_GUIDE.md) - Simple steps for local and production deployment
+- [Quick Start](QUICKSTART.md) - 5-minute setup guide
+- [Troubleshooting](docs/guides/troubleshooting.md) - Common issues and solutions
 
----
+### Deployment
+- [AZD Deployment](docs/setup/azure-deployment.md) - Deploy with Azure Developer CLI
+- [Production Database Setup](docs/setup/database-setup.md) - Cosmos DB with Managed Identity
+- [Infrastructure Guide](infra/README.md) - Bicep templates and deployment
 
-For issues, please open a GitHub issue.
+### Development
+- [Architecture](docs/reference/architecture.md) - System architecture and flows
+- [AGENTS.md](AGENTS.md) - AI agent development guide
+- [Environment Variables](docs/reference/environment-variables.md) - Complete configuration reference
+- [OAuth Configuration](docs/reference/oauth-setup.md) - OAuth app setup
+- [OAuth API Authentication](docs/reference/oauth-api.md) - API authentication guide
+- [Database Schema](docs/reference/database-schema.md) - MongoDB/Cosmos DB schema
+
+### Usage
+- [GitHub Action Setup](docs/guides/github-actions.md) - CI/CD integration
+- [Batch Scanning](docs/guides/batch-scanning.md) - Bulk template analysis
+- [Security Analysis](docs/features/security-analysis.md) - Bicep security checks
+- [Docker Guide](docs/guides/docker.md) - Docker deployment
+
+### Testing
+- [Test Coverage](docs/reference/testing.md) - Testing strategy and coverage
+
+## Contributing
+
+- Add/update tests for features and fixes
+- Avoid native browser dialogs; use notifications to keep tests stable
+- Format code before committing: `npm run format`
+- Don't commit generated artifacts like `node_modules/` or large reports
+- Update docs and workflows when changing paths or behavior
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines

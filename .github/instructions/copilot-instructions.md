@@ -44,7 +44,7 @@ This document provides context about the Template-Doctor project, its architectu
 
 Template-Doctor is an open-source tool designed to help developers validate, analyze, and manage project templates. It provides a web-based interface and a set of APIs to facilitate template validation, analysis, and integration with GitHub workflows.
 
-**Primary Reference Document**: See [AGENTS.md](/docs/development/AGENTS.md) for comprehensive architecture, development workflow, and AI agent guidelines.
+**Primary Reference Document**: See [AGENTS.md](../../AGENTS.md) for comprehensive architecture, development workflow, and AI agent guidelines.
 
 ## Architecture
 
@@ -55,7 +55,7 @@ Template-Doctor is an open-source tool designed to help developers validate, ana
 
 For detailed architecture information, migration status, and development patterns, refer to:
 
-- [AGENTS.md](/docs/development/AGENTS.md) - Primary AI agent guide
+- [AGENTS.md](../../AGENTS.md) - Primary AI agent guide
 - [docs/development/architecture.md](/docs/development/architecture.md) - Detailed architecture
 - [docs/development/EXPRESS_MIGRATION_MATRIX.md](/docs/development/EXPRESS_MIGRATION_MATRIX.md) - Migration tracking
 
@@ -70,7 +70,7 @@ For detailed architecture information, migration status, and development pattern
 
 ## Guidelines for AI-Assisted Code Generation and Review
 
-- **Understand Context**: Always consider the project architecture and existing code patterns before generating new code. Consult [AGENTS.md](/docs/development/AGENTS.md) for current context.
+- **Understand Context**: Always consider the project architecture and existing code patterns before generating new code. Consult [AGENTS.md](../../AGENTS.md) for current context.
 - **Maintain Consistency**: Ensure that generated code adheres to the established coding standards and style guide.
 - **Focus on Functionality**: Generated code must be fully functional, efficient, and production-ready - never use mocks or stubs.
 - **Security**: Be mindful of security best practices, especially when handling user data and external integrations.
@@ -82,7 +82,7 @@ For detailed architecture information, migration status, and development pattern
 
 ### Before Making Changes:
 
-1. Read [AGENTS.md](/docs/development/AGENTS.md) for current project state and context
+1. Read [AGENTS.md](../../AGENTS.md) for current project state and context
 2. Check migration status and active work in progress
 3. Verify no conflicts with ongoing migrations
 4. Ensure all dependencies are properly configured
@@ -104,7 +104,7 @@ For detailed architecture information, migration status, and development pattern
 
 ## Additional Resources
 
-- [AGENTS.md](/docs/development/AGENTS.md) - **PRIMARY REFERENCE** - Start here for all development work
+- [AGENTS.md](../../AGENTS.md) - **PRIMARY REFERENCE** - Start here for all development work
 - [docs/development/](/docs/development/) - Development documentation
 - [docs/usage/](/docs/usage/) - Usage guides and setup instructions
 - [CONTRIBUTING.md](/CONTRIBUTING.md) - Contribution guidelines

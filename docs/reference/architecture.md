@@ -2,14 +2,14 @@
 
 ## Containerized Express Architecture
 
-Template Doctor has migrated from Azure Functions to a containerized Express server architecture. The application now runs as Docker containers, providing better local development experience, easier deployment, and more flexibility in hosting options.
+Template Doctor runs as a containerized Express application with a Vite-built frontend, providing excellent local development experience and flexible deployment options.
 
 ### Components
 
-- **Express Backend** (`packages/server`): TypeScript-based REST API running on port 3001
-- **Static Frontend** (`packages/app`): Vite-built SPA running on port 3000 (preview) or 4000 (dev)
-- **Docker**: Multi-container (docker-compose) and single-container (Dockerfile.combined) deployment options
-- **Legacy Azure Functions**: Preserved in `dev/api-legacy-azure-functions` branch for historical reference
+- **Express Backend** (`packages/server`): TypeScript REST API on port 3000
+- **Vite Frontend** (`packages/app`): TypeScript SPA (dev: port 4000, production: served by Express)
+- **MongoDB/Cosmos DB**: Persistent storage for analysis results and configuration
+- **Docker**: Single and multi-container deployment options
 
 ## OAuth 2.0 Authentication Flow
 
@@ -292,123 +292,79 @@ graph TB
     classDef highlight fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
+### Port Allocation
+
+| Service                  | Development | Production/Docker |
+| ------------------------ | ----------- | ----------------- |
+| Vite Dev Server          | 4000        | -                 |
+| Express Backend + Frontend | 3000      | 3000              |
+
+**Note**: In production/Docker, Express serves both API and static frontend on port 3000 for OAuth compatibility.
+
 ## Deployment Options
 
 ### Local Development
 
-**Two-Terminal Approach (Recommended):**
+**Recommended: Docker Compose**
+
+```bash
+docker-compose --profile combined up
+```
+
+Access at http://localhost:3000
+
+**Manual Two-Terminal Approach:**
 
 Terminal 1 - Express Backend:
 
 ```bash
 cd packages/server
-npm run dev  # Runs on port 3001
+npm run dev  # Port 3000
 ```
 
 Terminal 2 - Vite Frontend:
 
 ```bash
 cd packages/app
-npm run dev  # Runs on port 4000
+npm run dev  # Port 4000
 ```
 
-**Production Preview:**
+**Note**: OAuth only works correctly when both run on port 3000 (Docker setup).
 
-```bash
-cd packages/app
-npm run preview  # Runs on port 3000
-```
+### Production Deployment
 
-### Docker Deployment
-
-**Multi-Container (Development):**
-
-```bash
-docker-compose up
-```
-
-- Frontend: http://localhost:3000
-- Backend: http://localhost:3001
-
-**Single Container (Production):**
+**Docker Single Container:**
 
 ```bash
 docker build -f Dockerfile.combined -t template-doctor .
-docker run -p 80:80 template-doctor
+docker run -p 3000:3000 --env-file .env template-doctor
 ```
 
-- All services: http://localhost
+**Azure Container Apps:**
 
-### Port Allocation
+Use `azd up` with the included Bicep templates in `infra/`. See [Production Database Setup](../deployment/PRODUCTION_DATABASE_MANAGED_IDENTITY.md).
 
-| Service                  | Development | Preview | Docker (Multi) | Docker (Single) |
-| ------------------------ | ----------- | ------- | -------------- | --------------- |
-| Vite Dev Server          | 4000        | -       | -              | -               |
-| Vite Preview             | -           | 3000    | 3000           | -               |
-| Express Backend          | 3001        | 3001    | 3001           | -               |
-| Nginx (Combined)         | -           | -       | -              | 80              |
-| Azure Functions (Legacy) | 7071        | 7071    | -              | -               |
+## API Endpoints
 
-## Migration Status
+All API endpoints use OAuth 2.0 authentication (except public endpoints). See [OAuth API Authentication](./OAUTH_API_AUTHENTICATION.md).
 
-### Completed Migrations
+### Public Endpoints
+- `GET /api/health` - Health check
+- `GET /api/v4/client-settings` - Runtime configuration
+- `POST /api/v4/github-oauth-token` - OAuth token exchange
 
-✅ **Core API Endpoints:**
+### Protected Endpoints (Require Authentication)
+- `POST /api/v4/analyze-template` - Template analysis
+- `POST /api/v4/validate-template` - Trigger validation workflow
+- `GET /api/v4/validation-status` - Poll validation status
+- `POST /api/v4/validation-callback` - Workflow callback
+- `POST /api/v4/issue-create` - Create GitHub issue
+- `POST /api/v4/batch-scan-start` - Start batch analysis
 
-- `/api/v4/analyze` - Template analysis with fork-first SAML strategy
-- `/api/v4/github-oauth-token` - OAuth token exchange
-- `/api/v4/client-settings` - Runtime configuration
+### Admin Endpoints (Require Admin Privileges)
+- `GET /api/admin/*` - Admin debugging endpoints
+- `POST /api/v4/admin/*` - Configuration management
 
-✅ **Infrastructure:**
+---
 
-- Docker Compose configuration for multi-container deployment
-- Combined Dockerfile for single-container production deployment
-- Environment variable consolidation
-- CORS and security configuration
-
-### Pending Migrations (17 Functions)
-
-The following Azure Functions remain to be migrated to Express endpoints:
-
-**Validation Workflow:**
-
-- `validate-template` → `/api/v4/validate-template`
-- `validation-status` → `/api/v4/validation-status`
-- `validation-callback` → `/api/v4/validation-callback`
-- `validation-cancel` → `/api/v4/validation-cancel`
-- `validation-docker-image` → `/api/v4/validation-docker-image`
-- `validation-ossf` → `/api/v4/validation-ossf`
-
-**GitHub Actions:**
-
-- `action-trigger` → `/api/v4/action-trigger`
-- `action-run-status` → `/api/v4/action-run-status`
-- `action-run-artifacts` → `/api/v4/action-run-artifacts`
-
-**Analysis & Submission:**
-
-- `submit-analysis-dispatch` → `/api/v4/submit-analysis-dispatch`
-- `add-template-pr` → `/api/v4/add-template-pr`
-- `archive-collection` → `/api/v4/archive-collection` ✅ (migrated)
-
-**Repository Management:**
-
-- `repo-fork` → `/api/v4/repo-fork`
-- `batch-scan-start` → `/api/v4/batch-scan-start`
-
-**Issue Management:**
-
-- `issue-create` → `/api/v4/issue-create`
-- `issue-ai-proxy` → `/api/v4/issue-ai-proxy`
-
-**Setup:**
-
-- `setup` → `/api/v4/setup`
-
-### Legacy Branch
-
-Azure Functions code is maintained in the `dev/api-legacy-azure-functions` branch for historical reference.
-
-```
-
-```
+*For detailed sequence diagrams and flows, see sections above.*
