@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import { ConfigurationStorage } from '../services/configuration-storage.js';
 import { database } from '../services/database.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { isAllowedCollection, ALLOWED_COLLECTIONS } from '../constants/collections.js';
 
 export const adminRouter = Router();
 
@@ -258,7 +259,17 @@ adminRouter.get('/db-query/:collection', async (req: Request, res: Response) => 
     }
 
     const { collection: collectionName } = req.params;
-    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // SECURITY: Validate collection name to prevent NoSQL injection
+    if (!isAllowedCollection(collectionName)) {
+      return res.status(400).json({
+        error: 'Invalid collection',
+        message: `Collection must be one of: ${ALLOWED_COLLECTIONS.join(', ')}`,
+        allowedCollections: ALLOWED_COLLECTIONS,
+      });
+    }
+    
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100); // Cap at 100
     const skip = parseInt(req.query.skip as string) || 0;
 
     const collection = db.collection(collectionName);

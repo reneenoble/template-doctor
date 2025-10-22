@@ -27,9 +27,13 @@ authRouter.post('/github-oauth-token', authRateLimit, async (req: Request, res: 
       });
     }
 
-    // Exchange code for token with GitHub
+    // Exchange code for token with GitHub (with 30-second timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const ghRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
@@ -39,7 +43,7 @@ authRouter.post('/github-oauth-token', authRateLimit, async (req: Request, res: 
         client_secret: clientSecret,
         code,
       }),
-    });
+    }).finally(() => clearTimeout(timeoutId));
 
     const data = await ghRes.json();
 

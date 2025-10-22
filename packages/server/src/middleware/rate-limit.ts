@@ -5,25 +5,34 @@ import type { Request, Response, NextFunction } from 'express';
  * Rate limiting configuration for API endpoints
  * 
  * We use tiered rate limits based on endpoint sensitivity:
- * - Strict: Heavy operations (analysis, validation, batch scanning)
- * - Standard: General API endpoints
- * - Auth: OAuth token exchange
+ * - Batch: Very heavy operations (batch analysis) - 3 requests/hour
+ * - Strict: Heavy operations (single analysis, validation) - 10 requests/15min
+ * - Standard: General API endpoints - 100 requests/minute
+ * - Auth: OAuth token exchange - 20 requests/minute
  */
 
 // Environment variable configuration with defaults
 const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10); // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
+const RATE_LIMIT_STRICT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_STRICT_WINDOW_MS || '900000', 10); // 15 minutes
 const RATE_LIMIT_STRICT_MAX = parseInt(process.env.RATE_LIMIT_STRICT_MAX || '10', 10);
+const RATE_LIMIT_BATCH_WINDOW_MS = parseInt(process.env.RATE_LIMIT_BATCH_WINDOW_MS || '3600000', 10); // 1 hour
+const RATE_LIMIT_BATCH_MAX = parseInt(process.env.RATE_LIMIT_BATCH_MAX || '3', 10);
 const RATE_LIMIT_AUTH_MAX = parseInt(process.env.RATE_LIMIT_AUTH_MAX || '20', 10);
 
 /**
- * Custom key generator that uses IP address for rate limiting
+ * Custom key generator that uses authenticated user OR IP address
  * 
- * Note: Future enhancement after OAuth PR #147 merges:
- * Can be extended to use req.user.login for authenticated users
+ * For authenticated requests: Uses GitHub username for accurate per-user limits
+ * For unauthenticated requests: Falls back to IP address
  */
 const keyGenerator = (req: Request): string => {
-  // Use IP address for rate limiting
+  // Use authenticated user's GitHub login if available (from requireAuth middleware)
+  if (req.user?.login) {
+    return `user:${req.user.login}`;
+  }
+  
+  // Fall back to IP address for unauthenticated requests
   const forwarded = req.headers['x-forwarded-for'];
   const ip = typeof forwarded === 'string' 
     ? forwarded.split(',')[0].trim() 
@@ -62,21 +71,49 @@ export const standardRateLimit = rateLimit({
 });
 
 /**
- * Strict rate limiter for expensive operations
- * Default: 10 requests per minute per user/IP
+ * Strict rate limiter for expensive operations (single analysis/validation)
+ * Default: 10 requests per 15 minutes per user/IP
  * 
  * Use for:
- * - Template analysis
+ * - Single template analysis
  * - Validation workflows
- * - Batch scanning
+ * - Individual scans
+ * 
+ * Rationale: Analysis is CPU/memory intensive and calls external APIs.
+ * 15-minute window prevents API abuse while allowing normal usage.
  */
 export const strictRateLimit = rateLimit({
-  windowMs: RATE_LIMIT_WINDOW_MS,
+  windowMs: RATE_LIMIT_STRICT_WINDOW_MS,
   max: RATE_LIMIT_STRICT_MAX,
   keyGenerator,
   handler,
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+/**
+ * Batch rate limiter for very expensive batch operations
+ * Default: 3 requests per hour per user/IP
+ * 
+ * Use for:
+ * - Batch analysis (multiple repos)
+ * - Batch validation
+ * 
+ * Rationale: Each batch can process up to 50 repositories, consuming
+ * significant server resources. Hourly limit prevents resource exhaustion.
+ */
+export const batchRateLimit = rateLimit({
+  windowMs: RATE_LIMIT_BATCH_WINDOW_MS,
+  max: RATE_LIMIT_BATCH_MAX,
+  keyGenerator,
+  handler,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too Many Requests',
+    message: 'Batch analysis rate limit exceeded. You can perform 3 batch operations per hour.',
+    retryAfter: '1 hour',
+  },
 });
 
 /**

@@ -155,6 +155,12 @@ export function startServer(port: number = Number(defaultPort)): Promise<http.Se
       );
       startupLogger.info({ staticPath }, 'Serving static files');
 
+      // SECURITY: Prevent DISABLE_AUTH in production
+      if (process.env.NODE_ENV === 'production' && process.env.DISABLE_AUTH === 'true') {
+        startupLogger.error('FATAL: DISABLE_AUTH cannot be enabled in production');
+        process.exit(1);
+      }
+
       // Initialize default configuration settings
       try {
         startupLogger.info('Initializing configuration defaults...');

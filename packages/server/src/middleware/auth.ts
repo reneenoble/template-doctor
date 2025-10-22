@@ -73,7 +73,25 @@ async function getGitHubUserInfo(token: string): Promise<{
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   // FOR TESTING ONLY: Allow disabling auth with environment variable
+  // SECURITY: Only allowed in development/test environments
   if (process.env.DISABLE_AUTH === 'true') {
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    
+    if (!isDevelopment) {
+      authLogger.error(
+        { 
+          nodeEnv: process.env.NODE_ENV, 
+          ip: req.ip, 
+          path: req.path 
+        }, 
+        'SECURITY VIOLATION: Attempted to use DISABLE_AUTH in production'
+      );
+      return res.status(500).json({
+        error: 'Configuration error',
+        message: 'Authentication cannot be disabled in production environments',
+      });
+    }
+    
     req.user = {
       login: 'test-user',
       id: 1,

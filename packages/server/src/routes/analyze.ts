@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { runAnalyzer } from '../analyzer-core/index.js';
 import { analysisStorage } from '../services/analysis-storage.js';
 import { requireAuth } from '../middleware/auth.js';
-import { strictRateLimit } from '../middleware/rate-limit.js';
+import { strictRateLimit, batchRateLimit } from '../middleware/rate-limit.js';
 
 export const analyzeRouter = Router();
 
@@ -34,8 +34,22 @@ interface BatchAnalyzeResult {
 }
 
 // POST /api/v4/analyze-template
-// Requires authentication and strict rate limiting for expensive analysis operations
-analyzeRouter.post('/analyze-template', requireAuth, strictRateLimit, async (req: Request, res: Response) => {
+// Requires authentication
+// Rate limiting applied conditionally: batch (3/hour) vs single (10/15min)
+analyzeRouter.post(
+  '/analyze-template',
+  requireAuth,
+  // Apply appropriate rate limit based on request type
+  (req: Request, res: Response, next: any) => {
+    const { repos } = req.body || {};
+    const isBatch = repos && Array.isArray(repos) && repos.length > 0;
+    
+    // Batch requests: 3 per hour (very expensive)
+    // Single requests: 10 per 15 minutes (expensive)
+    const rateLimiter = isBatch ? batchRateLimit : strictRateLimit;
+    return rateLimiter(req, res, next);
+  },
+  async (req: Request, res: Response) => {
   try {
     const requestBody: AnalyzeRequest = req.body || {};
     const {
@@ -52,6 +66,17 @@ analyzeRouter.post('/analyze-template', requireAuth, strictRateLimit, async (req
 
     // Handle batch analysis
     if (repos && Array.isArray(repos) && repos.length > 0) {
+      // SECURITY: Enforce batch size limit to prevent DoS attacks
+      const MAX_BATCH_SIZE = 50;
+      if (repos.length > MAX_BATCH_SIZE) {
+        return res.status(400).json({
+          error: 'Batch size limit exceeded',
+          message: `Maximum ${MAX_BATCH_SIZE} repositories per batch. Received: ${repos.length}`,
+          limit: MAX_BATCH_SIZE,
+          received: repos.length,
+        });
+      }
+
       console.log(`Batch analysis requested for ${repos.length} repositories`);
       const result = await handleBatchAnalysis(
         req,
@@ -89,7 +114,8 @@ analyzeRouter.post('/analyze-template', requireAuth, strictRateLimit, async (req
       details: error?.message,
     });
   }
-});
+},
+);
 
 export async function analyzeSingleRepository(
   req: Request,
@@ -318,6 +344,16 @@ async function handleBatchAnalysis(
   };
 }
 
+/**
+ * Create AbortController with timeout to prevent hanging requests
+ * @param timeoutMs - Timeout in milliseconds (default: 30 seconds)
+ */
+function createTimeoutSignal(timeoutMs: number = 30000): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
 function extractRepoInfo(url: string): { owner: string; repo: string } {
   const m = url.match(/github\.com\/([^/]+)\/([^/]+)(\.git)?/i);
   if (!m) throw new Error('Invalid GitHub URL');
@@ -330,6 +366,7 @@ function createGitHubClient(defaultToken?: string) {
     const url = base + path;
     const token = overrideToken || defaultToken;
     const res = await fetch(url, {
+      signal: createTimeoutSignal(30000),
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'template-doctor-analyzer',

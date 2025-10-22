@@ -182,6 +182,7 @@ class DatabaseService {
   private db: Db | null = null;
   private connectionString: string = '';
   private isConnected: boolean = false;
+  private tokenRefreshInterval: NodeJS.Timeout | null = null;
 
   /**
    * Connect to MongoDB (local or Cosmos DB)
@@ -334,7 +335,13 @@ class DatabaseService {
    * Refresh MI token periodically (every 1 hour)
    */
   private scheduleTokenRefresh(): void {
-    setInterval(async () => {
+    // Clear any existing interval to prevent multiple timers
+    if (this.tokenRefreshInterval) {
+      clearInterval(this.tokenRefreshInterval);
+      this.tokenRefreshInterval = null;
+    }
+
+    this.tokenRefreshInterval = setInterval(async () => {
       logger.info('Refreshing MI token...');
       try {
         await this.disconnect();
@@ -350,6 +357,13 @@ class DatabaseService {
    * Disconnect from database
    */
   async disconnect(): Promise<void> {
+    // Clear token refresh interval to prevent memory leak
+    if (this.tokenRefreshInterval) {
+      clearInterval(this.tokenRefreshInterval);
+      this.tokenRefreshInterval = null;
+      logger.debug('Token refresh interval cleared');
+    }
+
     if (this.client) {
       await this.client.close();
       this.client = null;

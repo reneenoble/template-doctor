@@ -39,6 +39,61 @@ describe('Authentication Middleware', () => {
   });
 
   describe('requireAuth', () => {
+    it('should return 500 when DISABLE_AUTH is true in production', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      process.env.DISABLE_AUTH = 'true';
+
+      await requireAuth(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Configuration error',
+          message: expect.stringContaining('production environments'),
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+
+      // Cleanup
+      process.env.NODE_ENV = originalNodeEnv;
+      delete process.env.DISABLE_AUTH;
+    });
+
+    it('should allow DISABLE_AUTH in development mode', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      process.env.DISABLE_AUTH = 'true';
+
+      await requireAuth(mockReq as Request, mockRes as Response, mockNext);
+
+      // Should create mock user and proceed
+      expect(mockReq.user).toBeDefined();
+      expect(mockReq.user?.login).toBe('dev-user');
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+
+      // Cleanup
+      process.env.NODE_ENV = originalNodeEnv;
+      delete process.env.DISABLE_AUTH;
+    });
+
+    it('should allow DISABLE_AUTH in test mode', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'test';
+      process.env.DISABLE_AUTH = 'true';
+
+      await requireAuth(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockReq.user).toBeDefined();
+      expect(mockNext).toHaveBeenCalled();
+      expect(statusMock).not.toHaveBeenCalled();
+
+      // Cleanup
+      process.env.NODE_ENV = originalNodeEnv;
+      delete process.env.DISABLE_AUTH;
+    });
+
     it('should return 401 when Authorization header is missing', async () => {
       await requireAuth(mockReq as Request, mockRes as Response, mockNext);
 

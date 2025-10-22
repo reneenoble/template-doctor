@@ -2,9 +2,8 @@ const { defineConfig, devices } = require('@playwright/test');
 const path = require('path');
 // Ensure we always serve the frontend directory even when tests are invoked from repo root.
 const appDir = __dirname; // packages/app
-// Use Docker combined container (port 3000) by default, fallback to Vite dev server (port 4000)
-const useDocker = process.env.PLAYWRIGHT_USE_DOCKER !== 'false';
-const baseURL = useDocker ? 'http://localhost:3000' : 'http://localhost:4000';
+// Use port 3000 (combined Docker container - production architecture)
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 const serverCommand = `bash -c "cd '${appDir}' && npx vite"`;
 
 /**
@@ -19,7 +18,7 @@ module.exports = defineConfig({
   reporter: 'html', // Use HTML reporter
 
   use: {
-    baseURL, // Docker: http://localhost:3000, Vite: http://localhost:4000
+    baseURL, // http://localhost:3000 (combined Docker container)
     trace: 'on', // Capture traces for all tests
     screenshot: 'only-on-failure', // Capture screenshots on failure
     video: 'on-first-retry', // Record video on retry

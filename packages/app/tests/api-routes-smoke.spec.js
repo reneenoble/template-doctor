@@ -1,7 +1,7 @@
 // Simple Playwright smoke test to validate ApiRoutes presence and runtime-config availability.
 const { test, expect } = require('@playwright/test');
 
-const APP_URL = process.env.APP_URL || 'http://localhost:4000';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 
 test.describe('API Routes Smoke', () => {
   test('ApiRoutes present and runtime-config fetch succeeds', async ({ page }) => {

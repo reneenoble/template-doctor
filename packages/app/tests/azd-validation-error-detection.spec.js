@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { test, expect } from '@playwright/test';
 
-describe('AZD Validation Error Detection', () => {
+test.describe('AZD Validation Error Detection', () => {
   // Test the UnmatchedPrincipalType error pattern matching (multiline-capable)
   const unmatchedPrincipalErrorPattern =
     /UnmatchedPrincipalType[\s\S]*has type[\s\S]*ServicePrincipal[\s\S]*different from[\s\S]*PrinciaplType[\s\S]*User/i;
 
-  it('should detect UnmatchedPrincipalType error in actual error message', () => {
+  test('should detect UnmatchedPrincipalType error in actual error message', () => {
     const actualError = `ERROR: error executing step command 'provision': deployment failed: error deploying infrastructure: deploying to subscription:
 
 Deployment Error Details:
@@ -20,7 +20,7 @@ Failed to list resources: No value for given attribute`;
     expect(unmatchedPrincipalErrorPattern.test(actualError)).toBe(true);
   });
 
-  it('should detect UnmatchedPrincipalType with different formatting', () => {
+  test('should detect UnmatchedPrincipalType with different formatting', () => {
     const errorVariation1 = `UnmatchedPrincipalType: The PrincipalId 'abc123' has type 'ServicePrincipal', which is different from specified PrinciaplType 'User'.`;
     const errorVariation2 = `UNMATCHEDPRINCIPALTYPE: The PrincipalId 'xyz789' has type 'ServicePrincipal' , which is different from specified PRINCIAPLTYPE 'User'.`;
 
@@ -28,7 +28,7 @@ Failed to list resources: No value for given attribute`;
     expect(unmatchedPrincipalErrorPattern.test(errorVariation2)).toBe(true);
   });
 
-  it('should NOT detect unrelated errors', () => {
+  test('should NOT detect unrelated errors', () => {
     const unrelatedErrors = [
       'Error: Resource not found',
       'Deployment failed: timeout',
@@ -41,13 +41,13 @@ Failed to list resources: No value for given attribute`;
     });
   });
 
-  it('should detect error regardless of case', () => {
+  test('should detect error regardless of case', () => {
     const lowercaseError = `unmatchedprincipaltype: the principalid 'test' has type 'serviceprincipal' , which is different from specified princiapltype 'user'.`;
 
     expect(unmatchedPrincipalErrorPattern.test(lowercaseError)).toBe(true);
   });
 
-  it('should work with multiline error messages', () => {
+  test('should work with multiline error messages', () => {
     const multilineError = `
       Multiple errors occurred:
       
@@ -62,7 +62,7 @@ Failed to list resources: No value for given attribute`;
   });
 
   // Test that the fix recommendation would be generated
-  it('should generate correct fix recommendation for GitHub issue', () => {
+  test('should generate correct fix recommendation for GitHub issue', () => {
     const errorSummary = `UnmatchedPrincipalType: The PrincipalId 'a61472c60dc14425ac1a8ede3955e55f' has type 'ServicePrincipal' , which is different from specified PrinciaplType 'User'.`;
 
     const hasError = unmatchedPrincipalErrorPattern.test(errorSummary);

@@ -332,7 +332,7 @@ router.post('/archive-collection', async (req: Request, res: Response, next: Nex
       ),
     ).toString('base64');
 
-    // Helper for GitHub API calls
+    // Helper for GitHub API calls (with 30-second timeout)
     async function gh(path: string, init: RequestInit = {}) {
       const headers: Record<string, string> = {
         Authorization: `token ${token}`,
@@ -340,10 +340,14 @@ router.post('/archive-collection', async (req: Request, res: Response, next: Nex
         ...((init.headers as Record<string, string>) || {}),
       };
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(`https://api.github.com${path}`, {
         ...init,
+        signal: controller.signal,
         headers,
-      });
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
         const text = await response.text();

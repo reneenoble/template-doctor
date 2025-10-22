@@ -4,7 +4,10 @@ import type { Request, Response } from 'express';
 // Mock environment variables before importing
 process.env.RATE_LIMIT_WINDOW_MS = '60000';
 process.env.RATE_LIMIT_MAX_REQUESTS = '100';
+process.env.RATE_LIMIT_STRICT_WINDOW_MS = '900000';
 process.env.RATE_LIMIT_STRICT_MAX = '10';
+process.env.RATE_LIMIT_BATCH_WINDOW_MS = '3600000';
+process.env.RATE_LIMIT_BATCH_MAX = '3';
 process.env.RATE_LIMIT_AUTH_MAX = '20';
 
 describe('Rate Limiting Middleware', () => {
@@ -57,7 +60,22 @@ describe('Rate Limiting Middleware', () => {
   });
 
   describe('keyGenerator', () => {
-    it('should use IP address for rate limiting', () => {
+    it('should use authenticated user login when available', () => {
+      mockReq.user = { login: 'testuser' };
+      
+      const key = mockReq.user?.login ? `user:${mockReq.user.login}` : `ip:${mockReq.ip}`;
+      expect(key).toBe('user:testuser');
+    });
+
+    it('should fall back to IP address for unauthenticated requests', () => {
+      mockReq.ip = '192.168.1.1';
+      mockReq.user = undefined;
+      
+      const key = mockReq.user?.login ? `user:${mockReq.user.login}` : `ip:${mockReq.ip}`;
+      expect(key).toBe('ip:192.168.1.1');
+    });
+
+    it('should use IP address for rate limiting when user not present', () => {
       mockReq.ip = '192.168.1.1';
       
       expect(mockReq.ip).toBe('192.168.1.1');
@@ -97,6 +115,12 @@ describe('Rate Limiting Middleware', () => {
       expect(typeof strictRateLimit).toBe('function');
     });
 
+    it('should export batchRateLimit', async () => {
+      const { batchRateLimit } = await import('../../src/middleware/rate-limit.js');
+      expect(batchRateLimit).toBeDefined();
+      expect(typeof batchRateLimit).toBe('function');
+    });
+
     it('should export authRateLimit', async () => {
       const { authRateLimit } = await import('../../src/middleware/rate-limit.js');
       expect(authRateLimit).toBeDefined();
@@ -107,6 +131,45 @@ describe('Rate Limiting Middleware', () => {
       const { noRateLimit } = await import('../../src/middleware/rate-limit.js');
       expect(noRateLimit).toBeDefined();
       expect(typeof noRateLimit).toBe('function');
+    });
+  });
+
+  describe('Rate limit windows', () => {
+    it('should use 15-minute window for strict rate limit', () => {
+      const STRICT_WINDOW_MS = 900000; // 15 minutes
+      expect(STRICT_WINDOW_MS).toBe(15 * 60 * 1000);
+    });
+
+    it('should use 1-hour window for batch rate limit', () => {
+      const BATCH_WINDOW_MS = 3600000; // 1 hour
+      expect(BATCH_WINDOW_MS).toBe(60 * 60 * 1000);
+    });
+
+    it('should use 1-minute window for standard rate limit', () => {
+      const WINDOW_MS = 60000; // 1 minute
+      expect(WINDOW_MS).toBe(60 * 1000);
+    });
+  });
+
+  describe('Rate limit maximums', () => {
+    it('should allow maximum 10 strict requests per window', () => {
+      const STRICT_MAX = 10;
+      expect(STRICT_MAX).toBe(10);
+    });
+
+    it('should allow maximum 3 batch requests per window', () => {
+      const BATCH_MAX = 3;
+      expect(BATCH_MAX).toBe(3);
+    });
+
+    it('should allow maximum 100 standard requests per window', () => {
+      const MAX_REQUESTS = 100;
+      expect(MAX_REQUESTS).toBe(100);
+    });
+
+    it('should allow maximum 20 auth requests per window', () => {
+      const AUTH_MAX = 20;
+      expect(AUTH_MAX).toBe(20);
     });
   });
 

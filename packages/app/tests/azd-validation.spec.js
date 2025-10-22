@@ -368,7 +368,7 @@ test.describe('Artifact-Based Validation Results', () => {
     });
   });
 
-  test('should show success status for fully passing validation', async ({ page }) => {
+  test('should show success status with artifact-based validation results', async ({ page }) => {
     await page.route('**/api/v4/validation-template', (route) => {
       route.fulfill({
         json: {
