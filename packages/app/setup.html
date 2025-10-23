@@ -13,6 +13,10 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Inter', sans-serif;
             background: #f8fafc;
@@ -32,22 +36,98 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            color: white;
+            background: #f8fafc;
+            color: #64748b;
             padding: 30px;
             text-align: center;
+            border-bottom: 1px solid #e2e8f0;
         }
         
         .header h1 {
             margin: 0;
             font-size: 2rem;
             font-weight: 600;
+            color: #1e293b;
         }
         
         .header p {
             margin: 8px 0 0;
-            opacity: 0.9;
+            color: #64748b;
             font-size: 1rem;
+        }
+        
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        nav {
+            display: flex;
+            gap: 20px;
+        }
+        
+        nav a {
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        nav a:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        
+        nav a.active {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-toggle {
+                display: block;
+            }
+            
+            nav {
+                position: absolute;
+                top: 100%;
+                right: 20px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                flex-direction: column;
+                gap: 0;
+                min-width: 200px;
+                display: none;
+            }
+            
+            nav.open {
+                display: flex;
+            }
+            
+            nav a {
+                border-radius: 0;
+                padding: 12px 20px;
+            }
+            
+            nav a:first-child {
+                border-radius: 8px 8px 0 0;
+            }
+            
+            nav a:last-child {
+                border-radius: 0 0 8px 8px;
+            }
         }
         
         .content {
@@ -211,8 +291,8 @@
         }
         
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             display: inline-block;
             margin-right: 8px;
@@ -220,17 +300,19 @@
         
         .status-connected {
             background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
         }
         
         .status-disconnected {
             background: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
         }
         
         .info-box {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
             border-radius: 6px;
-            padding: 15px;
+            padding: 12px 15px;
             margin-bottom: 20px;
         }
         
@@ -250,15 +332,18 @@
 <body>
     <!-- Header with Navigation -->
     <header style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 20px 0; box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 1000;">
-        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; position: relative;">
             <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #1e293b;">
                 <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" style="width: 40px; height: 40px;" />
                 <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Template Doctor</h1>
             </a>
-            <nav style="display: flex; gap: 20px;">
-                <a href="/" style="text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">Dashboard</a>
-                <a href="/leaderboards" style="text-decoration: none; color: #64748b; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">🏆 Leaderboards</a>
-                <a href="/setup" style="text-decoration: none; background: #3b82f6; color: white; font-weight: 500; padding: 8px 16px; border-radius: 8px; transition: all 0.2s;">⚙️ Setup</a>
+            <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+            <nav id="main-nav">
+                <a href="/"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="/leaderboards"><i class="fas fa-trophy"></i> Leaderboards</a>
+                <a href="/setup" class="active"><i class="fas fa-cog"></i> Setup</a>
             </nav>
         </div>
     </header>
@@ -323,16 +408,9 @@
                             <input type="text" id="backend-base-url" placeholder="Loading...">
                         </div>
                         <div class="form-group">
-                            <label for="backend-function-key">Function Key</label>
-                            <input type="password" id="backend-function-key" placeholder="Loading...">
+                            <label for="backend-api-version">API Version</label>
+                            <input type="text" id="backend-api-version" readonly value="v4 (Express API)" style="background-color: #f9fafb; color: #6b7280;">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="backend-api-version">API Version</label>
-                        <select id="backend-api-version">
-                            <option value="v4">v4 (Recommended)</option>
-                            <option value="v3">v3 (Legacy)</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -348,9 +426,7 @@
                         <div class="form-group">
                             <label for="default-rule-set">Default Rule Set</label>
                             <select id="default-rule-set">
-                                <option value="dod">DoD (Definition of Done)</option>
-                                <option value="basic">Basic</option>
-                                <option value="comprehensive">Comprehensive</option>
+                                <option value="">Loading rulesets...</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -358,17 +434,10 @@
                             <input type="text" id="archive-collection" placeholder="Loading...">
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="require-auth"> Require Authentication for Results
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="auto-save"> Auto Save Results
-                            </label>
-                        </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="require-auth"> Require Authentication for Results
+                        </label>
                     </div>
                     <div class="form-group">
                         <label class="checkbox-label">
@@ -476,6 +545,9 @@
                     throw new Error('No configuration data loaded');
                 }
                 
+                // Load rulesets from database
+                await loadRulesets();
+                
                 populateForm();
             } catch (error) {
                 console.error('Error loading configuration:', error);
@@ -516,6 +588,52 @@
             }
         }
         
+        async function loadRulesets() {
+            try {
+                const token = localStorage.getItem('gh_access_token');
+                const headers = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch('/api/v4/rulesets', { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    const rulesets = data.rulesets || [];
+                    
+                    // Store rulesets in currentConfig for later use
+                    currentConfig.availableRulesets = rulesets;
+                    
+                    // Update the dropdown
+                    const select = document.getElementById('default-rule-set');
+                    if (select && rulesets.length > 0) {
+                        // Clear existing options
+                        select.innerHTML = '';
+                        
+                        // Add rulesets from database
+                        rulesets.forEach(ruleset => {
+                            const option = document.createElement('option');
+                            option.value = ruleset.name;
+                            option.textContent = `${ruleset.displayName || ruleset.name}${ruleset.isDefault ? ' (Default)' : ''}`;
+                            if (!ruleset.enabled) {
+                                option.textContent += ' [Disabled]';
+                                option.disabled = true;
+                            }
+                            select.appendChild(option);
+                        });
+                        
+                        console.log(`Loaded ${rulesets.length} rulesets from database`);
+                    }
+                } else {
+                    console.warn('Failed to load rulesets:', response.status, response.statusText);
+                    // Keep hardcoded options as fallback
+                }
+            } catch (error) {
+                console.warn('Error loading rulesets:', error.message);
+                // Keep hardcoded options as fallback
+            }
+        }
+        
         function updateConnectionStatus(connected, message) {
             const indicator = document.getElementById('connection-status');
             const text = document.getElementById('status-text');
@@ -536,14 +654,11 @@
             // Backend - using Express server, not Azure Functions
             const backendBaseUrl = currentConfig.backend?.baseUrl || window.location.origin;
             document.getElementById('backend-base-url').value = backendBaseUrl;
-            document.getElementById('backend-function-key').value = 'Not implemented (Express server does not use function keys)';
-            document.getElementById('backend-api-version').value = 'v4 (hardcoded in Express routes)';
             
             // Application Settings
             document.getElementById('default-rule-set').value = currentConfig.defaultRuleSet || currentConfig.DEFAULT_RULE_SET || 'dod';
             document.getElementById('archive-collection').value = currentConfig.archiveCollection || currentConfig.ARCHIVE_COLLECTION || 'aigallery';
             document.getElementById('require-auth').checked = currentConfig.requireAuthForResults || currentConfig.REQUIRE_AUTH_FOR_RESULTS === 'true';
-            document.getElementById('auto-save').checked = currentConfig.autoSaveResults || currentConfig.AUTO_SAVE_RESULTS === 'true';
             document.getElementById('archive-enabled').checked = currentConfig.archiveEnabled || currentConfig.ARCHIVE_ENABLED === 'true';
             
             // Deprecated Models
@@ -598,14 +713,11 @@
                     redirectUri: document.getElementById('github-redirect').value
                 },
                 backend: {
-                    baseUrl: document.getElementById('backend-base-url').value,
-                    functionKey: document.getElementById('backend-function-key').value,
-                    apiVersion: document.getElementById('backend-api-version').value
+                    baseUrl: document.getElementById('backend-base-url').value
                 },
                 defaultRuleSet: document.getElementById('default-rule-set').value,
                 archiveCollection: document.getElementById('archive-collection').value,
                 requireAuthForResults: document.getElementById('require-auth').checked,
-                autoSaveResults: document.getElementById('auto-save').checked,
                 archiveEnabled: document.getElementById('archive-enabled').checked,
                 deprecatedModels: currentConfig.deprecatedModels || []
             };
@@ -637,6 +749,14 @@
                 alert('🔄 Deprecated models refresh initiated!\\n\\nThis would normally trigger a GitHub workflow to update the list.');
                 // In a real implementation, this would call an API endpoint
                 console.log('Would trigger deprecated models workflow');
+            }
+        }
+
+        // Toggle navigation menu on mobile
+        function toggleNav() {
+            const nav = document.getElementById('main-nav');
+            if (nav) {
+                nav.classList.toggle('open');
             }
         }
     </script>

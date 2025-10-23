@@ -247,7 +247,21 @@ function render() {
       return;
     }
     if (data.length === 0) {
-      console.debug('[TemplateList] render aborted: templatesData empty');
+      console.debug('[TemplateList] render: showing empty state');
+      const section = ensureSection();
+      const grid = section?.querySelector(`#${GRID_ID}`);
+      if (!grid) {
+        console.debug('[TemplateList] render aborted: grid element missing');
+        return;
+      }
+      // Show empty state
+      grid.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-folder-open"></i>
+          <p>No results! Start analyzing to see previously scanned templates here!</p>
+        </div>
+      `;
+      rendered = true;
       return;
     }
     console.debug('[TemplateList] rendering', { count: data.length });

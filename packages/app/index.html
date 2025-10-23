@@ -82,16 +82,19 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
   </head>
   <body>
-    <header>
-      <div class="container header-content">
-        <div class="logo">
+    <header class="header">
+      <div class="header-content">
+        <a href="/" class="logo">
           <img src="assets/images/templatedoctor.svg" alt="Template Doctor Logo" />
           <h1>Template Doctor</h1>
-        </div>
-        <nav class="header-nav">
-          <a href="/" class="nav-link active">Dashboard</a>
-          <a href="/leaderboards" class="nav-link">🏆 Leaderboards</a>
-          <a href="/setup" class="nav-link">⚙️ Setup</a>
+        </a>
+        <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">
+          <i class="fas fa-bars"></i>
+        </button>
+        <nav class="nav-links" id="main-nav">
+          <a href="/" class="active"><i class="fas fa-home"></i> Dashboard</a>
+          <a href="/leaderboards"><i class="fas fa-trophy"></i> Leaderboards</a>
+          <a href="/setup"><i class="fas fa-cog"></i> Setup</a>
         </nav>
         <div id="user-info" class="user-info">
           <button id="login-button" class="login-button">
@@ -328,6 +331,16 @@
         </div>
       </div>
     </footer>
+
+    <!-- Toggle navigation menu on mobile -->
+    <script>
+      function toggleNav() {
+        const nav = document.getElementById('main-nav');
+        if (nav) {
+          nav.classList.toggle('open');
+        }
+      }
+    </script>
 
     <!-- Vite unified entry -->
     <script type="module" src="/src/main.ts"></script>

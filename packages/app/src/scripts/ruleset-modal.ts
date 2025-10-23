@@ -5,7 +5,7 @@ import { sanitizeHtml } from '../shared/sanitize';
 
 declare global {
   interface Window {
-    showRulesetModal?: (repoUrl: string) => void;
+    showRulesetModal?: (repoUrl: string, currentRuleset?: string) => void;
   }
 }
 
@@ -18,6 +18,75 @@ interface SelectedCategories {
 }
 
 let currentRepoUrl = '';
+
+/**
+ * Load rulesets from API and populate radio buttons
+ */
+async function loadRulesetsFromAPI(): Promise<void> {
+  try {
+    const apiRoutes = (window as any).apiRoutes;
+    if (!apiRoutes?.rulesets) {
+      console.warn('[RulesetModal] API routes not available');
+      return;
+    }
+
+    const response = await fetch(apiRoutes.rulesets, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('gh_access_token')}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.warn('[RulesetModal] Failed to load rulesets:', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    const rulesets = data.rulesets || [];
+
+    if (rulesets.length === 0) {
+      console.warn('[RulesetModal] No rulesets found in database');
+      return;
+    }
+
+    // Update the ruleset form with dynamic options
+    const form = document.getElementById('ruleset-form');
+    if (!form) return;
+
+    // Find the container for ruleset options (before custom-config-container)
+    const customContainer = form.querySelector('#custom-config-container');
+    if (!customContainer) return;
+
+    // Remove all existing radio groups except custom
+    const existingGroups = form.querySelectorAll('.form-group');
+    existingGroups.forEach(group => {
+      const input = group.querySelector('input[name="ruleset"]');
+      if (input && input.getAttribute('value') !== 'custom') {
+        group.remove();
+      }
+    });
+
+    // Add rulesets from database (before custom option)
+    rulesets.forEach((ruleset: any, index: number) => {
+      if (!ruleset.enabled) return; // Skip disabled rulesets
+
+      const formGroup = document.createElement('div');
+      formGroup.className = 'form-group';
+      formGroup.innerHTML = `
+        <label>
+          <input type="radio" name="ruleset" value="${sanitizeHtml(ruleset.name)}" ${index === 0 ? 'checked' : ''}>
+          <strong>${sanitizeHtml(ruleset.displayName || ruleset.name)}</strong>
+        </label>
+        <p class="ruleset-description">${sanitizeHtml(ruleset.description || '')}</p>
+      `;
+      customContainer.parentNode?.insertBefore(formGroup, customContainer);
+    });
+
+    console.log(`[RulesetModal] Loaded ${rulesets.length} rulesets from API`);
+  } catch (error) {
+    console.error('[RulesetModal] Error loading rulesets:', error);
+  }
+}
 
 export function initRulesetModal(): void {
   // Check if modal already exists
@@ -128,6 +197,10 @@ export function initRulesetModal(): void {
 
   document.body.appendChild(modalDiv);
   setupModalHandlers();
+  
+  // Load rulesets from API after modal is created
+  loadRulesetsFromAPI();
+  
   console.log('[RulesetModal] Modal initialized');
 }
 
@@ -414,15 +487,28 @@ function setupModalHandlers(): void {
   }
 }
 
-export function showRulesetModal(repoUrl: string): void {
+export function showRulesetModal(repoUrl: string, currentRuleset?: string): void {
   currentRepoUrl = repoUrl;
   const modal = document.getElementById('ruleset-modal');
 
   if (!modal) {
     console.warn('[RulesetModal] Modal not initialized, initializing now');
     initRulesetModal();
-    setTimeout(() => showRulesetModal(repoUrl), 100);
+    setTimeout(() => showRulesetModal(repoUrl, currentRuleset), 100);
     return;
+  }
+
+  // Pre-select the current ruleset if provided
+  if (currentRuleset) {
+    const rulesetInput = modal.querySelector<HTMLInputElement>(
+      `input[name="ruleset"][value="${currentRuleset}"]`
+    );
+    if (rulesetInput) {
+      rulesetInput.checked = true;
+      console.log(`[RulesetModal] Pre-selected ruleset: ${currentRuleset}`);
+    } else {
+      console.warn(`[RulesetModal] Ruleset "${currentRuleset}" not found in modal options`);
+    }
   }
 
   // Refresh archive override visibility based on runtime config
@@ -610,11 +696,13 @@ window.showRulesetModal = showRulesetModal;
 
     try {
       console.log('[AnalyzeRepoIntegr] Step 5: Calling analyzeTemplateServerSide...');
+      console.log('[AnalyzeRepoIntegr]   🎯 Using ruleSet:', ruleSet);
       const result = await (window as any).TemplateAnalyzer.analyzeTemplateServerSide(
         repoUrl,
         ruleSet,
       );
       console.log('[AnalyzeRepoIntegr] ✓ Analysis complete');
+      console.log('[AnalyzeRepoIntegr]   📊 Result ruleSet:', result?.ruleSet);
 
       console.log('[AnalyzeRepoIntegr] Step 6: Showing results...');
       showResults(containers);
@@ -632,6 +720,18 @@ window.showRulesetModal = showRulesetModal;
       }
 
       showNotification('success', 'Analysis complete!');
+      
+      // Update the main report view if it exists (when rescanning from an existing report)
+      const mainReportDiv = document.getElementById('report');
+      if (mainReportDiv && mainReportDiv !== containers.reportDiv) {
+        if (
+          (window as any).DashboardRenderer &&
+          typeof (window as any).DashboardRenderer.render === 'function'
+        ) {
+          (window as any).DashboardRenderer.render(result, mainReportDiv);
+        }
+      }
+      
       document.dispatchEvent(
         new CustomEvent('analysis-completed', { detail: { repoUrl, result } }),
       );

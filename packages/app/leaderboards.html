@@ -17,13 +17,35 @@
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
+            background: #f8fafc;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
             backdrop-filter: blur(10px);
             padding: 20px 0;
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
+        }
+
+        .header h1 {
+            color: #1e293b;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
         }
 
         .header-content {
@@ -33,6 +55,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: relative;
         }
 
         .logo {
@@ -66,11 +89,56 @@
             padding: 8px 16px;
             border-radius: 8px;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .nav-links a:hover, .nav-links a.active {
-            background: #3b82f6;
-            color: white;
+        .nav-links a:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .nav-links a.active {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .nav-toggle {
+                display: block;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 100%;
+                right: 20px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                flex-direction: column;
+                gap: 0;
+                min-width: 200px;
+                display: none;
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .nav-links a {
+                border-radius: 0;
+                padding: 12px 20px;
+            }
+
+            .nav-links a:first-child {
+                border-radius: 8px 8px 0 0;
+            }
+
+            .nav-links a:last-child {
+                border-radius: 0 0 8px 8px;
+            }
         }
 
         .container {
@@ -512,10 +580,13 @@
                 <img src="assets/images/templatedoctor.svg" alt="Template Doctor">
                 <h1>Template Doctor</h1>
             </a>
-            <nav class="nav-links">
-                <a href="/">Dashboard</a>
-                <a href="/leaderboards" class="active">Leaderboards</a>
-                <a href="/setup">Setup</a>
+            <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+            <nav class="nav-links" id="main-nav">
+                <a href="/"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="/leaderboards" class="active"><i class="fas fa-trophy"></i> Leaderboards</a>
+                <a href="/setup"><i class="fas fa-cog"></i> Setup</a>
             </nav>
         </div>
     </header>
@@ -1285,6 +1356,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadLeaderboards();
         });
+
+        // Toggle navigation menu on mobile
+        function toggleNav() {
+            const nav = document.getElementById('main-nav');
+            if (nav) {
+                nav.classList.toggle('open');
+            }
+        }
     </script>
 
     <!-- Footer -->

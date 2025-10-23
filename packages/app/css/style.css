@@ -36,13 +36,146 @@ body {
 }
 
 /* Header Styles */
-header {
-  background-color: var(--card-background);
-  box-shadow: var(--shadow);
+header,
+.header {
+  background: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
-  z-index: 100;
-  padding: 16px 0;
+  z-index: 1000;
+  padding: 20px 0;
+}
+
+.header h1 {
+  color: #1e293b;
+}
+
+.header p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #1e293b;
+}
+
+.logo img {
+  width: 40px;
+  height: 40px;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.header-nav,
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.header-nav a,
+.nav-links a,
+.nav-link {
+  text-decoration: none;
+  color: #64748b;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-nav a:hover,
+.nav-links a:hover,
+.nav-link:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.header-nav a.active,
+.nav-links a.active,
+.nav-link.active {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+
+  .header-nav,
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    flex-direction: column;
+    gap: 0;
+    min-width: 200px;
+    display: none;
+    margin-top: 10px;
+  }
+
+  .header-nav.open,
+  .nav-links.open {
+    display: flex;
+  }
+
+  .header-nav a,
+  .nav-links a,
+  .nav-link {
+    border-radius: 0;
+    padding: 12px 20px;
+  }
+
+  .header-nav a:first-child,
+  .nav-links a:first-child,
+  .nav-link:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .header-nav a:last-child,
+  .nav-links a:last-child,
+  .nav-link:last-child {
+    border-radius: 0 0 8px 8px;
+  }
 }
 
 /* SAML Warning Banner */

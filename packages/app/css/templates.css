@@ -23,6 +23,31 @@
   margin-top: 16px;
 }
 
+/* Empty State */
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.empty-state i {
+  font-size: 120px;
+  color: #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.empty-state p {
+  font-size: 18px;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
 /* Ruleset Badges */
 .ruleset-badge {
   display: inline-block;
@@ -43,6 +68,11 @@
   color: white;
 }
 
+.docs-badge {
+  background-color: #00a4ef;
+  color: white;
+}
+
 .custom-badge {
   background-color: #5c2d91;
   color: white;
@@ -50,6 +80,7 @@
 
 .partner-badge,
 .dod-badge,
+.docs-badge,
 .custom-badge {
   padding: 2px 8px;
   border-radius: 8px;
