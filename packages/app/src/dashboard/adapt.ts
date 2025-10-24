@@ -24,6 +24,90 @@ export interface AdaptedData {
   customConfig?: any;
 }
 
+/**
+ * Build categories object from issues and compliant items
+ * Mirrors backend logic in packages/server/src/routes/results.ts
+ * This ensures category percentages are calculated correctly even when
+ * the API doesn't provide pre-built categories
+ */
+function buildCategoriesFromData(
+  issues: AdaptedIssue[],
+  compliant: AdaptedCompliant[],
+): Record<
+  string,
+  {
+    enabled: boolean;
+    issues: AdaptedIssue[];
+    passed: AdaptedCompliant[];
+    percentage: number;
+  }
+> {
+  // Category mapping - maps issue/compliant category prefixes to standard categories
+    const categoryMap: Record<string, string> = {
+      file: 'repositoryManagement',
+      folder: 'repositoryManagement',
+      readme: 'functionalRequirements',
+      docs: 'functionalRequirements',
+      documentation: 'functionalRequirements',
+      workflow: 'deployment',
+      cicd: 'deployment',
+      'ci-cd': 'deployment',
+      deployment: 'deployment',
+      security: 'security',
+      'security-analysis': 'security',
+      testing: 'testing',
+      test: 'testing',
+      tests: 'testing',
+      agents: 'agents',
+      agent: 'agents',
+      ai: 'agents',
+      general: 'repositoryManagement',
+    };  // Initialize all categories
+  const categories: Record<
+    string,
+    {
+      enabled: boolean;
+      issues: AdaptedIssue[];
+      passed: AdaptedCompliant[];
+      percentage: number;
+    }
+  > = {
+    repositoryManagement: { enabled: true, issues: [], passed: [], percentage: 0 },
+    functionalRequirements: { enabled: true, issues: [], passed: [], percentage: 0 },
+    deployment: { enabled: true, issues: [], passed: [], percentage: 0 },
+    security: { enabled: true, issues: [], passed: [], percentage: 0 },
+    testing: { enabled: true, issues: [], passed: [], percentage: 0 },
+    agents: { enabled: true, issues: [], passed: [], percentage: 0 },
+  };
+
+  // Distribute issues to their categories (skip meta category)
+  issues.forEach((issue) => {
+    const cat = issue.category || 'general';
+    const mappedCat = categoryMap[cat] || 'repositoryManagement';
+    if (mappedCat !== 'meta' && categories[mappedCat]) {
+      categories[mappedCat].issues.push(issue);
+    }
+  });
+
+  // Distribute compliant items to categories (skip meta)
+  compliant.forEach((item) => {
+    const cat = item.category || 'general';
+    const mappedCat = categoryMap[cat] || 'repositoryManagement';
+    if (mappedCat !== 'meta' && categories[mappedCat]) {
+      categories[mappedCat].passed.push(item);
+    }
+  });
+
+  // Calculate percentages for each category
+  Object.keys(categories).forEach((key) => {
+    const cat = categories[key];
+    const total = cat.issues.length + cat.passed.length;
+    cat.percentage = total > 0 ? Math.round((cat.passed.length / total) * 100) : 0;
+  });
+
+  return categories;
+}
+
 export function adaptResultData(result: any): AdaptedData {
   const issues: AdaptedIssue[] = [];
   const compliant: AdaptedCompliant[] = [];
@@ -90,7 +174,17 @@ export function adaptResultData(result: any): AdaptedData {
     totalPassed: compliant.length,
   };
   if (result.__analysisMode) adapted.__analysisMode = result.__analysisMode;
-  if (result?.compliance?.categories) adapted.compliance.categories = result.compliance.categories;
+
+  // Build categories from issues/compliant if not provided by API or empty
+  if (
+    !result?.compliance?.categories ||
+    Object.keys(result.compliance.categories).length === 0
+  ) {
+    adapted.compliance.categories = buildCategoriesFromData(issues, compliant);
+  } else {
+    adapted.compliance.categories = result.compliance.categories;
+  }
+
   if (result.customConfig) adapted.customConfig = result.customConfig;
   return adapted;
 }
